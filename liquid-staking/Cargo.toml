@@ -1,0 +1,28 @@
+[package]
+name = "liquid-staking"
+version = "0.0.0"
+authors = ["Mihai Eremia <mihai@xoxno.com>"]
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies.itertools]
+version = "0.13.0"
+default-features = false
+
+[dependencies.multiversx-sc]
+version = "0.53.0"
+
+[dependencies.multiversx-sc-modules]
+version = "0.53.0"
+
+[dependencies.delegation-mock]
+path = "../delegation-mock"
+
+[dependencies.accumulator]
+git = "https://github.com/XOXNO/rs-accumulator"
+
+[dev-dependencies.multiversx-sc-scenario]
+version = "0.53.0"
