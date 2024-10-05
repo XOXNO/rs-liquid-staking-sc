@@ -13,10 +13,10 @@ version = "0.13.0"
 default-features = false
 
 [dependencies.multiversx-sc]
-version = "0.53.0"
+version = "0.53.2"
 
 [dependencies.multiversx-sc-modules]
-version = "0.53.0"
+version = "0.53.2"
 
 [dependencies.delegation-mock]
 path = "../delegation-mock"
@@ -25,4 +25,4 @@ path = "../delegation-mock"
 git = "https://github.com/XOXNO/rs-accumulator"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.53.0"
+version = "0.53.2"

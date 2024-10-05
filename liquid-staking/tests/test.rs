@@ -5,6 +5,7 @@ mod utils;
 use contract_setup::*;
 
 use multiversx_sc_scenario::DebugApi;
+use utils::exp18;
 
 #[test]
 fn init_test() {
@@ -24,6 +25,8 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.check_delegation_contract_values(&delegation_contract, 0u64, 0u64);
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+
+    sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&first_user);
 
     sc_setup.check_delegation_contract_values(&delegation_contract, 100u64, 0u64);
@@ -53,7 +56,7 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
 
     sc_setup.withdraw_pending(&first_user, &delegation_contract);
 
-    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1);
+    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(70));
 
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
     sc_setup.check_user_egld_balance_denominated(&first_user, 91232876712328767122u128);
@@ -105,6 +108,8 @@ fn liquid_staking_multiple_operations() {
     let second_user = sc_setup.setup_new_user(1000u64);
     let third_user = sc_setup.setup_new_user(1000u64);
     sc_setup.add_liquidity(&first_user, 100u64);
+    
+    sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&manager);
 
     sc_setup.check_delegation_contract_values(&delegation_contract1, 25u64, 0u64);
@@ -196,14 +201,18 @@ fn liquid_staking_multiple_withdraw_test() {
     sc_setup.add_liquidity(&first_user, 50u64);
     sc_setup.add_liquidity(&second_user, 40u64);
     sc_setup.add_liquidity(&third_user, 40u64);
+    sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.check_contract_storage(130, 130, 0, 0, 130, 0);
     sc_setup.delegate_pending(&first_user);
     sc_setup.b_mock.set_block_epoch(50u64);
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 20u64);
+    sc_setup.check_user_nft_balance_denominated(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(20), None);
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 20u64);
+    sc_setup.check_user_nft_balance_denominated(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(40), None);
     sc_setup.remove_liquidity(&second_user, LS_TOKEN_ID, 20u64);
     sc_setup.remove_liquidity(&third_user, LS_TOKEN_ID, 20u64);
 
-    sc_setup.check_contract_storage(130, 130, 0, 0, 0, 60);
+    sc_setup.check_contract_storage(130, 130, 0, 0, 0, 80);
 
     // return;
     sc_setup.un_delegate_pending(&first_user);
@@ -211,14 +220,14 @@ fn liquid_staking_multiple_withdraw_test() {
 
     sc_setup.withdraw_pending(&first_user, &delegation_contract);
 
-    sc_setup.check_contract_storage(70, 70, 0, 60, 0, 0);
+    sc_setup.check_contract_storage(50, 50, 0, 80, 0, 0);
 
-    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1);
-    sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 30u64);
+    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(20));
+    sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
     sc_setup.check_user_egld_balance(&first_user, 70);
     sc_setup.check_user_balance(&second_user, LS_TOKEN_ID, 20u64);
     sc_setup.check_user_egld_balance(&second_user, 60);
     sc_setup.check_user_balance(&third_user, LS_TOKEN_ID, 20u64);
     sc_setup.check_user_egld_balance(&third_user, 60);
-    sc_setup.check_contract_storage(70, 70, 0, 40, 0, 0); // 20 + 20 (second_user + third_user)
+    sc_setup.check_contract_storage(50, 50, 0, 60, 0, 0); // 20 + 20 (second_user + third_user)
 }

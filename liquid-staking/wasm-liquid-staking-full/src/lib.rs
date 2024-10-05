@@ -5,10 +5,10 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           35
+// Endpoints:                           42
 // Async Callback:                       1
 // Promise callbacks:                    5
-// Total number of exported functions:  42
+// Total number of exported functions:  49
 
 #![no_std]
 
@@ -26,6 +26,14 @@ multiversx_sc_wasm_adapter::endpoints! {
         registerUnstakeToken => register_unstake_token
         setStateActive => set_state_active
         setStateInactive => set_state_inactive
+        setAccumulatorContract => set_accumulator_contract
+        setFees => set_fees
+        setRoundsPerEpoch => set_rounds_per_epoch
+        setMinimumRounds => set_minimum_rounds
+        fees => fees
+        getAccumulatorContract => accumulator_contract
+        roundsPerEpoch => rounds_per_epoch
+        minimumRounds => minimum_rounds
         getState => state
         getLsTokenId => ls_token
         getLsSupply => ls_token_supply
@@ -35,12 +43,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         getUnstakeTokenId => unstake_token
         getPendingEgld => pending_egld
         getPendingLsForUnstake => pending_ls_for_unstake
+        getUnstakeTokenNonce => unstake_token_nonce
         getDelegationAddressesList => delegation_addresses_list
         getDelegationClaimStatus => delegation_claim_status
         maxDelegationAddresses => max_delegation_addresses
         getDelegationContractData => delegation_contract_data
-        fees => fees
-        getAccumulatorContract => accumulator_contract
         delegatePending => delegate_pending
         unDelegatePending => un_delegate_pending
         withdrawPending => withdraw_pending

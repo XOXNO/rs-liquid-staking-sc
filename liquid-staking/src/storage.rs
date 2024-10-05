@@ -23,13 +23,4 @@ pub trait StorageModule {
         &self,
         contract_address: &ManagedAddress,
     ) -> SingleValueMapper<DelegationContractData<Self::Api>>;
-
-
-    #[view(fees)]
-    #[storage_mapper("fees")]
-    fn fees(&self) -> SingleValueMapper<BigUint>;
-
-    #[view(getAccumulatorContract)]
-    #[storage_mapper("accumulatorContract")]
-    fn accumulator_contract(&self) -> SingleValueMapper<ManagedAddress>;
 }

@@ -43,17 +43,15 @@ pub struct DelegationContractData<M: ManagedTypeApi> {
 #[derive(
     TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone, PartialEq, Eq, Debug,
 )]
-pub struct UnstakeTokenAttributes<M: ManagedTypeApi> {
+pub struct UnstakeTokenAttributes {
     pub unstake_epoch: u64,
-    pub unstake_amount: BigUint<M>,
     pub unbond_epoch: u64,
 }
 
-impl<M: ManagedTypeApi> UnstakeTokenAttributes<M> {
-    pub fn new(unstake_epoch: u64, unstake_amount: BigUint<M>, unbond_epoch: u64) -> Self {
+impl UnstakeTokenAttributes {
+    pub fn new(unstake_epoch: u64, unbond_epoch: u64) -> Self {
         UnstakeTokenAttributes {
             unstake_epoch,
-            unstake_amount,
             unbond_epoch,
         }
     }

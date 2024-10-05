@@ -68,6 +68,7 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
 
     // Delegate the pending tokens
+    sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&first_user);
 
     // Remove liquidity of 90 tokens from the user
@@ -83,10 +84,9 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        1,
+        exp18(90),
         Some(&UnstakeTokenAttributes::new(
             50,
-            to_managed_biguint(exp18(90)),
             60,
         )),
     );
@@ -114,6 +114,7 @@ fn liquid_staking_remove_liquidity_not_partially_instant_test() {
     // Add liquidity of 100 tokens from the user to the contract
     sc_setup.add_liquidity(&first_user, 100u64);
 
+    sc_setup.b_mock.set_block_round(14000u64);
     // Set the block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
 
@@ -150,10 +151,9 @@ fn liquid_staking_remove_liquidity_not_partially_instant_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        1,
+        exp18(2),
         Some(&UnstakeTokenAttributes::new(
             50,
-            to_managed_biguint(exp18(2)),
             60,
         )),
     );
@@ -187,6 +187,7 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
     // Add liquidity of 100 tokens from the first user to the contract
     sc_setup.add_liquidity(&first_user, 100u64);
 
+    sc_setup.b_mock.set_block_round(14000u64);
     // Set the block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
     // Delegate the pending tokens
@@ -209,10 +210,9 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        1,
+        exp18(60),
         Some(&UnstakeTokenAttributes::new(
             50,
-            to_managed_biguint(exp18(60)),
             60,
         )),
     );

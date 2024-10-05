@@ -190,14 +190,20 @@ where
             .assert_error(4, bytes_to_str(ERROR_CLAIM_REDELEGATE));
     }
 
-    pub fn withdraw(&mut self, caller: &Address, payment_token: &[u8], token_nonce: u64) {
+    pub fn withdraw(
+        &mut self,
+        caller: &Address,
+        payment_token: &[u8],
+        token_nonce: u64,
+        amount: num_bigint::BigUint,
+    ) {
         self.b_mock
             .execute_esdt_transfer(
                 caller,
                 &self.sc_wrapper,
                 payment_token,
                 token_nonce,
-                &num_bigint::BigUint::from(1u64), // NFT
+                &amount,
                 |sc| {
                     sc.withdraw();
                 },
@@ -395,15 +401,15 @@ where
         address: &Address,
         token_id: &[u8],
         token_nonce: u64,
-        token_balance: u64,
-        expected_attributes: Option<&UnstakeTokenAttributes<DebugApi>>,
+        token_balance: num_bigint::BigUint,
+        expected_attributes: Option<&UnstakeTokenAttributes>,
     ) {
         self.b_mock
-            .check_nft_balance::<UnstakeTokenAttributes<DebugApi>>(
+            .check_nft_balance::<UnstakeTokenAttributes>(
                 address,
                 token_id,
                 token_nonce,
-                &num_bigint::BigUint::from(token_balance),
+                &token_balance,
                 expected_attributes,
             );
     }

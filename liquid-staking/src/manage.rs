@@ -8,9 +8,9 @@ use crate::{
     delegation_proxy,
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     structs::{ClaimStatus, ClaimStatusType},
-    StorageCache, ERROR_CLAIM_REDELEGATE, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_ACTIVE,
-    ERROR_NOT_WHITELISTED, ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
-    MIN_GAS_FOR_CALLBACK,
+    StorageCache, ERROR_CLAIM_REDELEGATE, ERROR_INSUFFICIENT_PENDING_EGLD,
+    ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_ACTIVE, ERROR_NOT_WHITELISTED,
+    ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_CALLBACK,
 };
 
 multiversx_sc::imports!();
@@ -37,9 +37,14 @@ pub trait ManageModule:
             ERROR_NOT_ACTIVE
         );
 
-        // let block_round = self.blockchain().get_block_round();
+        let block_round = self.blockchain().get_block_round();
+        let rounds_per_epoch = self.rounds_per_epoch().get();
+        let minimum_rounds = self.minimum_rounds().get();
 
-        // require!(144000 - block_round <= 1000, ERROR_DELEGATE_TOO_SOON);
+        require!(
+            rounds_per_epoch - block_round <= minimum_rounds,
+            ERROR_MINIMUM_ROUNDS_NOT_PASSED
+        );
 
         require!(
             storage_cache.pending_egld > BigUint::from(MIN_EGLD_TO_DELEGATE),
@@ -75,9 +80,14 @@ pub trait ManageModule:
             ERROR_NOT_ACTIVE
         );
 
-        // let block_round = self.blockchain().get_block_round();
+        let block_round = self.blockchain().get_block_round();
+        let rounds_per_epoch = self.rounds_per_epoch().get();
+        let minimum_rounds = self.minimum_rounds().get();
 
-        // require!(144000 - block_round <= 1000, ERROR_DELEGATE_TOO_SOON);
+        require!(
+            rounds_per_epoch - block_round <= minimum_rounds,
+            ERROR_MINIMUM_ROUNDS_NOT_PASSED
+        );
 
         let pending = storage_cache.pending_ls_for_unstake.clone();
         let egld_to_unstake = self.pool_remove_liquidity(&pending, &mut storage_cache);

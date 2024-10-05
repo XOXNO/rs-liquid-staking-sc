@@ -68,6 +68,8 @@ where
                 sc.init(
                     managed_address!(accumulator_wrapper.address_ref()),
                     managed_biguint!(400),
+                    14400,
+                    1400,
                 );
             })
             .assert_ok();

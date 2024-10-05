@@ -10,6 +10,7 @@ pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 pub const MAX_DELEGATION_ADDRESSES: usize = 50;
 
 pub mod accumulator;
+pub mod callback;
 pub mod config;
 pub mod delegation;
 pub mod delegation_proxy;
@@ -19,7 +20,6 @@ pub mod storage;
 pub mod structs;
 pub mod utils;
 pub mod views;
-pub mod callback;
 
 mod contexts;
 mod events;
@@ -48,7 +48,13 @@ pub trait LiquidStaking<ContractReader>:
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[init]
-    fn init(&self, accumulator_contract: ManagedAddress, fees: BigUint) {
+    fn init(
+        &self,
+        accumulator_contract: ManagedAddress,
+        fees: BigUint,
+        rounds_per_epoch: u64,
+        minimum_rounds: u64,
+    ) {
         self.state().set(State::Inactive);
         self.max_delegation_addresses()
             .set(MAX_DELEGATION_ADDRESSES);
@@ -57,13 +63,14 @@ pub trait LiquidStaking<ContractReader>:
         let claim_status = ClaimStatus {
             status: ClaimStatusType::Insufficent,
             last_claim_epoch: current_epoch,
-
             current_node: 0,
         };
 
         self.delegation_claim_status().set(claim_status);
         self.accumulator_contract().set(accumulator_contract);
         self.fees().set(fees);
+        self.rounds_per_epoch().set(rounds_per_epoch);
+        self.minimum_rounds().set(minimum_rounds);
     }
 
     #[payable("EGLD")]
@@ -305,7 +312,7 @@ pub trait LiquidStaking<ContractReader>:
 
         require!(payment.amount > 0, ERROR_BAD_PAYMENT_AMOUNT);
 
-        let unstake_token_attributes: UnstakeTokenAttributes<Self::Api> = self
+        let unstake_token_attributes: UnstakeTokenAttributes = self
             .unstake_token()
             .get_token_attributes(payment.token_nonce);
 
@@ -317,17 +324,14 @@ pub trait LiquidStaking<ContractReader>:
         );
 
         require!(
-            storage_cache.total_withdrawn_egld >= unstake_token_attributes.unstake_amount,
+            storage_cache.total_withdrawn_egld >= payment.amount,
             ERROR_INSUFFICIENT_UNBONDED_AMOUNT
         );
 
-        self.burn_unstake_tokens(payment.token_nonce);
+        self.burn_unstake_tokens(payment.token_nonce, &payment.amount);
 
-        storage_cache.total_withdrawn_egld -= &unstake_token_attributes.unstake_amount;
+        storage_cache.total_withdrawn_egld -= &payment.amount;
 
-        self.tx()
-            .to(&caller)
-            .egld(&unstake_token_attributes.unstake_amount)
-            .transfer();
+        self.tx().to(&caller).egld(&payment.amount).transfer();
     }
 }

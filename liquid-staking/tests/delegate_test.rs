@@ -76,6 +76,8 @@ fn liquid_staking_add_liquidity_instant_test() {
     // 0: total_unstaked_egld
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
 
+    sc_setup.b_mock.set_block_round(14000u64);
+
     // Delegate the pending EGLD for the first user
     sc_setup.delegate_pending(&first_user);
 
@@ -114,10 +116,9 @@ fn liquid_staking_add_liquidity_instant_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        1,
+        exp18(90),
         Some(&UnstakeTokenAttributes::new(
             50,
-            to_managed_biguint(exp18(90)),
             60,
         )),
     );

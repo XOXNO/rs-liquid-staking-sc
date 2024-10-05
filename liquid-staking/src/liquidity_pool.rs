@@ -79,14 +79,29 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         self.ls_token().burn(amount);
     }
 
-    fn mint_unstake_tokens<T: TopEncode>(&self, attributes: &T) -> EsdtTokenPayment<Self::Api> {
-        self.unstake_token()
-            .nft_create(BigUint::from(1u64), attributes)
+    fn mint_unstake_tokens<T: TopEncode>(
+        &self,
+        attributes: &T,
+        amount: &BigUint,
+        epoch: u64,
+    ) -> EsdtTokenPayment<Self::Api> {
+        let nonce = self.unstake_token_nonce(epoch);
+        if nonce.is_empty() {
+            let payment = self.unstake_token().nft_create_named(
+                amount.clone(),
+                &sc_format!("Release epoch #{}", epoch),
+                &attributes,
+            );
+            nonce.set(payment.token_nonce);
+            payment
+        } else {
+            self.unstake_token()
+                .nft_add_quantity(nonce.get(), amount.clone())
+        }
     }
 
-    fn burn_unstake_tokens(&self, token_nonce: u64) {
-        self.unstake_token()
-            .nft_burn(token_nonce, &BigUint::from(1u64));
+    fn burn_unstake_tokens(&self, token_nonce: u64, amount: &BigUint) {
+        self.unstake_token().nft_burn(token_nonce, amount);
     }
 
     fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {
@@ -95,11 +110,11 @@ pub trait LiquidityPoolModule: config::ConfigModule {
 
         let virtual_position = UnstakeTokenAttributes {
             unstake_epoch: current_epoch,
-            unstake_amount: egld_to_unstake.clone(),
             unbond_epoch,
         };
 
-        let user_payment = self.mint_unstake_tokens(&virtual_position);
+        let user_payment =
+            self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
 
         self.tx()
             .to(caller)
