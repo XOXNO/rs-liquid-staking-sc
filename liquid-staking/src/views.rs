@@ -9,6 +9,15 @@ pub trait ViewsModule:
     + crate::config::ConfigModule
     + crate::liquidity_pool::LiquidityPoolModule
 {
+    #[view(canExecutePendingTasks)]
+    fn can_execute_pending_tasks(&self) -> bool {
+        let block_round = self.blockchain().get_block_round();
+        let rounds_per_epoch = self.rounds_per_epoch().get();
+        let minimum_rounds = self.minimum_rounds().get();
+
+        rounds_per_epoch - block_round <= minimum_rounds
+    }
+
     #[view(getLsValueForPosition)]
     fn get_ls_value_for_position(&self, ls_token_amount: BigUint) -> BigUint {
         let storage_cache = StorageCache::new(self);

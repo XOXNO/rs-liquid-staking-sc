@@ -8,7 +8,7 @@ use crate::structs::UnstakeTokenAttributes;
 
 use super::config;
 
-const MINIMUM_LIQUIDITY: u64 = 1_000;
+const MINIMUM_LIQUIDITY: u64 = 0;
 
 #[multiversx_sc::module]
 pub trait LiquidityPoolModule: config::ConfigModule {
@@ -31,6 +31,7 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         storage_cache: &mut StorageCache<Self>,
     ) -> BigUint {
         let egld_amount = self.get_egld_amount(token_amount, storage_cache);
+
         storage_cache.ls_token_supply -= token_amount;
         storage_cache.virtual_egld_reserve -= &egld_amount;
 
@@ -49,6 +50,7 @@ pub trait LiquidityPoolModule: config::ConfigModule {
 
         let egld_amount =
             ls_token_amount * &storage_cache.virtual_egld_reserve / &storage_cache.ls_token_supply;
+
         require!(egld_amount > 0u64, ERROR_INSUFFICIENT_LIQ_BURNED);
 
         egld_amount

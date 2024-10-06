@@ -66,7 +66,7 @@ pub trait ManageModule:
                     CallbackModule::callbacks(self)
                         .add_liquidity_callback(&data.delegation_address, &data.amount),
                 )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK / 2)
+                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
         }
     }
@@ -107,7 +107,7 @@ pub trait ManageModule:
                     CallbackModule::callbacks(self)
                         .remove_liquidity_callback(&data.delegation_address, &data.amount),
                 )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK / 2)
+                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
         }
     }
@@ -132,7 +132,7 @@ pub trait ManageModule:
             .withdraw()
             .gas(MIN_GAS_FOR_ASYNC_CALL)
             .callback(CallbackModule::callbacks(self).withdraw_tokens_callback(&contract))
-            .gas_for_callback(MIN_GAS_FOR_CALLBACK / 2)
+            .gas_for_callback(MIN_GAS_FOR_CALLBACK)
             .register_promise();
     }
 
@@ -178,7 +178,7 @@ pub trait ManageModule:
                 .callback(
                     CallbackModule::callbacks(self).claim_rewards_callback(&delegation_address),
                 )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK / 2)
+                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
 
             if next_node == 0 {
@@ -253,7 +253,7 @@ pub trait ManageModule:
                     CallbackModule::callbacks(self)
                         .delegate_rewards_callback(&data.delegation_address, &data.amount),
                 )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK / 2)
+                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
         }
     }

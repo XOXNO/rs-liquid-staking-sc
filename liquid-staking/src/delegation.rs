@@ -14,6 +14,7 @@ pub trait DelegationModule:
     crate::config::ConfigModule
     + crate::storage::StorageModule
     + crate::utils::UtilsModule
+    + crate::events::EventsModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {

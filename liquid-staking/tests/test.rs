@@ -4,7 +4,8 @@ mod utils;
 
 use contract_setup::*;
 
-use multiversx_sc_scenario::DebugApi;
+use liquid_staking::structs::UnstakeTokenAttributes;
+use multiversx_sc_scenario::{num_bigint, DebugApi};
 use utils::exp18;
 
 #[test]
@@ -39,7 +40,7 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
     sc_setup.check_contract_rewards_storage_denominated(1369863013698630136);
 
     sc_setup.delegate_rewards(&first_user);
-    return;
+    
     sc_setup.check_contract_rewards_storage_denominated(0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
@@ -49,17 +50,25 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
     sc_setup.check_pending_ls_for_unstake(0);
     sc_setup.check_delegation_contract_unstaked_value_denominated(
         &delegation_contract,
-        91232876712328767122u128,
+        91183561643835616437u128,
+    );
+
+    sc_setup.check_user_nft_balance_denominated(
+        &first_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        num_bigint::BigUint::from(91183561643835616437u128),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
     sc_setup.b_mock.set_block_epoch(60u64);
 
     sc_setup.withdraw_pending(&first_user, &delegation_contract);
 
-    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(70));
+    sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1, num_bigint::BigUint::from(91183561643835616437u128));
 
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
-    sc_setup.check_user_egld_balance_denominated(&first_user, 91232876712328767122u128);
+    sc_setup.check_user_egld_balance_denominated(&first_user, 91183561643835616437u128);
 }
 
 #[test]

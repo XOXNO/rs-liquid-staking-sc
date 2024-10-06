@@ -6,7 +6,10 @@ use contract_setup::*;
 
 use utils::*;
 
-use liquid_staking::structs::UnstakeTokenAttributes;
+use liquid_staking::{
+    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_ACTIVE},
+    structs::UnstakeTokenAttributes,
+};
 use multiversx_sc_scenario::DebugApi;
 
 #[test]
@@ -106,7 +109,6 @@ fn liquid_staking_add_liquidity_instant_test() {
     // Expected balance: 10 LS tokens (100 - 90 removed)
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
 
-
     // Check the first user's balance of unstake tokens (NFTs)
     // Expected balance: 1 unstake token with the specified attributes
     // 50: unstake_epoch
@@ -117,10 +119,7 @@ fn liquid_staking_add_liquidity_instant_test() {
         UNSTAKE_TOKEN_ID,
         1,
         exp18(90),
-        Some(&UnstakeTokenAttributes::new(
-            50,
-            60,
-        )),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
     // Check the first user's EGLD balance
@@ -170,4 +169,68 @@ fn liquid_staking_add_liquidity_exp17_test() {
     // Expected balance: 5 * 10^17 (0.5 LS tokens)
     // This is because the second user added 0.5 EGLD as liquidity
     sc_setup.check_user_balance_exp17(&second_user, LS_TOKEN_ID, 5u64);
+}
+
+#[test]
+fn liquid_staking_add_liquidity_inactive_contract_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(100u64);
+
+    sc_setup.set_inactive_state(&sc_setup.owner_address.clone());
+
+    sc_setup.add_liquidity_error(&first_user, 100u64, ERROR_NOT_ACTIVE);
+}
+
+#[test]
+fn liquid_staking_add_liquidity_not_enough_pending_egld_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    // Try to add only 0.1 EGLD when there is not enough pending EGLD
+    sc_setup.add_liquidity_exp17_error(&first_user, 1u64, ERROR_INSUFFICIENT_PENDING_EGLD);
+}
+
+#[test]
+fn liquid_staking_add_liquidity_fallback_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    sc_setup.add_liquidity(&first_user, 5u64);
+    sc_setup.check_contract_storage(5, 5, 0, 0, 5, 0);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    sc_setup.delegate_pending(&first_user);
+
+    sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
+
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 2u64);
+    sc_setup.check_contract_storage(5, 5, 0, 0, 0, 2);
+
+    sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 3u64);
+    // Try to add 1.5 EGLD when there is not enough left pending xEGLD
+    // Should execute the partial pending xEGLD and the rest undelegate
+    sc_setup.add_liquidity_exp17(&first_user, 15u64);
+
+    // Check the pending EGLD in the contract
+    sc_setup.check_pending_egld_exp17(10u64);
+
+    // Check for 0.5 EGLD withdrawn
+    sc_setup.check_total_withdrawn_egld_exp17(5);
+
+    // Check the second user's balance of LS tokens using exp17
+    // Expected balance: 5 * 10^17 (0.5 LS tokens)
+    // This is because the second user added 0.5 EGLD as liquidity
+    sc_setup.check_user_balance_exp17(&first_user, LS_TOKEN_ID, 45u64);
 }

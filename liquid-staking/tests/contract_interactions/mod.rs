@@ -73,6 +73,15 @@ where
         delegation_wrapper.address_ref().clone()
     }
 
+    pub fn set_inactive_state(&mut self, caller: &Address) {
+        let rust_zero = rust_biguint!(0u64);
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.set_state_inactive();
+            })
+            .assert_ok();
+    }
+
     pub fn update_staking_contract_params(
         &mut self,
         owner_address: &Address,
@@ -107,12 +116,28 @@ where
             .assert_ok();
     }
 
+    pub fn add_liquidity_error(&mut self, caller: &Address, payment_amount: u64, error: &[u8]) {
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &exp18(payment_amount), |sc| {
+                sc.delegate();
+            })
+            .assert_error(4, bytes_to_str(error));
+    }
+
     pub fn add_liquidity_exp17(&mut self, caller: &Address, payment_amount: u64) {
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &exp17(payment_amount), |sc| {
                 sc.delegate();
             })
             .assert_ok();
+    }
+
+    pub fn add_liquidity_exp17_error(&mut self, caller: &Address, payment_amount: u64, error: &[u8]) {
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &exp17(payment_amount), |sc| {
+                sc.delegate();
+            })
+            .assert_error(4, bytes_to_str(error));
     }
 
     pub fn remove_liquidity(
@@ -135,6 +160,27 @@ where
             .assert_ok();
     }
 
+    pub fn remove_liquidity_error(
+        &mut self,
+        caller: &Address,
+        payment_token: &[u8],
+        payment_amount: u64,
+        error: &[u8],
+    ) {
+        self.b_mock
+            .execute_esdt_transfer(
+                caller,
+                &self.sc_wrapper,
+                payment_token,
+                0,
+                &exp18(payment_amount),
+                |sc| {
+                    sc.un_delegate();
+                },
+            )
+            .assert_error(4, bytes_to_str(error));
+    }
+
     pub fn claim_rewards(&mut self, caller: &Address) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
@@ -142,6 +188,15 @@ where
                 sc.claim_rewards();
             })
             .assert_ok();
+    }
+
+    pub fn claim_rewards_error(&mut self, caller: &Address, error: &[u8]) {
+        let rust_zero = rust_biguint!(0u64);
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.claim_rewards();
+            })
+            .assert_error(4, bytes_to_str(error));
     }
 
     pub fn delegate_rewards(&mut self, caller: &Address) {
@@ -153,6 +208,15 @@ where
             .assert_ok();
     }
 
+    pub fn delegate_rewards_error(&mut self, caller: &Address, error: &[u8]) {
+        let rust_zero = rust_biguint!(0u64);
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.delegate_rewards();
+            })
+            .assert_error(4, bytes_to_str(error));
+    }
+
     pub fn delegate_pending(&mut self, caller: &Address) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
@@ -160,6 +224,15 @@ where
                 sc.delegate_pending();
             })
             .assert_ok();
+    }
+
+    pub fn delegate_pending_error(&mut self, caller: &Address, error: &[u8]) {
+        let rust_zero = rust_biguint!(0u64);
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.delegate_pending();
+            })
+            .assert_error(4, bytes_to_str(error));
     }
 
     pub fn un_delegate_pending(&mut self, caller: &Address) {
@@ -171,6 +244,15 @@ where
             .assert_ok();
     }
 
+    pub fn un_delegate_pending_error(&mut self, caller: &Address, error: &[u8]) {
+        let rust_zero = rust_biguint!(0u64);
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.un_delegate_pending();
+            })
+            .assert_error(4, bytes_to_str(error));
+    }
+
     pub fn withdraw_pending(&mut self, caller: &Address, contracts: &Address) {
         let rust_zero = rust_biguint!(0u64);
 
@@ -179,6 +261,16 @@ where
                 sc.withdraw_pending(managed_address!(contracts));
             })
             .assert_ok();
+    }
+
+    pub fn withdraw_pending_error(&mut self, caller: &Address, contracts: &Address, error: &[u8]) {
+        let rust_zero = rust_biguint!(0u64);
+
+        self.b_mock
+            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
+                sc.withdraw_pending(managed_address!(contracts));
+            })
+            .assert_error(4, bytes_to_str(error));
     }
 
     pub fn delegate_rewards_check_insufficient(&mut self, caller: &Address) {
@@ -209,6 +301,28 @@ where
                 },
             )
             .assert_ok();
+    }
+
+    pub fn withdraw_error(
+        &mut self,
+        caller: &Address,
+        payment_token: &[u8],
+        token_nonce: u64,
+        amount: num_bigint::BigUint,
+        error: &[u8],
+    ) {
+        self.b_mock
+            .execute_esdt_transfer(
+                caller,
+                &self.sc_wrapper,
+                payment_token,
+                token_nonce,
+                &amount,
+                |sc| {
+                    sc.withdraw();
+                },
+            )
+            .assert_error(4, bytes_to_str(error));
     }
 
     pub fn setup_new_user(&mut self, egld_token_amount: u64) -> Address {
@@ -313,6 +427,16 @@ where
             })
             .assert_ok();
     }
+    pub fn check_total_withdrawn_egld_exp17(&mut self, total_withdrawn_egld: u64) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                assert_eq!(
+                    sc.total_withdrawn_egld().get(),
+                    to_managed_biguint(exp17(total_withdrawn_egld))
+                );
+            })
+            .assert_ok();
+    }
 
     pub fn check_contract_rewards_storage_denominated(&mut self, rewards_reserve: u128) {
         self.b_mock
@@ -355,6 +479,7 @@ where
             .execute_query(&self.sc_wrapper, |sc| {
                 let ls_value_biguint =
                     sc.get_ls_value_for_position(to_managed_biguint(exp18(token_amount)));
+                println!("ls_value {:?}", ls_value_biguint);
                 ls_value = ls_value_biguint.to_u64().unwrap();
             })
             .assert_ok();
@@ -404,13 +529,12 @@ where
         token_balance: num_bigint::BigUint,
         expected_attributes: Option<&UnstakeTokenAttributes>,
     ) {
-        self.b_mock
-            .check_nft_balance::<UnstakeTokenAttributes>(
-                address,
-                token_id,
-                token_nonce,
-                &token_balance,
-                expected_attributes,
-            );
+        self.b_mock.check_nft_balance::<UnstakeTokenAttributes>(
+            address,
+            token_id,
+            token_nonce,
+            &token_balance,
+            expected_attributes,
+        );
     }
 }

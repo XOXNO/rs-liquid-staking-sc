@@ -5,19 +5,21 @@ multiversx_sc::derive_imports!();
 
 pub const DEFAULT_GAS_TO_CLAIM_REWARDS: u64 = 6_000_000;
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
-pub const MIN_GAS_FOR_CALLBACK: u64 = 12_000_000;
+pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 pub const MAX_DELEGATION_ADDRESSES: usize = 50;
 
 pub mod accumulator;
 pub mod callback;
 pub mod config;
+pub mod delegate_utils;
 pub mod delegation;
 pub mod delegation_proxy;
 pub mod errors;
 pub mod manage;
 pub mod storage;
 pub mod structs;
+pub mod un_delegate_utils;
 pub mod utils;
 pub mod views;
 
@@ -42,6 +44,8 @@ pub trait LiquidStaking<ContractReader>:
     + storage::StorageModule
     + manage::ManageModule
     + views::ViewsModule
+    + delegate_utils::DelegateUtilsModule
+    + un_delegate_utils::UnDelegateUtilsModule
     + delegation::DelegationModule
     + callback::CallbackModule
     + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
@@ -77,102 +81,30 @@ pub trait LiquidStaking<ContractReader>:
     #[endpoint(delegate)]
     fn delegate(&self) {
         let mut storage_cache = StorageCache::new(self);
-        let caller = self.blockchain().get_caller();
 
         let payment = self.call_value().egld_value().clone_value();
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+
+        self.validate_delegate_conditions(&mut storage_cache, &payment);
 
         let ls_amount = self.get_ls_amount(&payment, &mut storage_cache);
+
         let min_xegld_amount =
             self.get_ls_amount(&BigUint::from(MIN_EGLD_TO_DELEGATE), &mut storage_cache);
 
-        let mut instant_unbound_balance = BigUint::zero();
-        let mut xegld_from_pending = BigUint::zero();
-        let mut egld_to_add_liquidity = BigUint::zero();
+        let (xegld_from_pending, instant_unbond_balance, egld_to_add_liquidity) = self
+            .determine_delegate_amounts(
+                &mut storage_cache,
+                &payment,
+                &ls_amount,
+                &min_xegld_amount,
+            );
 
-        if &storage_cache.pending_ls_for_unstake >= &min_xegld_amount {
-            if ls_amount == storage_cache.pending_ls_for_unstake
-                || ls_amount <= &storage_cache.pending_ls_for_unstake - &min_xegld_amount
-            {
-                // Case 1: Full instant staking
-                xegld_from_pending = ls_amount.clone();
-                instant_unbound_balance = payment.clone();
-            } else {
-                // Case 2: Partial instant staking or full normal staking
-                // Here ls_amount is always greater than pending_ls_for_unstake with at least min_xegld_amount
-                let difference = &ls_amount - &storage_cache.pending_ls_for_unstake;
-
-                if difference >= min_xegld_amount {
-                    // Case 2: Full pending redemption + normal staking
-                    xegld_from_pending = storage_cache.pending_ls_for_unstake.clone();
-                    instant_unbound_balance =
-                        self.get_egld_amount(&xegld_from_pending, &storage_cache);
-                    egld_to_add_liquidity = &payment - &instant_unbound_balance;
-                } else {
-                    // Case 3: Attempt partial pending redemption + normal staking
-                    let possible_instant_amount = self.calculate_instant_amount(
-                        &ls_amount,
-                        &storage_cache.pending_ls_for_unstake,
-                        &min_xegld_amount,
-                    );
-
-                    if possible_instant_amount >= min_xegld_amount
-                        && (&ls_amount - &possible_instant_amount) >= min_xegld_amount
-                    {
-                        // We can do partial redemption
-                        xegld_from_pending = possible_instant_amount;
-                        instant_unbound_balance =
-                            self.get_egld_amount(&xegld_from_pending, &storage_cache);
-                        egld_to_add_liquidity = &payment - &instant_unbound_balance;
-                    } else {
-                        // Fallback: full normal staking
-                        egld_to_add_liquidity = payment.clone();
-                    }
-                }
-            }
-        } else {
-            // Fallback: full normal staking
-            egld_to_add_liquidity = payment.clone();
-        }
-
-        // Ensure the remaining pending EGLD is not less than 1 EGLD
-        require!(
-            &storage_cache.pending_egld + &egld_to_add_liquidity
-                >= BigUint::from(MIN_EGLD_TO_DELEGATE),
-            ERROR_INSUFFICIENT_PENDING_EGLD
+        self.process_redemption_and_staking(
+            &mut storage_cache,
+            xegld_from_pending,
+            instant_unbond_balance,
+            egld_to_add_liquidity,
         );
-
-        // Process instant staking
-        if xegld_from_pending > 0 {
-            storage_cache.pending_ls_for_unstake -= &xegld_from_pending;
-            storage_cache.total_withdrawn_egld += &instant_unbound_balance; // Ensure the remaining pending xEGLD is not less than min_xegld_amount or is zero
-            require!(
-                storage_cache.pending_ls_for_unstake >= min_xegld_amount
-                    || storage_cache.pending_ls_for_unstake == BigUint::zero(),
-                ERROR_INSUFFICIENT_PENDING_XEGLD
-            );
-            self.send()
-                .direct_esdt(&caller, &storage_cache.ls_token_id, 0, &xegld_from_pending);
-        }
-
-        // Process normal staking
-        if egld_to_add_liquidity > 0 {
-            storage_cache.pending_egld += &egld_to_add_liquidity;
-            let ls_amount = self.pool_add_liquidity(&egld_to_add_liquidity, &mut storage_cache);
-            let user_payment = self.mint_ls_token(ls_amount);
-
-            self.send().direct_esdt(
-                &caller,
-                &user_payment.token_identifier,
-                user_payment.token_nonce,
-                &user_payment.amount,
-            );
-        }
-
-        self.emit_add_liquidity_event(&storage_cache, &caller, ls_amount);
     }
 
     #[payable("*")]
@@ -182,113 +114,27 @@ pub trait LiquidStaking<ContractReader>:
         let caller = self.blockchain().get_caller();
         let payment = self.call_value().single_esdt();
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
-
-        require!(
-            storage_cache.ls_token_id.is_valid_esdt_identifier(),
-            ERROR_LS_TOKEN_NOT_ISSUED
-        );
-
-        require!(
-            payment.token_identifier == storage_cache.ls_token_id,
-            ERROR_BAD_PAYMENT_TOKEN
-        );
-
-        require!(payment.amount > 0, ERROR_BAD_PAYMENT_AMOUNT);
+        self.validate_undelegate_conditions(&mut storage_cache, &payment);
 
         let total_egld = self.get_egld_amount(&payment.amount, &mut storage_cache);
         let min_egld_amount = BigUint::from(MIN_EGLD_TO_DELEGATE);
 
-        let mut instant_amount = BigUint::zero();
-        let mut undelegate_amount = BigUint::zero();
+        let (instant_amount, undelegate_amount) =
+            self.determine_undelegate_amounts(&mut storage_cache, &total_egld, &min_egld_amount);
 
-        if &storage_cache.pending_egld >= &min_egld_amount {
-            if total_egld == storage_cache.pending_egld
-                || total_egld <= &storage_cache.pending_egld - &min_egld_amount
-            {
-                // Case 1: Full instant redemption
-                instant_amount = total_egld.clone();
-            } else {
-                // Always total_egld is greater than storage_cache.pending_egld with at least MIN_EGLD_TO_DELEGATE
-
-                let difference = &total_egld - &storage_cache.pending_egld;
-
-                // Basically we can use all the pending EGLD to instant undelegate and the rest to undelegate normally as the difference is always >= MIN_EGLD_TO_DELEGATE
-                if difference >= min_egld_amount {
-                    // Case 2: Full pending redemption + undelegation
-                    undelegate_amount = difference;
-                    instant_amount = storage_cache.pending_egld.clone();
-                } else {
-                    // Case 3: Attempt partial pending redemption + undelegation
-                    let possible_instant_amount = self.calculate_instant_amount(
-                        &total_egld,
-                        &storage_cache.pending_egld,
-                        &min_egld_amount,
-                    );
-
-                    if possible_instant_amount >= min_egld_amount
-                        && (&total_egld - &possible_instant_amount) >= min_egld_amount
-                    {
-                        // We can do partial redemption
-                        instant_amount = possible_instant_amount.clone();
-                        undelegate_amount = &total_egld - &instant_amount;
-                        require!(
-                            undelegate_amount >= min_egld_amount,
-                            ERROR_INSUFFICIENT_UNSTAKE_AMOUNT
-                        );
-                    } else {
-                        // Fallback: full undelegation
-                        undelegate_amount = total_egld.clone();
-                    }
-                }
-            }
-        } else {
-            // Fallback: full undelegation
-            undelegate_amount = total_egld.clone();
-        }
-
-        // Process instant redemption
-        let mut xegld_amount_to_burn = BigUint::from(0u64);
-        if instant_amount > BigUint::from(0u64) {
-            // Determine if we are doing a full instant redemption or partial (good for dust decimal handling)
-            xegld_amount_to_burn = if &instant_amount == &total_egld {
-                payment.amount.clone()
-            } else {
-                self.get_ls_amount(&instant_amount, &mut storage_cache)
-            };
-
-            self.send().direct_egld(&caller, &instant_amount);
-            require!(
-                &storage_cache.pending_egld >= &min_egld_amount
-                    || storage_cache.pending_egld == BigUint::zero(),
-                ERROR_INSUFFICIENT_PENDING_EGLD
-            );
-            self.pool_remove_liquidity(&xegld_amount_to_burn, &mut storage_cache);
-            self.burn_ls_token(&xegld_amount_to_burn);
-            storage_cache.pending_egld -= instant_amount.clone();
-        }
+        self.process_instant_redemption(
+            &mut storage_cache,
+            &caller,
+            &payment,
+            &total_egld,
+            &instant_amount,
+        );
 
         if undelegate_amount > BigUint::from(0u64) {
             self.undelegate_amount(&undelegate_amount, &caller);
         }
 
-        // Store the remaining SEGLD for future redemption
-        let remaining_xegld = if payment.amount >= xegld_amount_to_burn {
-            &payment.amount - &xegld_amount_to_burn
-        } else {
-            BigUint::zero()
-        };
-
-        storage_cache.pending_ls_for_unstake += remaining_xegld;
-        let min_xegld_amount = self.get_ls_amount(&min_egld_amount, &mut storage_cache);
-        require!(
-            storage_cache.pending_ls_for_unstake >= min_xegld_amount
-                || storage_cache.pending_ls_for_unstake == BigUint::zero(),
-            ERROR_INSUFFICIENT_PENDING_XEGLD
-        );
+        self.store_remaining_xegld(&mut storage_cache, &payment, &instant_amount);
 
         self.emit_remove_liquidity_event(&storage_cache, &payment.amount, &total_egld);
     }

@@ -15,7 +15,13 @@ pub const MAX_PROVIDERS: usize = 25;
 pub const PERCENTAGE_TOTAL: u64 = 10_000; // 100%
 
 #[multiversx_sc::module]
-pub trait UtilsModule: crate::storage::StorageModule {
+pub trait UtilsModule:
+    crate::storage::StorageModule
+    + crate::config::ConfigModule
+    + crate::events::EventsModule
+    + crate::liquidity_pool::LiquidityPoolModule
+    + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
+{
     fn get_delegation_contract_for_delegate(
         &self,
         amount_to_delegate: &BigUint,
@@ -263,14 +269,16 @@ pub trait UtilsModule: crate::storage::StorageModule {
 
     fn calculate_instant_amount(
         &self,
-        amount_to_return: &BigUint,
+        sent_amount: &BigUint,
         pending_amount: &BigUint,
         min_amount: &BigUint,
     ) -> BigUint {
         if pending_amount < min_amount {
             return BigUint::zero();
         }
-        let max_instant = amount_to_return - min_amount;
+
+        let max_instant = sent_amount - min_amount;
+
         if max_instant <= pending_amount - min_amount {
             max_instant
         } else {
