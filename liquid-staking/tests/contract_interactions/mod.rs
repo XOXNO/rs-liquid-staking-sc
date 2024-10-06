@@ -5,7 +5,7 @@ use liquid_staking::storage::StorageModule;
 use liquid_staking::structs::UnstakeTokenAttributes;
 use liquid_staking::views::ViewsModule;
 use liquid_staking::LiquidStaking;
-use liquid_staking::{config::ConfigModule, errors::ERROR_CLAIM_REDELEGATE};
+use liquid_staking::config::ConfigModule;
 use multiversx_sc::types::Address;
 use multiversx_sc_scenario::{managed_address, num_bigint, rust_biguint, DebugApi};
 
@@ -132,7 +132,12 @@ where
             .assert_ok();
     }
 
-    pub fn add_liquidity_exp17_error(&mut self, caller: &Address, payment_amount: u64, error: &[u8]) {
+    pub fn add_liquidity_exp17_error(
+        &mut self,
+        caller: &Address,
+        payment_amount: u64,
+        error: &[u8],
+    ) {
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &exp17(payment_amount), |sc| {
                 sc.delegate();
@@ -271,15 +276,6 @@ where
                 sc.withdraw_pending(managed_address!(contracts));
             })
             .assert_error(4, bytes_to_str(error));
-    }
-
-    pub fn delegate_rewards_check_insufficient(&mut self, caller: &Address) {
-        let rust_zero = rust_biguint!(0u64);
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_rewards();
-            })
-            .assert_error(4, bytes_to_str(ERROR_CLAIM_REDELEGATE));
     }
 
     pub fn withdraw(
@@ -427,7 +423,18 @@ where
             })
             .assert_ok();
     }
-    
+
+    pub fn check_total_withdrawn_egld_denominated(&mut self, total_withdrawn_egld: u128) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                assert_eq!(
+                    sc.total_withdrawn_egld().get(),
+                    to_managed_biguint(num_bigint::BigUint::from(total_withdrawn_egld))
+                );
+            })
+            .assert_ok();
+    }
+
     pub fn check_total_withdrawn_egld_exp17(&mut self, total_withdrawn_egld: u64) {
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {
@@ -486,6 +493,17 @@ where
             .assert_ok();
 
         u128::from(ls_value)
+    }
+
+    pub fn get_pending_rewards(&mut self) -> u128 {
+        let mut rewards_value_biguint = 0u64;
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                rewards_value_biguint = sc.rewards_reserve().get().to_u64().unwrap();
+            })
+            .assert_ok();
+
+        u128::from(rewards_value_biguint)
     }
 
     pub fn check_delegation_contract_values_denominated(

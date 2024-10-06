@@ -36,24 +36,6 @@ where
 }
 
 #[rustfmt::skip]
-impl<Env, From, Gas> DelegationMockProxyMethods<Env, From, (), Gas>
-where
-    Env: TxEnv,
-    Env::Api: VMApi,
-    From: TxFrom<Env>,
-    Gas: TxGas<Env>,
-{
-    pub fn init(
-        self,
-    ) -> TxTypedDeploy<Env, From, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_deploy()
-            .original_result()
-    }
-}
-
-#[rustfmt::skip]
 impl<Env, From, To, Gas> DelegationMockProxyMethods<Env, From, To, Gas>
 where
     Env: TxEnv,
@@ -62,14 +44,6 @@ where
     To: TxTo<Env>,
     Gas: TxGas<Env>,
 {
-    pub fn deposit_egld(
-        self,
-    ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
-        self.wrapped_tx
-            .raw_call("depositEGLD")
-            .original_result()
-    }
-
     pub fn delegate(
         self,
     ) -> TxTypedCall<Env, From, To, (), Gas, ()> {

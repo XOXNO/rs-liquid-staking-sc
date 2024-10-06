@@ -45,7 +45,7 @@ impl<LiquidStakingContractObjBuilder> LiquidStakingContractSetup<LiquidStakingCo
 where
     LiquidStakingContractObjBuilder: 'static + Copy + Fn() -> liquid_staking::ContractObj<DebugApi>,
 {
-    pub fn new(sc_builder: LiquidStakingContractObjBuilder) -> Self {
+    pub fn new(sc_builder: LiquidStakingContractObjBuilder, fees: u64) -> Self {
         let rust_zero = rust_biguint!(0u64);
         let mut b_mock = BlockchainStateWrapper::new();
         let owner_address = b_mock.create_user_account(&rust_zero);
@@ -67,7 +67,7 @@ where
             .execute_tx(&owner_address, &sc_wrapper, &rust_zero, |sc| {
                 sc.init(
                     managed_address!(accumulator_wrapper.address_ref()),
-                    managed_biguint!(400),
+                    managed_biguint!(fees),
                     14400,
                     1400,
                 );

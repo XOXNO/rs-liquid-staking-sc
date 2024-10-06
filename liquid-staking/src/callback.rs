@@ -1,7 +1,4 @@
-use crate::{
-    structs::{ClaimStatus, ClaimStatusType},
-    StorageCache,
-};
+use crate::{structs::ClaimStatusType, StorageCache};
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -81,7 +78,6 @@ pub trait CallbackModule:
                 let withdraw_amount = self.call_value().egld_value().clone_value();
                 let delegation_contract_mapper =
                     self.delegation_contract_data(&delegation_contract);
-
                 if withdraw_amount > 0u64 {
                     storage_cache.total_withdrawn_egld += &withdraw_amount;
                     delegation_contract_mapper.update(|contract_data| {
@@ -128,13 +124,6 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract += staked_tokens;
                     });
 
-                let current_claim_status = self.load_operation::<ClaimStatus>();
-
-                if current_claim_status.status == ClaimStatusType::Finished {
-                    self.delegation_claim_status()
-                        .update(|claim_status| claim_status.status = ClaimStatusType::Redelegated);
-                }
-
                 storage_cache.virtual_egld_reserve += staked_tokens;
 
                 let sc_address = self.blockchain().get_sc_address();
@@ -143,6 +132,10 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Err(_) => {
                 // Revert the deduction made in the parent function
                 storage_cache.rewards_reserve += staked_tokens;
+
+                self.delegation_claim_status()
+                    .update(|claim_status| claim_status.status = ClaimStatusType::Finished);
+
                 self.move_delegation_contract_to_back(&delegation_contract);
             }
         }

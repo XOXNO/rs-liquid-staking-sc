@@ -1,6 +1,6 @@
 use crate::{
     StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_INSUFFICIENT_PENDING_XEGLD, ERROR_NOT_ACTIVE, MIN_EGLD_TO_DELEGATE,
+    ERROR_INSUFFICIENT_PENDING_XEGLD, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -95,7 +95,8 @@ pub trait DelegateUtilsModule:
         possible_instant_amount: &BigUint,
         min_xegld_amount: &BigUint,
     ) -> bool {
-        storage_cache.pending_ls_for_unstake >= *possible_instant_amount
+        possible_instant_amount > &BigUint::zero()
+            && &storage_cache.pending_ls_for_unstake >= possible_instant_amount
             && (&storage_cache.pending_ls_for_unstake - possible_instant_amount)
                 >= *min_xegld_amount
     }
@@ -217,10 +218,7 @@ pub trait DelegateUtilsModule:
         storage_cache: &mut StorageCache<Self>,
         amount: &BigUint,
     ) {
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         require!(amount > &BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
     }

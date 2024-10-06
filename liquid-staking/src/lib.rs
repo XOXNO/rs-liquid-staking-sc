@@ -145,10 +145,7 @@ pub trait LiquidStaking<ContractReader>:
         let caller = self.blockchain().get_caller();
         let payment = self.call_value().single_esdt();
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         require!(
             payment.token_identifier == self.unstake_token().get_token_id(),

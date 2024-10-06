@@ -1,7 +1,7 @@
 use crate::{
     StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_BAD_PAYMENT_TOKEN,
     ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_PENDING_XEGLD, ERROR_LS_TOKEN_NOT_ISSUED,
-    ERROR_NOT_ACTIVE, MIN_EGLD_TO_DELEGATE,
+    MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -130,10 +130,7 @@ pub trait UnDelegateUtilsModule:
         storage_cache: &mut StorageCache<Self>,
         payment: &EsdtTokenPayment<Self::Api>,
     ) {
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         require!(
             storage_cache.ls_token_id.is_valid_esdt_identifier(),

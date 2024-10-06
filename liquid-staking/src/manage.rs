@@ -8,8 +8,8 @@ use crate::{
     delegation_proxy,
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     structs::{ClaimStatus, ClaimStatusType},
-    StorageCache, ERROR_CLAIM_REDELEGATE, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_ACTIVE, ERROR_NOT_WHITELISTED,
+    StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
+    ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_WHITELISTED,
     ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_CALLBACK,
 };
 
@@ -32,10 +32,7 @@ pub trait ManageModule:
     fn delegate_pending(&self) {
         let mut storage_cache = StorageCache::new(self);
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         let block_round = self.blockchain().get_block_round();
         let rounds_per_epoch = self.rounds_per_epoch().get();
@@ -75,10 +72,7 @@ pub trait ManageModule:
     fn un_delegate_pending(&self) {
         let mut storage_cache = StorageCache::new(self);
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         let block_round = self.blockchain().get_block_round();
         let rounds_per_epoch = self.rounds_per_epoch().get();
@@ -116,10 +110,7 @@ pub trait ManageModule:
     fn withdraw_pending(&self, contract: ManagedAddress) {
         let storage_cache = StorageCache::new(self);
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         require!(
             !self.delegation_contract_data(&contract).is_empty(),
@@ -140,10 +131,7 @@ pub trait ManageModule:
     fn claim_rewards(&self) {
         let storage_cache = StorageCache::new(self);
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         let delegation_addresses_mapper = self.delegation_addresses_list();
 
@@ -182,6 +170,7 @@ pub trait ManageModule:
                 .register_promise();
 
             if next_node == 0 {
+                sc_print!("No next node {}", next_node);
                 claim_status_mapper.set(current_claim_status.clone());
                 return STOP_OP;
             } else {
@@ -196,6 +185,7 @@ pub trait ManageModule:
                 self.save_progress(&current_claim_status);
             }
             OperationCompletionStatus::Completed => {
+                sc_print!("Claim status updated {}", 0);
                 claim_status_mapper.update(|claim_status| {
                     claim_status.status = ClaimStatusType::Finished;
                 });
@@ -208,10 +198,7 @@ pub trait ManageModule:
         let mut storage_cache = StorageCache::new(self);
         let claim_status = self.delegation_claim_status().get();
 
-        require!(
-            self.is_state_active(storage_cache.contract_state),
-            ERROR_NOT_ACTIVE
-        );
+        self.is_state_active(storage_cache.contract_state);
 
         require!(
             claim_status.status == ClaimStatusType::Finished,
@@ -220,7 +207,7 @@ pub trait ManageModule:
 
         require!(
             storage_cache.rewards_reserve > BigUint::from(MIN_EGLD_TO_DELEGATE),
-            ERROR_CLAIM_REDELEGATE
+            ERROR_INSUFFICIENT_REWARDS
         );
 
         let fees = self.calculate_split(&storage_cache.rewards_reserve, &self.fees().get());
@@ -255,6 +242,10 @@ pub trait ManageModule:
                 )
                 .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
+        }
+        if storage_cache.rewards_reserve == BigUint::zero() {
+            self.delegation_claim_status()
+                .update(|claim_status| claim_status.status = ClaimStatusType::Redelegated);
         }
     }
 }

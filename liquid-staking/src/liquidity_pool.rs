@@ -8,8 +8,6 @@ use crate::structs::UnstakeTokenAttributes;
 
 use super::config;
 
-const MINIMUM_LIQUIDITY: u64 = 0;
-
 #[multiversx_sc::module]
 pub trait LiquidityPoolModule: config::ConfigModule {
     fn pool_add_liquidity(
@@ -44,7 +42,7 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         storage_cache: &StorageCache<Self>,
     ) -> BigUint {
         require!(
-            storage_cache.ls_token_supply >= ls_token_amount + MINIMUM_LIQUIDITY,
+            &storage_cache.ls_token_supply >= ls_token_amount,
             ERROR_NOT_ENOUGH_LP
         );
 
@@ -92,13 +90,20 @@ pub trait LiquidityPoolModule: config::ConfigModule {
             let payment = self.unstake_token().nft_create_named(
                 amount.clone(),
                 &sc_format!("Release epoch #{}", epoch),
-                &attributes,
+                attributes,
             );
+
+            // Always add one to the initial MetaESDT so we can add later quantities for the same epoch
+            self.unstake_token()
+                .nft_add_quantity(payment.token_nonce, BigUint::from(1u64));
+
             nonce.set(payment.token_nonce);
             payment
         } else {
-            self.unstake_token()
-                .nft_add_quantity(nonce.get(), amount.clone())
+            let payment = self
+                .unstake_token()
+                .nft_add_quantity(nonce.get(), amount.clone());
+            payment
         }
     }
 
@@ -118,6 +123,13 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         let user_payment =
             self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
 
-        self.tx().to(caller).esdt(user_payment).transfer();
+        self.tx()
+            .to(caller)
+            .single_esdt(
+                &user_payment.token_identifier,
+                user_payment.token_nonce,
+                &user_payment.amount,
+            )
+            .transfer();
     }
 }

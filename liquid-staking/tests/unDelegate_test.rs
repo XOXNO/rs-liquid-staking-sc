@@ -17,7 +17,7 @@ fn liquid_staking_remove_liquidity_instant_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     // Deploy the staking contract with the specified parameters
     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -50,7 +50,7 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     // Deploy the staking contract with the specified parameters
     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -85,10 +85,7 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
         UNSTAKE_TOKEN_ID,
         1,
         exp18(90),
-        Some(&UnstakeTokenAttributes::new(
-            50,
-            60,
-        )),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     // Check the user's EGLD balance to ensure they didn't receive any EGLD back instantly
     sc_setup.check_user_egld_balance(&first_user, 0u64);
@@ -103,7 +100,7 @@ fn liquid_staking_remove_liquidity_not_partially_instant_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     // Deploy the staking contract with the specified parameters
     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -152,10 +149,7 @@ fn liquid_staking_remove_liquidity_not_partially_instant_test() {
         UNSTAKE_TOKEN_ID,
         1,
         exp18(2),
-        Some(&UnstakeTokenAttributes::new(
-            50,
-            60,
-        )),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     // Check the user's EGLD balance to ensure they didn't receive any EGLD back
     sc_setup.check_user_egld_balance(&first_user, 0u64);
@@ -170,7 +164,7 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     // Deploy the first staking contract with the specified parameters
     let delegation_contract1 =
@@ -211,10 +205,7 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
         UNSTAKE_TOKEN_ID,
         1,
         exp18(60),
-        Some(&UnstakeTokenAttributes::new(
-            50,
-            60,
-        )),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     // Check the user's EGLD balance to ensure they received 30 EGLD back instantly
     sc_setup.check_user_egld_balance(&first_user, 30u64);
@@ -223,7 +214,7 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
 #[test]
 fn liquid_staking_un_delegate_pending_rounds_error_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract =
         sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);

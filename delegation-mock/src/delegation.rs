@@ -67,7 +67,6 @@ pub trait DelegationMock {
             .update(|value| *value -= &withdraw_amount);
         self.address_undelegate_epoch(&caller).clear();
         self.address_undelegate_amount(&caller).clear();
-
         self.tx().to(&caller).egld(&withdraw_amount).transfer();
     }
 
@@ -82,14 +81,12 @@ pub trait DelegationMock {
             let rewards = (total_deposit.clone() * APY / MAX_PERCENTAGE)
                 * (current_epoch - last_claim_epoch)
                 / EPOCHS_IN_YEAR;
-            sc_print!("claim_rewards: rewards are {}", rewards);
-            sc_print!("claim_rewards: total_deposit is {}", total_deposit);
-            sc_print!("claim_rewards: last_claim_epoch is {}", last_claim_epoch);
-            sc_print!("claim_rewards: current_epoch is {}", current_epoch);
             if rewards > 0u64 {
                 self.tx().to(&caller).egld(&rewards).transfer();
                 self.address_last_claim_epoch(&caller).set(current_epoch);
-                self.egld_token_supply().update(|value| *value -= &rewards);
+                // This makes a bug in the tests when we start with a delegation contract with 0 balance
+                // We are not mocking or simulating the meta chain sending rewards to the delegation contract, thus the balance is not updated correctly in order to deduct the rewards
+                // self.egld_token_supply().update(|value| *value -= &rewards);
             }
         }
     }

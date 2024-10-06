@@ -4,7 +4,7 @@ pub static ERROR_LS_TOKEN_NOT_ISSUED: &[u8] = b"LS token not issued";
 pub static ERROR_CLAIM_START: &[u8] = b"Claim operation must be new or pending";
 pub static ERROR_OLD_CLAIM_START: &[u8] =
     b"Previous claimed rewards must be redelegated or lesser than 1 EGLD";
-pub static ERROR_CLAIM_REDELEGATE: &[u8] = b"Old claimed rewards must be greater than 1 EGLD";
+pub static ERROR_INSUFFICIENT_REWARDS: &[u8] = b"Existing rewards must be greater than 1 EGLD";
 pub static ERROR_RECOMPUTE_RESERVES: &[u8] = b"Claim operation must be in the finished status";
 pub static ERROR_CLAIM_EPOCH: &[u8] = b"The rewards were already claimed for this epoch";
 pub static ERROR_UNSTAKE_PERIOD_NOT_PASSED: &[u8] = b"The unstake period has not passed";
@@ -30,3 +30,4 @@ pub static ERROR_DELEGATION_CAP: &[u8] =
 pub static ERROR_ONLY_DELEGATION_ADMIN: &[u8] =
     b"Only the admin of the delegation contract can change the status";
 pub static ERROR_MINIMUM_ROUNDS_NOT_PASSED: &[u8] = b"Minimum rounds didn't pass";
+pub static ERROR_FAILED_TO_DISTRIBUTE: &[u8] = b"Failed to distribute entire amount";

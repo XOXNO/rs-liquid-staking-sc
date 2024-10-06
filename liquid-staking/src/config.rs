@@ -1,4 +1,4 @@
-use crate::structs::State;
+use crate::{structs::State, ERROR_NOT_ACTIVE};
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -84,8 +84,8 @@ pub trait ConfigModule {
     }
 
     #[inline]
-    fn is_state_active(&self, state: State) -> bool {
-        state == State::Active
+    fn is_state_active(&self, state: State) {
+        require!(State::Active == state, ERROR_NOT_ACTIVE);
     }
 
     #[view(fees)]

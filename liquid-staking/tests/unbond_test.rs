@@ -5,8 +5,8 @@ mod utils;
 use contract_setup::*;
 use liquid_staking::{
     errors::{
-        ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_UNBONDED_AMOUNT, ERROR_NOT_ACTIVE,
-        ERROR_UNSTAKE_PERIOD_NOT_PASSED,
+        ERROR_BAD_PAYMENT_AMOUNT, ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_UNBONDED_AMOUNT,
+        ERROR_NOT_ACTIVE, ERROR_UNSTAKE_PERIOD_NOT_PASSED,
     },
     structs::UnstakeTokenAttributes,
 };
@@ -14,10 +14,12 @@ use utils::*;
 
 use multiversx_sc_scenario::DebugApi;
 
+pub static BAD_TOKEN_ID: &[u8] = b"BAD-123456";
+
 #[test]
 fn liquid_staking_unbond_success_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract =
         sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -80,7 +82,7 @@ fn liquid_staking_unbond_success_test() {
 #[test]
 fn liquid_staking_unbond_error_epoch_too_soon_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract =
         sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -120,7 +122,7 @@ fn liquid_staking_unbond_error_epoch_too_soon_test() {
 #[test]
 fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
 
@@ -157,7 +159,7 @@ fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
 #[test]
 fn liquid_staking_unbond_error_not_active_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract =
         sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -193,7 +195,7 @@ fn liquid_staking_unbond_error_not_active_test() {
 #[test]
 fn liquid_staking_unbond_error_not_amount_sent_test() {
     let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract =
         sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
@@ -228,4 +230,42 @@ fn liquid_staking_unbond_error_not_amount_sent_test() {
         exp18(0),
         ERROR_BAD_PAYMENT_AMOUNT,
     );
+}
+
+#[test]
+fn liquid_staking_unbond_error_bad_token_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&user);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.un_delegate_pending(&user);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(60u64);
+
+    sc_setup.withdraw_pending(&user, &delegation_contract);
+
+    // // Perform unbond operation with bad token
+
+    sc_setup
+        .b_mock
+        .set_esdt_balance(&user, BAD_TOKEN_ID, &exp18(100));
+    sc_setup.withdraw_error(&user, BAD_TOKEN_ID, 0, exp18(100), ERROR_BAD_PAYMENT_TOKEN);
 }

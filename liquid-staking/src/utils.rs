@@ -3,8 +3,9 @@ use crate::{
         ClaimStatus, ClaimStatusType, DelegationContractData, DelegationContractInfo,
         DelegatorSelection,
     },
-    ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FIRST_DELEGATION_NODE,
-    ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START, MIN_EGLD_TO_DELEGATE,
+    ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
+    ERROR_FIRST_DELEGATION_NODE, ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START,
+    MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -114,10 +115,7 @@ pub trait UtilsModule:
             }
         }
 
-        require!(
-            !selected_addresses.is_empty(),
-            ERROR_NO_DELEGATION_CONTRACTS
-        );
+        require!(!selected_addresses.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
 
         distribute_fn(&selected_addresses, amount, &min_egld, &total_stake)
     }
@@ -240,9 +238,9 @@ pub trait UtilsModule:
             }
         }
 
-        assert!(
+        require!(
             remaining_amount == BigUint::zero(),
-            "Failed to distribute entire amount"
+            ERROR_FAILED_TO_DISTRIBUTE
         );
 
         result
