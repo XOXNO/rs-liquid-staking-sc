@@ -7,15 +7,10 @@ use contract_setup::*;
 use utils::*;
 
 use liquid_staking::{
-    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_ACTIVE},
+    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_ACTIVE},
     structs::UnstakeTokenAttributes,
 };
 use multiversx_sc_scenario::DebugApi;
-
-#[test]
-fn init_test() {
-    let _ = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
-}
 
 #[test]
 fn liquid_staking_add_liquidity_test() {
@@ -183,6 +178,20 @@ fn liquid_staking_add_liquidity_inactive_contract_error_test() {
     sc_setup.set_inactive_state(&sc_setup.owner_address.clone());
 
     sc_setup.add_liquidity_error(&first_user, 100u64, ERROR_NOT_ACTIVE);
+}
+
+#[test]
+fn liquid_staking_add_liquidity_min_rounds_contract_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(100u64);
+
+    sc_setup.add_liquidity(&first_user, 100u64);
+
+    sc_setup.delegate_pending_error(&first_user, ERROR_MINIMUM_ROUNDS_NOT_PASSED);
 }
 
 #[test]

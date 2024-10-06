@@ -427,6 +427,7 @@ where
             })
             .assert_ok();
     }
+    
     pub fn check_total_withdrawn_egld_exp17(&mut self, total_withdrawn_egld: u64) {
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {

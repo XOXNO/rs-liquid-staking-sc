@@ -3,7 +3,13 @@ mod contract_setup;
 mod utils;
 
 use contract_setup::*;
-use liquid_staking::structs::UnstakeTokenAttributes;
+use liquid_staking::{
+    errors::{
+        ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_UNBONDED_AMOUNT, ERROR_NOT_ACTIVE,
+        ERROR_UNSTAKE_PERIOD_NOT_PASSED,
+    },
+    structs::UnstakeTokenAttributes,
+};
 use utils::*;
 
 use multiversx_sc_scenario::DebugApi;
@@ -37,10 +43,7 @@ fn liquid_staking_unbond_success_test() {
         UNSTAKE_TOKEN_ID,
         1,
         exp18(90),
-        Some(&UnstakeTokenAttributes::new(
-            50,
-            60,
-        )),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
     sc_setup.check_contract_storage(100, 100, 0, 0, 0, 90);
@@ -62,7 +65,7 @@ fn liquid_staking_unbond_success_test() {
     sc_setup.check_contract_storage(10, 10, 0, 90, 0, 0);
 
     // // Perform unbond operation
-    sc_setup.withdraw(&user, UNSTAKE_TOKEN_ID, 1,exp18(90));
+    sc_setup.withdraw(&user, UNSTAKE_TOKEN_ID, 1, exp18(90));
 
     // // Check user's EGLD balance after unbond
     sc_setup.check_user_egld_balance(&user, 90u64);
@@ -72,4 +75,157 @@ fn liquid_staking_unbond_success_test() {
 
     // // Check contract storage after unbond
     sc_setup.check_contract_storage(10, 10, 0, 0, 0, 0);
+}
+
+#[test]
+fn liquid_staking_unbond_error_epoch_too_soon_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&user);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.un_delegate_pending(&user);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(55u64);
+
+    sc_setup.withdraw_pending(&user, &delegation_contract);
+
+    // // Perform unbond operation
+    sc_setup.withdraw_error(
+        &user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp18(90),
+        ERROR_UNSTAKE_PERIOD_NOT_PASSED,
+    );
+}
+
+#[test]
+fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&user);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.un_delegate_pending(&user);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(60u64);
+
+    // // Perform unbond operation
+    sc_setup.withdraw_error(
+        &user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp18(90),
+        ERROR_INSUFFICIENT_UNBONDED_AMOUNT,
+    );
+}
+
+#[test]
+fn liquid_staking_unbond_error_not_active_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&user);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.un_delegate_pending(&user);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(60u64);
+
+    sc_setup.withdraw_pending(&user, &delegation_contract);
+
+    sc_setup.set_inactive_state(&user);
+
+    // // Perform unbond operation
+    sc_setup.withdraw_error(&user, UNSTAKE_TOKEN_ID, 1, exp18(90), ERROR_NOT_ACTIVE);
+}
+
+#[test]
+fn liquid_staking_unbond_error_not_amount_sent_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&user);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.un_delegate_pending(&user);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(60u64);
+
+    sc_setup.withdraw_pending(&user, &delegation_contract);
+
+    // // Perform unbond operation
+    sc_setup.withdraw_error(
+        &user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp18(0),
+        ERROR_BAD_PAYMENT_AMOUNT,
+    );
 }

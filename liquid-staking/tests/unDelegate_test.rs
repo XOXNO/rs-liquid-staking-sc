@@ -5,7 +5,7 @@ mod utils;
 use contract_setup::*;
 use utils::*;
 
-use liquid_staking::structs::UnstakeTokenAttributes;
+use liquid_staking::{errors::ERROR_MINIMUM_ROUNDS_NOT_PASSED, structs::UnstakeTokenAttributes};
 use multiversx_sc_scenario::DebugApi;
 
 // Test: liquid_staking_remove_liquidity_instant_test
@@ -218,4 +218,33 @@ fn liquid_staking_remove_liquidity_partially_instant_test() {
     );
     // Check the user's EGLD balance to ensure they received 30 EGLD back instantly
     sc_setup.check_user_egld_balance(&first_user, 30u64);
+}
+
+#[test]
+fn liquid_staking_un_delegate_pending_rounds_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(100u64);
+
+    sc_setup.add_liquidity(&first_user, 100u64);
+
+    sc_setup.check_delegation_contract_values(&delegation_contract, 0u64, 0u64);
+    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    sc_setup.delegate_pending(&first_user);
+
+    sc_setup.check_delegation_contract_values(&delegation_contract, 100u64, 0u64);
+    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
+
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.b_mock.set_block_round(140u64);
+    sc_setup.un_delegate_pending_error(&first_user, ERROR_MINIMUM_ROUNDS_NOT_PASSED);
 }

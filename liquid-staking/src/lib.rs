@@ -3,7 +3,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-pub const DEFAULT_GAS_TO_CLAIM_REWARDS: u64 = 6_000_000;
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
 pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;

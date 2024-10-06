@@ -118,13 +118,6 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         let user_payment =
             self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
 
-        self.tx()
-            .to(caller)
-            .single_esdt(
-                &user_payment.token_identifier,
-                user_payment.token_nonce,
-                &user_payment.amount,
-            )
-            .transfer();
+        self.tx().to(caller).esdt(user_payment).transfer();
     }
 }

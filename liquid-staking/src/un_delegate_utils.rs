@@ -91,7 +91,6 @@ pub trait UnDelegateUtilsModule:
                 self.get_ls_amount(instant_amount, storage_cache)
             };
 
-            self.send().direct_egld(caller, instant_amount);
             require!(
                 &storage_cache.pending_egld >= &BigUint::from(MIN_EGLD_TO_DELEGATE)
                     || storage_cache.pending_egld == BigUint::zero(),
@@ -99,6 +98,7 @@ pub trait UnDelegateUtilsModule:
             );
             self.pool_remove_liquidity(&xegld_amount_to_burn, storage_cache);
             self.burn_ls_token(&xegld_amount_to_burn);
+            self.tx().to(caller).egld(instant_amount).transfer();
             storage_cache.pending_egld -= instant_amount.clone();
         }
     }

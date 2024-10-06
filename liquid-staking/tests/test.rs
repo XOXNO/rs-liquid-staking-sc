@@ -207,6 +207,7 @@ fn liquid_staking_multiple_withdraw_test() {
     let first_user = sc_setup.setup_new_user(100u64);
     let second_user = sc_setup.setup_new_user(100u64);
     let third_user = sc_setup.setup_new_user(100u64);
+
     sc_setup.add_liquidity(&first_user, 50u64);
     sc_setup.add_liquidity(&second_user, 40u64);
     sc_setup.add_liquidity(&third_user, 40u64);
