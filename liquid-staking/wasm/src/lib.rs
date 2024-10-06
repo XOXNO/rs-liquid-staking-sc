@@ -5,10 +5,10 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           42
+// Endpoints:                           43
 // Async Callback:                       1
 // Promise callbacks:                    5
-// Total number of exported functions:  49
+// Total number of exported functions:  50
 
 #![no_std]
 
@@ -53,6 +53,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         withdrawPending => withdraw_pending
         claimRewards => claim_rewards
         delegateRewards => delegate_rewards
+        canExecutePendingTasks => can_execute_pending_tasks
         getLsValueForPosition => get_ls_value_for_position
         getDelegationStatus => get_delegation_status
         getDelegationContractStakedAmount => get_delegation_contract_staked_amount
