@@ -60,6 +60,7 @@ pub trait ManageModule:
                 .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
         }
+        self.emit_general_liquidity_event(&storage_cache);
     }
 
     #[endpoint(unDelegatePending)]

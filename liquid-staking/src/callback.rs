@@ -32,9 +32,9 @@ pub trait CallbackModule:
             }
             ManagedAsyncCallResult::Err(_) => {
                 let ls_amount = self.pool_add_liquidity(&egld_to_unstake, &mut storage_cache);
-                self.emit_add_liquidity_event(&storage_cache, &egld_to_unstake);
                 storage_cache.pending_ls_for_unstake += &ls_amount;
                 self.mint_ls_token(ls_amount);
+                self.emit_add_liquidity_event(&storage_cache, &egld_to_unstake);
             }
         }
     }
@@ -56,6 +56,7 @@ pub trait CallbackModule:
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld += staked_tokens;
+                self.emit_general_liquidity_event(&storage_cache);
             }
         }
         self.move_delegation_contract_to_back(delegation_contract);
@@ -73,7 +74,7 @@ pub trait CallbackModule:
                 let withdraw_amount = self.call_value().egld_value().clone_value();
                 let delegation_contract_mapper =
                     self.delegation_contract_data(&delegation_contract);
-                if withdraw_amount > 0u64 {
+                if withdraw_amount > BigUint::zero() {
                     storage_cache.total_withdrawn_egld += &withdraw_amount;
                     delegation_contract_mapper.update(|contract_data| {
                         contract_data.total_unstaked_from_ls_contract -= &withdraw_amount;
@@ -141,6 +142,8 @@ pub trait CallbackModule:
                     .update(|claim_status| claim_status.status = ClaimStatusType::Finished);
 
                 self.move_delegation_contract_to_back(&delegation_contract);
+
+                self.emit_general_liquidity_event(&storage_cache);
             }
         }
     }

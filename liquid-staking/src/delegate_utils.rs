@@ -164,6 +164,7 @@ pub trait DelegateUtilsModule:
         final_amount_to_send: &mut BigUint,
     ) {
         // Subtract the xEGLD from the pending_ls_for_unstake
+        // Should never fail, but just in case
         require!(
             storage_cache.pending_ls_for_unstake >= *xegld_from_pending,
             ERROR_INSUFFICIENT_PENDING_XEGLD

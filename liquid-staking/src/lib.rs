@@ -116,10 +116,9 @@ pub trait LiquidStaking<ContractReader>:
         self.validate_undelegate_conditions(&mut storage_cache, &payment);
 
         let total_egld = self.get_egld_amount(&payment.amount, &mut storage_cache);
-        let min_egld_amount = BigUint::from(MIN_EGLD_TO_DELEGATE);
 
         let (instant_amount, undelegate_amount) =
-            self.determine_undelegate_amounts(&mut storage_cache, &total_egld, &min_egld_amount);
+            self.determine_undelegate_amounts(&mut storage_cache, &total_egld);
 
         self.process_instant_redemption(
             &mut storage_cache,
@@ -129,9 +128,7 @@ pub trait LiquidStaking<ContractReader>:
             &instant_amount,
         );
 
-        if undelegate_amount > BigUint::from(0u64) {
-            self.undelegate_amount(&undelegate_amount, &caller);
-        }
+        self.undelegate_amount(&undelegate_amount, &caller);
 
         self.store_remaining_xegld(&mut storage_cache, &payment, &instant_amount);
     }
@@ -173,5 +170,7 @@ pub trait LiquidStaking<ContractReader>:
         storage_cache.total_withdrawn_egld -= &payment.amount;
 
         self.tx().to(&caller).egld(&payment.amount).transfer();
+
+        self.emit_general_liquidity_event(&storage_cache);
     }
 }

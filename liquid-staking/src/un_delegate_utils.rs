@@ -21,8 +21,8 @@ pub trait UnDelegateUtilsModule:
         &self,
         storage_cache: &mut StorageCache<Self>,
         total_egld: &BigUint,
-        min_egld_amount: &BigUint,
     ) -> (BigUint, BigUint) {
+        let min_egld_amount = &BigUint::from(MIN_EGLD_TO_DELEGATE);
         if self.can_fully_instant_redeem(storage_cache, total_egld, min_egld_amount) {
             // Case 1: Full instant redemption
             (total_egld.clone(), BigUint::zero())
@@ -129,6 +129,7 @@ pub trait UnDelegateUtilsModule:
                 || storage_cache.pending_ls_for_unstake == BigUint::zero(),
             ERROR_INSUFFICIENT_PENDING_XEGLD
         );
+        self.emit_general_liquidity_event(&storage_cache);
     }
 
     fn validate_undelegate_conditions(
@@ -152,6 +153,10 @@ pub trait UnDelegateUtilsModule:
     }
 
     fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {
+        if *egld_to_unstake == BigUint::zero() {
+            return;
+        }
+
         let current_epoch = self.blockchain().get_block_epoch();
         let unbond_epoch = current_epoch + UNBOND_PERIOD;
 

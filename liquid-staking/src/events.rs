@@ -146,6 +146,24 @@ pub trait EventsModule:
         )
     }
 
+    fn emit_general_liquidity_event(&self, storage_cache: &StorageCache<Self>) {
+        let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
+        self.general_liquidity_event(&ChangeLiquidityEvent {
+            caller: caller.clone(),
+            ls_token_id: storage_cache.ls_token_id.clone(),
+            ls_token_supply: storage_cache.ls_token_supply.clone(),
+            virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
+            rewards_reserve: storage_cache.rewards_reserve.clone(),
+            total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+            pending_egld: storage_cache.pending_egld.clone(),
+            pending_ls: storage_cache.pending_ls_for_unstake.clone(),
+            block: self.blockchain().get_block_nonce(),
+            epoch,
+            timestamp: self.blockchain().get_block_timestamp(),
+        })
+    }
+
     #[event("add_liquidity")]
     fn add_liquidity_event(
         &self,
@@ -185,9 +203,11 @@ pub trait EventsModule:
     );
 
     #[event("protocol_revenue")]
-    fn protocol_revenue_event(
+    fn protocol_revenue_event(&self, #[indexed] amount: &BigUint, #[indexed] epoch: u64);
+
+    #[event("general_liquidity_event")]
+    fn general_liquidity_event(
         &self,
-        #[indexed] amount: &BigUint,
-        #[indexed] epoch: u64,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
     );
 }
