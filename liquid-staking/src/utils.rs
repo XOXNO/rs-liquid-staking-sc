@@ -4,8 +4,8 @@ use crate::{
         DelegatorSelection,
     },
     ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
-    ERROR_FIRST_DELEGATION_NODE, ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START,
-    MIN_EGLD_TO_DELEGATE,
+    ERROR_FIRST_DELEGATION_NODE, ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NO_DELEGATION_CONTRACTS,
+    ERROR_OLD_CLAIM_START, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -271,7 +271,7 @@ pub trait UtilsModule:
         pending_amount: &BigUint,
         min_amount: &BigUint,
     ) -> BigUint {
-        if pending_amount < min_amount {
+        if pending_amount <= min_amount {
             return BigUint::zero();
         }
 
@@ -322,5 +322,16 @@ pub trait UtilsModule:
 
     fn calculate_split(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
         total_amount * cut_percentage / PERCENTAGE_TOTAL
+    }
+
+    fn require_min_rounds_passed(&self) {
+        let block_round = self.blockchain().get_block_round();
+        let rounds_per_epoch = self.rounds_per_epoch().get();
+        let minimum_rounds = self.minimum_rounds().get();
+
+        require!(
+            rounds_per_epoch - block_round <= minimum_rounds,
+            ERROR_MINIMUM_ROUNDS_NOT_PASSED
+        );
     }
 }

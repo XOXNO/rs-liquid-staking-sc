@@ -78,7 +78,7 @@ pub trait DelegationMock {
         let total_deposit = self.address_deposit(&caller).get();
 
         if current_epoch > last_claim_epoch {
-            let rewards = (total_deposit.clone() * APY / MAX_PERCENTAGE)
+            let rewards = (total_deposit * APY / MAX_PERCENTAGE)
                 * (current_epoch - last_claim_epoch)
                 / EPOCHS_IN_YEAR;
             if rewards > 0u64 {

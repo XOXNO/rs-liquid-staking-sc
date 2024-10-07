@@ -52,7 +52,8 @@ pub trait UnDelegateUtilsModule:
         total_egld: &BigUint,
         min_egld_amount: &BigUint,
     ) -> bool {
-        total_egld > &storage_cache.pending_egld
+        storage_cache.pending_egld > BigUint::from(0u64)
+            && total_egld > &storage_cache.pending_egld
             && &(total_egld - &storage_cache.pending_egld) >= min_egld_amount
     }
 
@@ -64,7 +65,6 @@ pub trait UnDelegateUtilsModule:
     ) -> (BigUint, BigUint) {
         let possible_instant_amount =
             self.calculate_instant_amount(total_egld, &storage_cache.pending_egld, min_egld_amount);
-
         if possible_instant_amount >= *min_egld_amount
             && (total_egld - &possible_instant_amount) >= *min_egld_amount
         {
@@ -91,15 +91,17 @@ pub trait UnDelegateUtilsModule:
                 self.get_ls_amount(instant_amount, storage_cache)
             };
 
+            storage_cache.pending_egld -= instant_amount;
+
             require!(
                 &storage_cache.pending_egld >= &BigUint::from(MIN_EGLD_TO_DELEGATE)
                     || storage_cache.pending_egld == BigUint::zero(),
                 ERROR_INSUFFICIENT_PENDING_EGLD
             );
+
             self.pool_remove_liquidity(&xegld_amount_to_burn, storage_cache);
             self.burn_ls_token(&xegld_amount_to_burn);
             self.tx().to(caller).egld(instant_amount).transfer();
-            storage_cache.pending_egld -= instant_amount.clone();
         }
     }
 

@@ -100,9 +100,9 @@ pub trait LiquidStaking<ContractReader>:
 
         self.process_redemption_and_staking(
             &mut storage_cache,
-            xegld_from_pending,
-            instant_unbond_balance,
-            egld_to_add_liquidity,
+            &xegld_from_pending,
+            &instant_unbond_balance,
+            &egld_to_add_liquidity,
         );
     }
 

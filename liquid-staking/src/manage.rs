@@ -9,8 +9,8 @@ use crate::{
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     structs::{ClaimStatus, ClaimStatusType},
     StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
-    ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_WHITELISTED,
-    ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_CALLBACK,
+    ERROR_NOT_WHITELISTED, ERROR_RECOMPUTE_RESERVES,
+    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_CALLBACK,
 };
 
 multiversx_sc::imports!();
@@ -34,24 +34,18 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
-        let block_round = self.blockchain().get_block_round();
-        let rounds_per_epoch = self.rounds_per_epoch().get();
-        let minimum_rounds = self.minimum_rounds().get();
+        self.require_min_rounds_passed();
 
         require!(
-            rounds_per_epoch - block_round <= minimum_rounds,
-            ERROR_MINIMUM_ROUNDS_NOT_PASSED
-        );
-
-        require!(
-            storage_cache.pending_egld > BigUint::from(MIN_EGLD_TO_DELEGATE),
+            storage_cache.pending_egld >= BigUint::from(MIN_EGLD_TO_DELEGATE),
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
         let delegation_contract =
             self.get_delegation_contract_for_delegate(&storage_cache.pending_egld);
+
         for data in &delegation_contract {
-            // !!!! Required to prevent double delegation from the same amount
+            // !!!! Required to prevent double delegation from the same amount, while the callback is not executed !!!!
             storage_cache.pending_egld -= &data.amount;
             self.tx()
                 .to(&data.delegation_address)
@@ -74,14 +68,7 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
-        let block_round = self.blockchain().get_block_round();
-        let rounds_per_epoch = self.rounds_per_epoch().get();
-        let minimum_rounds = self.minimum_rounds().get();
-
-        require!(
-            rounds_per_epoch - block_round <= minimum_rounds,
-            ERROR_MINIMUM_ROUNDS_NOT_PASSED
-        );
+        self.require_min_rounds_passed();
 
         let pending = storage_cache.pending_ls_for_unstake.clone();
         let egld_to_unstake = self.pool_remove_liquidity(&pending, &mut storage_cache);

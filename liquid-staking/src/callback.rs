@@ -127,7 +127,7 @@ pub trait CallbackModule:
                 storage_cache.virtual_egld_reserve += staked_tokens;
 
                 let sc_address = self.blockchain().get_sc_address();
-                self.emit_add_liquidity_event(&storage_cache, &sc_address, BigUint::zero());
+                self.emit_add_liquidity_event(&storage_cache, &sc_address, &BigUint::zero());
             }
             ManagedAsyncCallResult::Err(_) => {
                 // Revert the deduction made in the parent function

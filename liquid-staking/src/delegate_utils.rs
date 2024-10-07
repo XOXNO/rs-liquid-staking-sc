@@ -41,18 +41,15 @@ pub trait DelegateUtilsModule:
         ls_amount: &BigUint,
         min_xegld_amount: &BigUint,
     ) -> (BigUint, BigUint, BigUint) {
-        let possible_instant_amount = self.calculate_instant_amount(
-            ls_amount,
-            &storage_cache.pending_ls_for_unstake,
-            min_xegld_amount,
-        );
+        let xegld_from_pending = &storage_cache.pending_ls_for_unstake;
+        let possible_instant_amount =
+            self.calculate_instant_amount(ls_amount, xegld_from_pending, min_xegld_amount);
 
         if self.can_fully_redeem(ls_amount, storage_cache, payment, min_xegld_amount) {
-            let xegld_from_pending = storage_cache.pending_ls_for_unstake.clone();
-            let instant_unbound_balance = self.get_egld_amount(&xegld_from_pending, storage_cache);
-            let egld_to_add_liquidity = payment - &instant_unbound_balance;
+            let instant_unbound_balance = self.get_egld_amount(xegld_from_pending, storage_cache);
+            let egld_to_add_liquidity = payment.clone() - &instant_unbound_balance;
             (
-                xegld_from_pending,
+                xegld_from_pending.clone(),
                 instant_unbound_balance,
                 egld_to_add_liquidity,
             )
@@ -61,11 +58,10 @@ pub trait DelegateUtilsModule:
             &possible_instant_amount,
             min_xegld_amount,
         ) {
-            let xegld_from_pending = &possible_instant_amount;
-            let instant_unbound_balance = self.get_egld_amount(xegld_from_pending, storage_cache);
+            let instant_unbound_balance = self.get_egld_amount(&possible_instant_amount, storage_cache);
             let egld_to_add_liquidity = payment - &instant_unbound_balance;
             (
-                xegld_from_pending.clone(),
+                possible_instant_amount,
                 instant_unbound_balance,
                 egld_to_add_liquidity,
             )
@@ -123,27 +119,27 @@ pub trait DelegateUtilsModule:
     fn process_redemption_and_staking(
         &self,
         storage_cache: &mut StorageCache<Self>,
-        xegld_from_pending: BigUint,
-        instant_unbound_balance: BigUint,
-        egld_to_add_liquidity: BigUint,
+        xegld_from_pending: &BigUint,
+        instant_unbound_balance: &BigUint,
+        egld_to_add_liquidity: &BigUint,
     ) {
         let mut final_amount_to_send = BigUint::from(0u64);
 
         // Process redemption of pending xEGLD by the user via his EGLD
-        if xegld_from_pending > 0 {
+        if xegld_from_pending > &BigUint::zero() {
             self.process_pending_redemption(
                 storage_cache,
-                &xegld_from_pending,
-                &instant_unbound_balance,
+                xegld_from_pending,
+                instant_unbound_balance,
                 &mut final_amount_to_send,
             );
         }
 
         // Increase the pending EGLD by the amount left to be staked if any
-        if egld_to_add_liquidity > 0 {
+        if egld_to_add_liquidity > &BigUint::zero() {
             self.process_egld_staking(
                 storage_cache,
-                &egld_to_add_liquidity,
+                egld_to_add_liquidity,
                 &mut final_amount_to_send,
             );
         }

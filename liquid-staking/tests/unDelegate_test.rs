@@ -13,7 +13,7 @@ use multiversx_sc_scenario::DebugApi;
 // It confirms that the user's LS token balance is reduced, their EGLD balance is increased by the correct amount,
 // and the contract's storage is updated to reflect the removed liquidity.
 #[test]
-fn liquid_staking_remove_liquidity_instant_test() {
+fn undelegate_can_fully_instant_redeem() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
@@ -46,7 +46,7 @@ fn liquid_staking_remove_liquidity_instant_test() {
 // It confirms that the user receives an NFT representing their unstaked tokens with the correct attributes,
 // their LS token balance is reduced, and the contract's storage is updated to reflect the pending unstake.
 #[test]
-fn liquid_staking_remove_liquidity_not_instant_test() {
+fn undelegate_partially_instant_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
@@ -57,6 +57,7 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
 
     // Set up a new user with an initial balance of 100 tokens
     let first_user = sc_setup.setup_new_user(100u64);
+    let second_user = sc_setup.setup_new_user(200u64);
 
     // Add liquidity of 100 tokens from the user to the contract
     sc_setup.add_liquidity(&first_user, 100u64);
@@ -71,10 +72,14 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&first_user);
 
+    // Add liquidity of 90.5 tokens from the second user to the contract
+    sc_setup.add_liquidity_exp17(&second_user, 905u64);
+
     // Remove liquidity of 90 tokens from the user
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
-    // Check the contract storage to ensure the liquidity is removed correctly and moved to pending unstake
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 90);
+
+    sc_setup.check_pending_egld_exp17(15u64);
+    sc_setup.check_pending_ls_for_unstake(1);
 
     // Check the user's balance of LS tokens to ensure they have 10 tokens remaining
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
@@ -84,11 +89,12 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        exp18(90),
+        exp18(1),
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
-    // Check the user's EGLD balance to ensure they didn't receive any EGLD back instantly
-    sc_setup.check_user_egld_balance(&first_user, 0u64);
+
+    // Check the user's EGLD balance to ensure they received some instant EGLD back the maximum possible
+    sc_setup.check_user_egld_balance(&first_user, 89);
 }
 
 // Test: liquid_staking_remove_liquidity_not_partially_instant_test
@@ -96,7 +102,7 @@ fn liquid_staking_remove_liquidity_not_instant_test() {
 // It confirms that the liquidity is removed correctly, the user receives an NFT representing their unstaked tokens with the correct attributes,
 // their LS token balance is reduced, and the contract's storage is updated to reflect the pending unstake and pending EGLD balance.
 #[test]
-fn liquid_staking_remove_liquidity_not_partially_instant_test() {
+fn calculate_partial_undelegate_fallback_test() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
@@ -160,7 +166,7 @@ fn liquid_staking_remove_liquidity_not_partially_instant_test() {
 // It confirms that the user receives a portion of their unstaked tokens instantly, the remaining as an NFT with the correct attributes,
 // their LS token balance is reduced, their EGLD balance is increased by the correct amount, and the contract's storage is updated to reflect the removed liquidity and pending unstake.
 #[test]
-fn liquid_staking_remove_liquidity_partially_instant_test() {
+fn undelegate_can_fully_pending_redeem() {
     // Create a dummy debug API instance
     let _ = DebugApi::dummy();
     // Set up the liquid staking contract
