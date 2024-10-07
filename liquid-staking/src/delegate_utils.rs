@@ -58,7 +58,8 @@ pub trait DelegateUtilsModule:
             &possible_instant_amount,
             min_xegld_amount,
         ) {
-            let instant_unbound_balance = self.get_egld_amount(&possible_instant_amount, storage_cache);
+            let instant_unbound_balance =
+                self.get_egld_amount(&possible_instant_amount, storage_cache);
             let egld_to_add_liquidity = payment - &instant_unbound_balance;
             (
                 possible_instant_amount,
@@ -135,6 +136,8 @@ pub trait DelegateUtilsModule:
             );
         }
 
+        let caller = self.blockchain().get_caller();
+
         // Increase the pending EGLD by the amount left to be staked if any
         if egld_to_add_liquidity > &BigUint::zero() {
             self.process_egld_staking(
@@ -144,8 +147,6 @@ pub trait DelegateUtilsModule:
             );
         }
 
-        let caller = self.blockchain().get_caller();
-
         // Send the final amount to the user, including the xEGLD from pending redemption if any and the fresh minted xEGLD if any
         self.send().direct_esdt(
             &caller,
@@ -153,9 +154,6 @@ pub trait DelegateUtilsModule:
             0,
             &final_amount_to_send,
         );
-
-        // Emit the add liquidity event
-        self.emit_add_liquidity_event(&storage_cache, &caller, egld_to_add_liquidity);
     }
 
     fn process_pending_redemption(
@@ -204,6 +202,9 @@ pub trait DelegateUtilsModule:
         // Add the liquidity to the pool and mint the corresponding xEGLD
         let ls_amount = self.pool_add_liquidity(egld_to_add_liquidity, storage_cache);
         let user_payment = self.mint_ls_token(ls_amount);
+
+        // Emit the add liquidity event
+        self.emit_add_liquidity_event(&storage_cache, egld_to_add_liquidity);
 
         // Add the minted xEGLD to the final amount to send
         *final_amount_to_send += user_payment.amount;

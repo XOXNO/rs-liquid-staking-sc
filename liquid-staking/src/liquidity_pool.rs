@@ -1,10 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::config::UNBOND_PERIOD;
 use crate::contexts::base::StorageCache;
 use crate::errors::*;
-use crate::structs::UnstakeTokenAttributes;
 
 use super::config;
 
@@ -109,27 +107,5 @@ pub trait LiquidityPoolModule: config::ConfigModule {
 
     fn burn_unstake_tokens(&self, token_nonce: u64, amount: &BigUint) {
         self.unstake_token().nft_burn(token_nonce, amount);
-    }
-
-    fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {
-        let current_epoch = self.blockchain().get_block_epoch();
-        let unbond_epoch = current_epoch + UNBOND_PERIOD;
-
-        let virtual_position = UnstakeTokenAttributes {
-            unstake_epoch: current_epoch,
-            unbond_epoch,
-        };
-
-        let user_payment =
-            self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
-
-        self.tx()
-            .to(caller)
-            .single_esdt(
-                &user_payment.token_identifier,
-                user_payment.token_nonce,
-                &user_payment.amount,
-            )
-            .transfer();
     }
 }

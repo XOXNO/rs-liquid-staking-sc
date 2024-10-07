@@ -9,8 +9,8 @@ use crate::{
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     structs::{ClaimStatus, ClaimStatusType},
     StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
-    ERROR_NOT_WHITELISTED, ERROR_RECOMPUTE_RESERVES,
-    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_CALLBACK,
+    ERROR_NOT_WHITELISTED, ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
+    MIN_GAS_FOR_CALLBACK,
 };
 
 multiversx_sc::imports!();
@@ -72,9 +72,17 @@ pub trait ManageModule:
 
         let pending = storage_cache.pending_ls_for_unstake.clone();
         let egld_to_unstake = self.pool_remove_liquidity(&pending, &mut storage_cache);
+
+        require!(
+            egld_to_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            ERROR_INSUFFICIENT_PENDING_EGLD
+        );
+
         self.burn_ls_token(&pending);
 
         storage_cache.pending_ls_for_unstake = BigUint::zero();
+
+        self.emit_remove_liquidity_event(&storage_cache, &pending);
 
         let delegation_contract = self.get_delegation_contract_for_undelegate(&egld_to_unstake);
 
@@ -192,8 +200,9 @@ pub trait ManageModule:
             ERROR_RECOMPUTE_RESERVES
         );
 
+        let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
         require!(
-            storage_cache.rewards_reserve > BigUint::from(MIN_EGLD_TO_DELEGATE),
+            storage_cache.rewards_reserve >= min_egld,
             ERROR_INSUFFICIENT_REWARDS
         );
 
@@ -201,7 +210,7 @@ pub trait ManageModule:
 
         let rewards_after = &storage_cache.rewards_reserve - &fees;
 
-        if rewards_after > BigUint::from(MIN_EGLD_TO_DELEGATE) {
+        if rewards_after >= min_egld {
             storage_cache.rewards_reserve = rewards_after;
 
             self.tx()
@@ -210,6 +219,8 @@ pub trait ManageModule:
                 .deposit()
                 .egld(&fees)
                 .transfer_execute();
+
+            self.protocol_revenue_event(&fees, self.blockchain().get_block_epoch());
         }
 
         let delegation_contract =

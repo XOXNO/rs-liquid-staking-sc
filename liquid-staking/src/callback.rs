@@ -29,17 +29,12 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract -= egld_to_unstake;
                         contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
                     });
-
-                self.emit_remove_liquidity_event(
-                    &storage_cache,
-                    &BigUint::zero(),
-                    &BigUint::zero(),
-                );
             }
             ManagedAsyncCallResult::Err(_) => {
-                let ls_amount = self.get_ls_amount(&egld_to_unstake, &mut storage_cache);
-                storage_cache.pending_ls_for_unstake += ls_amount;
-                self.move_delegation_contract_to_back(delegation_contract);
+                let ls_amount = self.pool_add_liquidity(&egld_to_unstake, &mut storage_cache);
+                self.emit_add_liquidity_event(&storage_cache, &egld_to_unstake);
+                storage_cache.pending_ls_for_unstake += &ls_amount;
+                self.mint_ls_token(ls_amount);
             }
         }
     }
@@ -83,6 +78,11 @@ pub trait CallbackModule:
                     delegation_contract_mapper.update(|contract_data| {
                         contract_data.total_unstaked_from_ls_contract -= &withdraw_amount;
                     });
+                    self.emit_withdraw_pending_event(
+                        &storage_cache,
+                        &withdraw_amount,
+                        delegation_contract,
+                    );
                 }
             }
             ManagedAsyncCallResult::Err(_) => {}
@@ -102,10 +102,12 @@ pub trait CallbackModule:
 
                 if rewards > 0u64 {
                     storage_cache.rewards_reserve += &rewards;
-                    self.emit_claim_rewards_event(delegation_contract, &rewards);
+                    self.emit_claim_rewards_event(&storage_cache, &rewards, delegation_contract);
                 }
             }
-            ManagedAsyncCallResult::Err(_) => {}
+            ManagedAsyncCallResult::Err(_) => {
+                self.move_delegation_contract_to_back(delegation_contract);
+            }
         }
     }
 
@@ -125,9 +127,11 @@ pub trait CallbackModule:
                     });
 
                 storage_cache.virtual_egld_reserve += staked_tokens;
-
-                let sc_address = self.blockchain().get_sc_address();
-                self.emit_add_liquidity_event(&storage_cache, &sc_address, &BigUint::zero());
+                self.emit_delegate_rewards_event(
+                    &storage_cache,
+                    staked_tokens,
+                    delegation_contract,
+                );
             }
             ManagedAsyncCallResult::Err(_) => {
                 // Revert the deduction made in the parent function

@@ -1,9 +1,10 @@
 use crate::{
-    StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_BAD_PAYMENT_TOKEN,
-    ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_PENDING_XEGLD, ERROR_LS_TOKEN_NOT_ISSUED,
-    MIN_EGLD_TO_DELEGATE,
+    structs::UnstakeTokenAttributes, StorageCache, ERROR_BAD_PAYMENT_AMOUNT,
+    ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_PENDING_XEGLD,
+    ERROR_LS_TOKEN_NOT_ISSUED, MIN_EGLD_TO_DELEGATE,
 };
 
+pub const UNBOND_PERIOD: u64 = 10;
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
@@ -101,6 +102,9 @@ pub trait UnDelegateUtilsModule:
 
             self.pool_remove_liquidity(&xegld_amount_to_burn, storage_cache);
             self.burn_ls_token(&xegld_amount_to_burn);
+
+            self.emit_remove_liquidity_event(storage_cache, &xegld_amount_to_burn);
+
             self.tx().to(caller).egld(instant_amount).transfer();
         }
     }
@@ -145,5 +149,27 @@ pub trait UnDelegateUtilsModule:
         );
 
         require!(payment.amount > 0, ERROR_BAD_PAYMENT_AMOUNT);
+    }
+
+    fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {
+        let current_epoch = self.blockchain().get_block_epoch();
+        let unbond_epoch = current_epoch + UNBOND_PERIOD;
+
+        let virtual_position = UnstakeTokenAttributes {
+            unstake_epoch: current_epoch,
+            unbond_epoch,
+        };
+
+        let user_payment =
+            self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
+
+        self.tx()
+            .to(caller)
+            .single_esdt(
+                &user_payment.token_identifier,
+                user_payment.token_nonce,
+                &user_payment.amount,
+            )
+            .transfer();
     }
 }

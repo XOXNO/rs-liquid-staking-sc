@@ -134,8 +134,6 @@ pub trait LiquidStaking<ContractReader>:
         }
 
         self.store_remaining_xegld(&mut storage_cache, &payment, &instant_amount);
-
-        self.emit_remove_liquidity_event(&storage_cache, &payment.amount, &total_egld);
     }
 
     #[payable("*")]

@@ -53,7 +53,7 @@ pub trait UtilsModule:
         self.get_delegation_contract(
             amount_to_undelegate,
             |contract_data, _| {
-                contract_data.total_staked_from_ls_contract > BigUint::from(MIN_EGLD_TO_DELEGATE)
+                contract_data.total_staked_from_ls_contract >= BigUint::from(MIN_EGLD_TO_DELEGATE)
             },
             |selected_addresses, amount_to_undelegate, min_egld, total_stake| {
                 self.distribute_amount(

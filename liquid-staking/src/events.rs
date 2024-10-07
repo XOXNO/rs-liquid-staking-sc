@@ -4,28 +4,15 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 #[derive(TypeAbi, TopEncode)]
-pub struct AddLiquidityEvent<M: ManagedTypeApi> {
+pub struct ChangeLiquidityEvent<M: ManagedTypeApi> {
     caller: ManagedAddress<M>,
     ls_token_id: TokenIdentifier<M>,
-    ls_token_amount: BigUint<M>,
     ls_token_supply: BigUint<M>,
     virtual_egld_reserve: BigUint<M>,
     rewards_reserve: BigUint<M>,
-    block: u64,
-    epoch: u64,
-    timestamp: u64,
-}
-
-#[derive(TypeAbi, TopEncode)]
-pub struct RemoveLiquidityEvent<M: ManagedTypeApi> {
-    caller: ManagedAddress<M>,
-    ls_token_id: TokenIdentifier<M>,
-    ls_token_amount: BigUint<M>,
-    unstake_token_id: TokenIdentifier<M>,
-    unstake_token_amount: BigUint<M>,
-    ls_token_supply: BigUint<M>,
-    virtual_egld_reserve: BigUint<M>,
-    rewards_reserve: BigUint<M>,
+    total_withdrawn_egld: BigUint<M>,
+    pending_egld: BigUint<M>,
+    pending_ls: BigUint<M>,
     block: u64,
     epoch: u64,
     timestamp: u64,
@@ -36,24 +23,20 @@ pub trait EventsModule:
     crate::config::ConfigModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    fn emit_add_liquidity_event(
-        &self,
-        storage_cache: &StorageCache<Self>,
-        caller: &ManagedAddress,
-        ls_token_amount: &BigUint,
-    ) {
+    fn emit_add_liquidity_event(&self, storage_cache: &StorageCache<Self>, egld_amount: &BigUint) {
         let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
         self.add_liquidity_event(
-            &storage_cache.ls_token_id,
-            caller,
-            epoch,
-            &AddLiquidityEvent {
+            &egld_amount,
+            &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
-                ls_token_amount: ls_token_amount.clone(),
                 ls_token_supply: storage_cache.ls_token_supply.clone(),
                 virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
                 rewards_reserve: storage_cache.rewards_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_ls: storage_cache.pending_ls_for_unstake.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
                 timestamp: self.blockchain().get_block_timestamp(),
@@ -61,56 +44,150 @@ pub trait EventsModule:
         )
     }
 
-    fn emit_remove_liquidity_event(
-        &self,
-        storage_cache: &StorageCache<Self>,
-        ls_token_amount: &BigUint,
-        unstake_token_amount: &BigUint,
-    ) {
+    fn emit_remove_liquidity_event(&self, storage_cache: &StorageCache<Self>, ls_amount: &BigUint) {
         let epoch = self.blockchain().get_block_epoch();
         let caller = self.blockchain().get_caller();
         self.remove_liquidity_event(
-            &storage_cache.ls_token_id,
-            &caller,
-            epoch,
-            &RemoveLiquidityEvent {
+            &ls_amount,
+            &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
-                ls_token_amount: ls_token_amount.clone(),
-                unstake_token_id: self.unstake_token().get_token_id(),
-                unstake_token_amount: unstake_token_amount.clone(),
                 ls_token_supply: storage_cache.ls_token_supply.clone(),
                 virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
                 rewards_reserve: storage_cache.rewards_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_ls: storage_cache.pending_ls_for_unstake.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
                 timestamp: self.blockchain().get_block_timestamp(),
             },
+        )
+    }
+
+    fn emit_claim_rewards_event(
+        &self,
+        storage_cache: &StorageCache<Self>,
+        egld_amount: &BigUint,
+        delegation_contract: &ManagedAddress,
+    ) {
+        let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
+        self.claim_rewards_event(
+            &egld_amount,
+            &ChangeLiquidityEvent {
+                caller: caller.clone(),
+                ls_token_id: storage_cache.ls_token_id.clone(),
+                ls_token_supply: storage_cache.ls_token_supply.clone(),
+                virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
+                rewards_reserve: storage_cache.rewards_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_ls: storage_cache.pending_ls_for_unstake.clone(),
+                block: self.blockchain().get_block_nonce(),
+                epoch,
+                timestamp: self.blockchain().get_block_timestamp(),
+            },
+            &delegation_contract,
+        )
+    }
+
+    fn emit_delegate_rewards_event(
+        &self,
+        storage_cache: &StorageCache<Self>,
+        egld_amount: &BigUint,
+        delegation_contract: &ManagedAddress,
+    ) {
+        let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
+        self.delegate_rewards_event(
+            &egld_amount,
+            &ChangeLiquidityEvent {
+                caller: caller.clone(),
+                ls_token_id: storage_cache.ls_token_id.clone(),
+                ls_token_supply: storage_cache.ls_token_supply.clone(),
+                virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
+                rewards_reserve: storage_cache.rewards_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_ls: storage_cache.pending_ls_for_unstake.clone(),
+                block: self.blockchain().get_block_nonce(),
+                epoch,
+                timestamp: self.blockchain().get_block_timestamp(),
+            },
+            &delegation_contract,
+        )
+    }
+
+    fn emit_withdraw_pending_event(
+        &self,
+        storage_cache: &StorageCache<Self>,
+        egld_amount: &BigUint,
+        delegation_contract: &ManagedAddress,
+    ) {
+        let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
+        self.withdraw_pending_event(
+            &egld_amount,
+            &ChangeLiquidityEvent {
+                caller: caller.clone(),
+                ls_token_id: storage_cache.ls_token_id.clone(),
+                ls_token_supply: storage_cache.ls_token_supply.clone(),
+                virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
+                rewards_reserve: storage_cache.rewards_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_ls: storage_cache.pending_ls_for_unstake.clone(),
+                block: self.blockchain().get_block_nonce(),
+                epoch,
+                timestamp: self.blockchain().get_block_timestamp(),
+            },
+            &delegation_contract,
         )
     }
 
     #[event("add_liquidity")]
     fn add_liquidity_event(
         &self,
-        #[indexed] ls_token: &TokenIdentifier,
-        #[indexed] caller: &ManagedAddress,
-        #[indexed] epoch: u64,
-        add_liquidity_event: &AddLiquidityEvent<Self::Api>,
+        #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
     );
 
     #[event("remove_liquidity")]
     fn remove_liquidity_event(
         &self,
-        #[indexed] ls_token: &TokenIdentifier,
-        #[indexed] caller: &ManagedAddress,
-        #[indexed] epoch: u64,
-        remove_liquidity_event: &RemoveLiquidityEvent<Self::Api>,
+        #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
+    );
+
+    #[event("delegate_rewards")]
+    fn delegate_rewards_event(
+        &self,
+        #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
+        #[indexed] delegation_contract: &ManagedAddress,
+    );
+
+    #[event("withdraw_pending")]
+    fn withdraw_pending_event(
+        &self,
+        #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
+        #[indexed] delegation_contract: &ManagedAddress,
     );
 
     #[event("claim_rewards")]
-    fn emit_claim_rewards_event(
+    fn claim_rewards_event(
         &self,
-        #[indexed] delegation_contract: &ManagedAddress,
         #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
+        #[indexed] delegation_contract: &ManagedAddress,
+    );
+
+    #[event("protocol_revenue")]
+    fn protocol_revenue_event(
+        &self,
+        #[indexed] amount: &BigUint,
+        #[indexed] epoch: u64,
     );
 }

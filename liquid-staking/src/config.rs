@@ -4,7 +4,6 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 pub const MAX_PERCENTAGE: u64 = 100_000;
-pub const UNBOND_PERIOD: u64 = 10;
 
 #[multiversx_sc::module]
 pub trait ConfigModule {
