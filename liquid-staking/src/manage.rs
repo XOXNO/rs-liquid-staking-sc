@@ -166,7 +166,6 @@ pub trait ManageModule:
                 .register_promise();
 
             if next_node == 0 {
-                sc_print!("No next node {}", next_node);
                 claim_status_mapper.set(current_claim_status.clone());
                 return STOP_OP;
             } else {
@@ -181,7 +180,6 @@ pub trait ManageModule:
                 self.save_progress(&current_claim_status);
             }
             OperationCompletionStatus::Completed => {
-                sc_print!("Claim status updated {}", 0);
                 claim_status_mapper.update(|claim_status| {
                     claim_status.status = ClaimStatusType::Finished;
                 });

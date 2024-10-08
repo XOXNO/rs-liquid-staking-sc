@@ -47,24 +47,20 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         let egld_amount =
             ls_token_amount * &storage_cache.virtual_egld_reserve / &storage_cache.ls_token_supply;
 
-        require!(egld_amount > 0u64, ERROR_INSUFFICIENT_LIQ_BURNED);
+        require!(egld_amount > BigUint::zero(), ERROR_INSUFFICIENT_LIQ_BURNED);
 
         egld_amount
     }
 
-    fn get_ls_amount(
-        &self,
-        token_amount: &BigUint,
-        storage_cache: &mut StorageCache<Self>,
-    ) -> BigUint {
-        let ls_amount = if storage_cache.virtual_egld_reserve > 0 {
+    fn get_ls_amount(&self, token_amount: &BigUint, storage_cache: &StorageCache<Self>) -> BigUint {
+        let ls_amount = if storage_cache.virtual_egld_reserve > BigUint::zero() {
             token_amount.clone() * &storage_cache.ls_token_supply
                 / (&storage_cache.virtual_egld_reserve + &storage_cache.rewards_reserve)
         } else {
             token_amount.clone()
         };
 
-        require!(ls_amount > 0, ERROR_INSUFFICIENT_LIQUIDITY);
+        require!(ls_amount > BigUint::zero(), ERROR_INSUFFICIENT_LIQUIDITY);
 
         ls_amount
     }

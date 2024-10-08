@@ -53,7 +53,7 @@ pub trait UnDelegateUtilsModule:
         total_egld: &BigUint,
         min_egld_amount: &BigUint,
     ) -> bool {
-        storage_cache.pending_egld > BigUint::from(0u64)
+        storage_cache.pending_egld > BigUint::zero()
             && total_egld > &storage_cache.pending_egld
             && &(total_egld - &storage_cache.pending_egld) >= min_egld_amount
     }
@@ -67,6 +67,7 @@ pub trait UnDelegateUtilsModule:
         let possible_instant_amount =
             self.calculate_instant_amount(total_egld, &storage_cache.pending_egld, min_egld_amount);
         if possible_instant_amount >= *min_egld_amount
+            && total_egld >= &possible_instant_amount
             && (total_egld - &possible_instant_amount) >= *min_egld_amount
         {
             let undelegate_amount = total_egld - &possible_instant_amount;
@@ -85,7 +86,7 @@ pub trait UnDelegateUtilsModule:
         total_egld: &BigUint,
         instant_amount: &BigUint,
     ) {
-        if *instant_amount > BigUint::from(0u64) {
+        if *instant_amount > BigUint::zero() {
             let xegld_amount_to_burn = if instant_amount == total_egld {
                 payment.amount.clone()
             } else {
@@ -149,7 +150,7 @@ pub trait UnDelegateUtilsModule:
             ERROR_BAD_PAYMENT_TOKEN
         );
 
-        require!(payment.amount > 0, ERROR_BAD_PAYMENT_AMOUNT);
+        require!(payment.amount > BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
     }
 
     fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {

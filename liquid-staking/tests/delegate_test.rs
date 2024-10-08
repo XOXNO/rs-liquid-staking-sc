@@ -263,6 +263,28 @@ fn liquid_staking_add_liquidity_exp17_test() {
 }
 
 #[test]
+fn liquid_staking_add_liquidity_exp17_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+    let second_user = sc_setup.setup_new_user(1u64);
+
+    // Action: First user adds 3 EGLD as liquidity to the contract
+    sc_setup.add_liquidity(&first_user, 3u64);
+    sc_setup.delegate_pending(&first_user);
+
+    // Action: First user removes 15 * 10^17 (1.5 EGLD) as liquidity from the contract using exp17
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 15u64);
+
+    // Action: Second user adds 6 * 10^17 (0.6 EGLD) as liquidity to the contract using exp17
+    // This simulates adding liquidity with decimal values
+    sc_setup.add_liquidity_exp17_error(&second_user, 6u64, ERROR_INSUFFICIENT_PENDING_EGLD);
+}
+
+#[test]
 fn liquid_staking_add_liquidity_inactive_contract_error_test() {
     let _ = DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
@@ -276,19 +298,19 @@ fn liquid_staking_add_liquidity_inactive_contract_error_test() {
     sc_setup.add_liquidity_error(&first_user, 100u64, ERROR_NOT_ACTIVE);
 }
 
-#[test]
-fn liquid_staking_add_liquidity_min_rounds_contract_error_test() {
-    let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+// #[test]
+// fn liquid_staking_add_liquidity_min_rounds_contract_error_test() {
+//     let _ = DebugApi::dummy();
+//     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
-    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+//     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
 
-    let first_user = sc_setup.setup_new_user(100u64);
+//     let first_user = sc_setup.setup_new_user(100u64);
 
-    sc_setup.add_liquidity(&first_user, 100u64);
+//     sc_setup.add_liquidity(&first_user, 100u64);
 
-    sc_setup.delegate_pending_error(&first_user, ERROR_MINIMUM_ROUNDS_NOT_PASSED);
-}
+//     sc_setup.delegate_pending_error(&first_user, ERROR_MINIMUM_ROUNDS_NOT_PASSED);
+// }
 
 #[test]
 fn liquid_staking_add_liquidity_not_enough_pending_egld_error_test() {

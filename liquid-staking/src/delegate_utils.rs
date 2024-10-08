@@ -124,7 +124,7 @@ pub trait DelegateUtilsModule:
         instant_unbound_balance: &BigUint,
         egld_to_add_liquidity: &BigUint,
     ) {
-        let mut final_amount_to_send = BigUint::from(0u64);
+        let mut final_amount_to_send = BigUint::zero();
 
         // Process redemption of pending xEGLD by the user via his EGLD
         if xegld_from_pending > &BigUint::zero() {

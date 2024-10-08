@@ -39,7 +39,7 @@ pub trait DelegationMock {
         let current_epoch = self.blockchain().get_block_epoch();
         let total_deposit = self.address_deposit(&caller).get();
         require!(
-            egld_to_undelegate > 0 && egld_to_undelegate <= total_deposit,
+            egld_to_undelegate > BigUint::zero() && egld_to_undelegate <= total_deposit,
             "Invalid undelegate amount"
         );
         self.address_deposit(&caller)
@@ -57,7 +57,7 @@ pub trait DelegationMock {
         let withdraw_epoch = self.address_undelegate_epoch(&caller).get();
         let withdraw_amount = self.address_undelegate_amount(&caller).get();
 
-        require!(withdraw_amount > 0, "No amount to withdraw");
+        require!(withdraw_amount > BigUint::zero(), "No amount to withdraw");
         require!(
             withdraw_epoch > 0 && current_epoch >= withdraw_epoch,
             "Cannot withdraw yet"

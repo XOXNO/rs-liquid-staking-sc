@@ -5,10 +5,11 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           43
+// Upgrade:                              1
+// Endpoints:                           45
 // Async Callback:                       1
 // Promise callbacks:                    5
-// Total number of exported functions:  50
+// Total number of exported functions:  53
 
 #![no_std]
 
@@ -19,6 +20,7 @@ multiversx_sc_wasm_adapter::endpoints! {
     liquid_staking
     (
         init => init
+        upgrade => upgrade
         delegate => delegate
         unDelegate => un_delegate
         withdraw => withdraw
@@ -55,6 +57,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         delegateRewards => delegate_rewards
         canExecutePendingTasks => can_execute_pending_tasks
         getLsValueForPosition => get_ls_value_for_position
+        getEgldPositionValue => get_egld_position_value
+        getExchangeRate => get_exchange_rate
         getDelegationStatus => get_delegation_status
         getDelegationContractStakedAmount => get_delegation_contract_staked_amount
         getDelegationContractUnstakedAmount => get_delegation_contract_unstaked_amount

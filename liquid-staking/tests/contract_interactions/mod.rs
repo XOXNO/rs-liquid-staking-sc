@@ -165,6 +165,26 @@ where
             .assert_ok();
     }
 
+    pub fn remove_liquidity_exp17(
+        &mut self,
+        caller: &Address,
+        payment_token: &[u8],
+        payment_amount: u64,
+    ) {
+        self.b_mock
+            .execute_esdt_transfer(
+                caller,
+                &self.sc_wrapper,
+                payment_token,
+                0,
+                &exp17(payment_amount),
+                |sc| {
+                    sc.un_delegate();
+                },
+            )
+            .assert_ok();
+    }
+
     pub fn remove_liquidity_error(
         &mut self,
         caller: &Address,
@@ -179,6 +199,27 @@ where
                 payment_token,
                 0,
                 &exp18(payment_amount),
+                |sc| {
+                    sc.un_delegate();
+                },
+            )
+            .assert_error(4, bytes_to_str(error));
+    }
+
+    pub fn remove_liquidity_exp17_error(
+        &mut self,
+        caller: &Address,
+        payment_token: &[u8],
+        payment_amount: u64,
+        error: &[u8],
+    ) {
+        self.b_mock
+            .execute_esdt_transfer(
+                caller,
+                &self.sc_wrapper,
+                payment_token,
+                0,
+                &exp17(payment_amount),
                 |sc| {
                     sc.un_delegate();
                 },

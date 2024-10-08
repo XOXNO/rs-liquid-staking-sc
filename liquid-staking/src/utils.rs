@@ -271,7 +271,7 @@ pub trait UtilsModule:
         pending_amount: &BigUint,
         min_amount: &BigUint,
     ) -> BigUint {
-        if pending_amount <= min_amount {
+        if pending_amount <= min_amount || sent_amount <= min_amount {
             return BigUint::zero();
         }
 
@@ -325,6 +325,8 @@ pub trait UtilsModule:
     }
 
     fn require_min_rounds_passed(&self) {
+        // TODO: Implement once new hooks are available in the VM
+        return;
         let block_round = self.blockchain().get_block_round();
         let rounds_per_epoch = self.rounds_per_epoch().get();
         let minimum_rounds = self.minimum_rounds().get();

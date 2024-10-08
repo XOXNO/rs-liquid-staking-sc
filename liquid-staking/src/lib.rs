@@ -50,6 +50,9 @@ pub trait LiquidStaking<ContractReader>:
     + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
+    #[upgrade]
+    fn upgrade(&self) {}
+
     #[init]
     fn init(
         &self,
@@ -147,7 +150,7 @@ pub trait LiquidStaking<ContractReader>:
             ERROR_BAD_PAYMENT_TOKEN
         );
 
-        require!(payment.amount > 0, ERROR_BAD_PAYMENT_AMOUNT);
+        require!(payment.amount > BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
 
         let unstake_token_attributes: UnstakeTokenAttributes = self
             .unstake_token()

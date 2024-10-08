@@ -101,7 +101,7 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Ok(()) => {
                 let rewards = self.call_value().egld_value().clone_value();
 
-                if rewards > 0u64 {
+                if rewards > BigUint::zero() {
                     storage_cache.rewards_reserve += &rewards;
                     self.emit_claim_rewards_event(&storage_cache, &rewards, delegation_contract);
                 }
