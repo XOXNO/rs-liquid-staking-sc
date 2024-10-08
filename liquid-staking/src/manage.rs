@@ -143,7 +143,12 @@ pub trait ManageModule:
 
         let mut current_claim_status = self.load_operation::<ClaimStatus>();
 
-        self.check_claim_operation(&current_claim_status, old_claim_status, current_epoch);
+        self.check_claim_operation(
+            &storage_cache,
+            &current_claim_status,
+            old_claim_status,
+            current_epoch,
+        );
         self.prepare_claim_operation(&mut current_claim_status, current_epoch);
 
         let run_result = self.run_while_it_has_gas(DEFAULT_MIN_GAS_TO_SAVE_PROGRESS, || {

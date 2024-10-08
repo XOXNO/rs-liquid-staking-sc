@@ -3,9 +3,9 @@ use crate::{
         ClaimStatus, ClaimStatusType, DelegationContractData, DelegationContractInfo,
         DelegatorSelection,
     },
-    ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
-    ERROR_FIRST_DELEGATION_NODE, ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NO_DELEGATION_CONTRACTS,
-    ERROR_OLD_CLAIM_START, MIN_EGLD_TO_DELEGATE,
+    StorageCache, ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START,
+    ERROR_FAILED_TO_DISTRIBUTE, ERROR_FIRST_DELEGATION_NODE, ERROR_MINIMUM_ROUNDS_NOT_PASSED,
+    ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -286,6 +286,7 @@ pub trait UtilsModule:
 
     fn check_claim_operation(
         &self,
+        storage_cache: &StorageCache<Self>,
         current_claim_status: &ClaimStatus,
         old_claim_status: ClaimStatus,
         current_epoch: u64,
@@ -297,7 +298,7 @@ pub trait UtilsModule:
         );
         require!(
             old_claim_status.status == ClaimStatusType::Redelegated
-                || old_claim_status.status == ClaimStatusType::Insufficent,
+                || storage_cache.rewards_reserve < BigUint::from(MIN_EGLD_TO_DELEGATE),
             ERROR_OLD_CLAIM_START
         );
         require!(
