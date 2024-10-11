@@ -71,12 +71,6 @@ pub trait ConfigModule {
     }
 
     #[only_owner]
-    #[endpoint(setRoundsPerEpoch)]
-    fn set_rounds_per_epoch(&self, rounds_per_epoch: u64) {
-        self.rounds_per_epoch().set(rounds_per_epoch);
-    }
-
-    #[only_owner]
     #[endpoint(setMinimumRounds)]
     fn set_minimum_rounds(&self, minimum_rounds: u64) {
         self.minimum_rounds().set(minimum_rounds);
@@ -137,7 +131,7 @@ pub trait ConfigModule {
 
     #[view(getPendingLsForUnstake)]
     #[storage_mapper("pendingLsForUnstake")]
-    fn pending_ls_for_unstake(&self) -> SingleValueMapper<BigUint>;
+    fn pending_egld_for_unstake(&self) -> SingleValueMapper<BigUint>;
 
     #[view(getUnstakeTokenNonce)]
     #[storage_mapper("unstakeTokenNonce")]

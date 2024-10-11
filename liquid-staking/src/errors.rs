@@ -31,3 +31,4 @@ pub static ERROR_ONLY_DELEGATION_ADMIN: &[u8] =
     b"Only the admin of the delegation contract can change the status";
 pub static ERROR_MINIMUM_ROUNDS_NOT_PASSED: &[u8] = b"Minimum rounds didn't pass";
 pub static ERROR_FAILED_TO_DISTRIBUTE: &[u8] = b"Failed to distribute entire amount";
+pub static ERROR_MAX_DELEGATION_ADDRESSES: &[u8] = b"Maximum number of delegation addresses reached";

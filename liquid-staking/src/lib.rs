@@ -11,15 +11,15 @@ pub const MAX_DELEGATION_ADDRESSES: usize = 50;
 pub mod accumulator;
 pub mod callback;
 pub mod config;
-pub mod delegate_utils;
 pub mod delegation;
 pub mod delegation_proxy;
 pub mod errors;
 pub mod manage;
 pub mod storage;
 pub mod structs;
-pub mod un_delegate_utils;
 pub mod utils;
+pub mod utils_delegation;
+pub mod utils_un_delegation;
 pub mod views;
 
 mod contexts;
@@ -43,8 +43,8 @@ pub trait LiquidStaking<ContractReader>:
     + storage::StorageModule
     + manage::ManageModule
     + views::ViewsModule
-    + delegate_utils::DelegateUtilsModule
-    + un_delegate_utils::UnDelegateUtilsModule
+    + utils_delegation::DelegateUtilsModule
+    + utils_un_delegation::UnDelegateUtilsModule
     + delegation::DelegationModule
     + callback::CallbackModule
     + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
@@ -88,23 +88,12 @@ pub trait LiquidStaking<ContractReader>:
 
         self.validate_delegate_conditions(&mut storage_cache, &payment);
 
-        let ls_amount = self.get_ls_amount(&payment, &mut storage_cache);
-
-        let min_xegld_amount =
-            self.get_ls_amount(&BigUint::from(MIN_EGLD_TO_DELEGATE), &mut storage_cache);
-
-        let (xegld_from_pending, instant_unbond_balance, egld_to_add_liquidity) = self
-            .determine_delegate_amounts(
-                &mut storage_cache,
-                &payment,
-                &ls_amount,
-                &min_xegld_amount,
-            );
+        let (egld_from_pending_used, egld_to_add_liquidity) =
+            self.determine_delegate_amounts(&mut storage_cache, &payment);
 
         self.process_redemption_and_staking(
             &mut storage_cache,
-            &xegld_from_pending,
-            &instant_unbond_balance,
+            &egld_from_pending_used,
             &egld_to_add_liquidity,
         );
     }
@@ -118,22 +107,17 @@ pub trait LiquidStaking<ContractReader>:
 
         self.validate_undelegate_conditions(&mut storage_cache, &payment);
 
-        let total_egld = self.get_egld_amount(&payment.amount, &mut storage_cache);
+        let unstaked_egld = self.pool_remove_liquidity(&payment.amount, &mut storage_cache);
+        self.burn_ls_token(&payment.amount);
 
-        let (instant_amount, undelegate_amount) =
-            self.determine_undelegate_amounts(&mut storage_cache, &total_egld);
+        let (instant_amount, to_undelegate_amount) =
+            self.determine_undelegate_amounts(&mut storage_cache, &unstaked_egld);
 
-        self.process_instant_redemption(
-            &mut storage_cache,
-            &caller,
-            &payment,
-            &total_egld,
-            &instant_amount,
-        );
+        self.process_instant_redemption(&mut storage_cache, &caller, &instant_amount);
 
-        self.undelegate_amount(&undelegate_amount, &caller);
+        self.undelegate_amount(&mut storage_cache, &to_undelegate_amount, &caller);
 
-        self.store_remaining_xegld(&mut storage_cache, &payment, &instant_amount);
+        self.emit_remove_liquidity_event(&storage_cache, &payment.amount);
     }
 
     #[payable("*")]

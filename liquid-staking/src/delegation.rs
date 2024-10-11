@@ -4,6 +4,7 @@ use crate::{
         ERROR_ONLY_DELEGATION_ADMIN,
     },
     structs::DelegationContractData,
+    ERROR_MAX_DELEGATION_ADDRESSES,
 };
 
 multiversx_sc::imports!();
@@ -37,7 +38,7 @@ pub trait DelegationModule:
     ) {
         require!(
             self.delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
-            "Maximum number of delegation addresses reached"
+            ERROR_MAX_DELEGATION_ADDRESSES
         );
 
         require!(
@@ -58,6 +59,7 @@ pub trait DelegationModule:
             apy,
             total_staked_from_ls_contract: BigUint::zero(),
             total_unstaked_from_ls_contract: BigUint::zero(),
+            eligible: true,
         };
 
         self.delegation_contract_data(&contract_address)

@@ -20,31 +20,31 @@ pub trait UnDelegateUtilsModule:
     fn determine_undelegate_amounts(
         &self,
         storage_cache: &mut StorageCache<Self>,
-        total_egld: &BigUint,
+        unstaked_egld: &BigUint,
     ) -> (BigUint, BigUint) {
         let min_egld_amount = &BigUint::from(MIN_EGLD_TO_DELEGATE);
-        if self.can_fully_instant_redeem(storage_cache, total_egld, min_egld_amount) {
+        if self.can_fully_instant_redeem(storage_cache, unstaked_egld, min_egld_amount) {
             // Case 1: Full instant redemption
-            (total_egld.clone(), BigUint::zero())
-        } else if self.can_fully_pending_redeem(storage_cache, total_egld, min_egld_amount) {
+            (unstaked_egld.clone(), BigUint::zero())
+        } else if self.can_fully_pending_redeem(storage_cache, unstaked_egld, min_egld_amount) {
             // Case 2: Full pending redemption + undelegation
-            let difference = total_egld - &storage_cache.pending_egld;
+            let difference = unstaked_egld - &storage_cache.pending_egld;
             (storage_cache.pending_egld.clone(), difference)
         } else {
             // Case 3: Partial pending redemption + undelegation
-            self.calculate_partial_undelegate(storage_cache, total_egld, min_egld_amount)
+            self.calculate_partial_undelegate(storage_cache, unstaked_egld, min_egld_amount)
         }
     }
 
     fn can_fully_instant_redeem(
         &self,
         storage_cache: &mut StorageCache<Self>,
-        total_egld: &BigUint,
+        unstaked_egld: &BigUint,
         min_egld_amount: &BigUint,
     ) -> bool {
-        total_egld == &storage_cache.pending_egld
-            || (&storage_cache.pending_egld >= total_egld
-                && (&storage_cache.pending_egld - total_egld) >= *min_egld_amount)
+        unstaked_egld == &storage_cache.pending_egld
+            || (&storage_cache.pending_egld >= unstaked_egld
+                && (&storage_cache.pending_egld - unstaked_egld) >= *min_egld_amount)
     }
 
     fn can_fully_pending_redeem(
@@ -61,20 +61,23 @@ pub trait UnDelegateUtilsModule:
     fn calculate_partial_undelegate(
         &self,
         storage_cache: &mut StorageCache<Self>,
-        total_egld: &BigUint,
+        unstaked_egld: &BigUint,
         min_egld_amount: &BigUint,
     ) -> (BigUint, BigUint) {
-        let possible_instant_amount =
-            self.calculate_instant_amount(total_egld, &storage_cache.pending_egld, min_egld_amount);
+        let possible_instant_amount = self.calculate_instant_amount(
+            unstaked_egld,
+            &storage_cache.pending_egld,
+            min_egld_amount,
+        );
         if possible_instant_amount >= *min_egld_amount
-            && total_egld >= &possible_instant_amount
-            && (total_egld - &possible_instant_amount) >= *min_egld_amount
+            && unstaked_egld >= &possible_instant_amount
+            && (unstaked_egld - &possible_instant_amount) >= *min_egld_amount
         {
-            let undelegate_amount = total_egld - &possible_instant_amount;
+            let undelegate_amount = unstaked_egld - &possible_instant_amount;
             (possible_instant_amount, undelegate_amount)
         } else {
             // Fallback: full undelegation
-            (BigUint::zero(), total_egld.clone())
+            (BigUint::zero(), unstaked_egld.clone())
         }
     }
 
@@ -82,17 +85,9 @@ pub trait UnDelegateUtilsModule:
         &self,
         storage_cache: &mut StorageCache<Self>,
         caller: &ManagedAddress,
-        payment: &EsdtTokenPayment<Self::Api>,
-        total_egld: &BigUint,
         instant_amount: &BigUint,
     ) {
         if *instant_amount > BigUint::zero() {
-            let xegld_amount_to_burn = if instant_amount == total_egld {
-                payment.amount.clone()
-            } else {
-                self.get_ls_amount(instant_amount, storage_cache)
-            };
-
             storage_cache.pending_egld -= instant_amount;
 
             require!(
@@ -101,36 +96,8 @@ pub trait UnDelegateUtilsModule:
                 ERROR_INSUFFICIENT_PENDING_EGLD
             );
 
-            self.pool_remove_liquidity(&xegld_amount_to_burn, storage_cache);
-            self.burn_ls_token(&xegld_amount_to_burn);
-
-            self.emit_remove_liquidity_event(storage_cache, &xegld_amount_to_burn);
-
             self.tx().to(caller).egld(instant_amount).transfer();
         }
-    }
-
-    fn store_remaining_xegld(
-        &self,
-        storage_cache: &mut StorageCache<Self>,
-        payment: &EsdtTokenPayment<Self::Api>,
-        instant_amount: &BigUint,
-    ) {
-        let remaining_xegld = if payment.amount >= *instant_amount {
-            &payment.amount - instant_amount
-        } else {
-            BigUint::zero()
-        };
-
-        storage_cache.pending_ls_for_unstake += remaining_xegld;
-        let min_xegld_amount =
-            self.get_ls_amount(&BigUint::from(MIN_EGLD_TO_DELEGATE), storage_cache);
-        require!(
-            storage_cache.pending_ls_for_unstake >= min_xegld_amount
-                || storage_cache.pending_ls_for_unstake == BigUint::zero(),
-            ERROR_INSUFFICIENT_PENDING_XEGLD
-        );
-        self.emit_general_liquidity_event(&storage_cache);
     }
 
     fn validate_undelegate_conditions(
@@ -153,10 +120,23 @@ pub trait UnDelegateUtilsModule:
         require!(payment.amount > BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
     }
 
-    fn undelegate_amount(&self, egld_to_unstake: &BigUint, caller: &ManagedAddress) {
+    fn undelegate_amount(
+        &self,
+        storage_cache: &mut StorageCache<Self>,
+        egld_to_unstake: &BigUint,
+        caller: &ManagedAddress,
+    ) {
         if *egld_to_unstake == BigUint::zero() {
             return;
         }
+
+        storage_cache.pending_egld_for_unstake += egld_to_unstake;
+
+        require!(
+            storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                || storage_cache.pending_egld_for_unstake == BigUint::zero(),
+            ERROR_INSUFFICIENT_PENDING_XEGLD
+        );
 
         let current_epoch = self.blockchain().get_block_epoch();
         let unbond_epoch = current_epoch + UNBOND_PERIOD;

@@ -98,7 +98,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token
     // 90: total_unstaked_egld (increased by 90 after liquidity removal)
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
 
     // Check the first user's balance of LS tokens
     // Expected balance: 10 LS tokens (100 - 90 removed)
@@ -194,7 +194,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token
     // 90: total_unstaked_egld (increased by 90 after liquidity removal)
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
 
     // Check the first user's balance of LS tokens
     // Expected balance: 10 LS tokens (100 - 90 removed)
@@ -343,7 +343,7 @@ fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
     sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 2u64);
-    sc_setup.check_contract_storage(5, 5, 0, 0, 0, 2);
+    sc_setup.check_contract_storage(3, 3, 0, 0, 0, 2);
 
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 3u64);
     // Try to add 1.5 EGLD when there is not enough left pending xEGLD

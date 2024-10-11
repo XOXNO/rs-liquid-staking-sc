@@ -436,7 +436,7 @@ where
                     to_managed_biguint(exp18(pending_egld))
                 );
                 assert_eq!(
-                    sc.pending_ls_for_unstake().get(),
+                    sc.pending_egld_for_unstake().get(),
                     to_managed_biguint(exp18(pending_ls_for_unstake))
                 );
             })
@@ -458,8 +458,23 @@ where
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {
                 assert_eq!(
-                    sc.pending_ls_for_unstake().get(),
+                    sc.pending_egld_for_unstake().get(),
                     to_managed_biguint(exp18(pending_ls_for_unstake))
+                );
+            })
+            .assert_ok();
+    }
+
+
+    pub fn check_pending_ls_for_unstake_denominated(
+        &mut self,
+        pending_ls_for_unstake: u128,
+    ) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                assert_eq!(
+                    sc.pending_egld_for_unstake().get(),
+                    to_managed_biguint(num_bigint::BigUint::from(pending_ls_for_unstake))
                 );
             })
             .assert_ok();

@@ -12,12 +12,7 @@ pub trait ViewsModule:
 {
     #[view(canExecutePendingTasks)]
     fn can_execute_pending_tasks(&self) -> bool {
-        // let block_round = self.blockchain().get_block_round();
-        // let rounds_per_epoch = self.rounds_per_epoch().get();
-        // let minimum_rounds = self.minimum_rounds().get();
-        // let current_epoch = self.blockchain().get_block_epoch();
-        // let change_epoch_round = (current_epoch + 1) * rounds_per_epoch;
-        // change_epoch_round - block_round <= minimum_rounds
+        // TODO: Implement once new hooks are available in the VM
         true
     }
 
@@ -38,7 +33,7 @@ pub trait ViewsModule:
         let storage_cache = StorageCache::new(self);
         const INITIAL_EXCHANGE_RATE: u64 = 1_000_000_000_000_000_000;
 
-        // The initial exchange rate between XOXNO and LXOXNO is fixed to one
+        // The initial exchange rate between EGLD and XEGLD is fixed to one
         if storage_cache.ls_token_supply.clone() == BigUint::zero() {
             return BigUint::from(INITIAL_EXCHANGE_RATE);
         }

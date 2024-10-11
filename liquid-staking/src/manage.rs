@@ -71,21 +71,15 @@ pub trait ManageModule:
 
         self.require_min_rounds_passed();
 
-        let pending = storage_cache.pending_ls_for_unstake.clone();
-        let egld_to_unstake = self.pool_remove_liquidity(&pending, &mut storage_cache);
-
         require!(
-            egld_to_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            &storage_cache.pending_egld_for_unstake >= &BigUint::from(MIN_EGLD_TO_DELEGATE),
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
-        self.burn_ls_token(&pending);
+        let delegation_contract =
+            self.get_delegation_contract_for_undelegate(&storage_cache.pending_egld_for_unstake);
 
-        storage_cache.pending_ls_for_unstake = BigUint::zero();
-
-        self.emit_remove_liquidity_event(&storage_cache, &pending);
-
-        let delegation_contract = self.get_delegation_contract_for_undelegate(&egld_to_unstake);
+        storage_cache.pending_egld_for_unstake = BigUint::zero();
 
         for data in &delegation_contract {
             self.tx()
@@ -138,17 +132,21 @@ pub trait ManageModule:
 
         let claim_status_mapper = self.delegation_claim_status();
 
-        let old_claim_status = claim_status_mapper.get();
+        let mut old_claim_status = claim_status_mapper.get();
+
+        // If the claim status is finished and the rewards reserve is less than the minimum eGLD to delegate, set the claim status to Insufficient
+        // This is to prevent the contract from getting stuck in the claim operation
+        if old_claim_status.status == ClaimStatusType::Finished
+            && storage_cache.rewards_reserve < BigUint::from(MIN_EGLD_TO_DELEGATE)
+        {
+            old_claim_status.status = ClaimStatusType::Insufficent;
+        }
+
         let current_epoch = self.blockchain().get_block_epoch();
 
         let mut current_claim_status = self.load_operation::<ClaimStatus>();
 
-        self.check_claim_operation(
-            &storage_cache,
-            &current_claim_status,
-            old_claim_status,
-            current_epoch,
-        );
+        self.check_claim_operation(&current_claim_status, &old_claim_status, current_epoch);
         self.prepare_claim_operation(&mut current_claim_status, current_epoch);
 
         let run_result = self.run_while_it_has_gas(DEFAULT_MIN_GAS_TO_SAVE_PROGRESS, || {

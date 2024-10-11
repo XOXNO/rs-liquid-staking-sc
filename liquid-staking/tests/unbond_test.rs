@@ -48,7 +48,7 @@ fn liquid_staking_unbond_success_test() {
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
 
     sc_setup.un_delegate_pending(&user);
 

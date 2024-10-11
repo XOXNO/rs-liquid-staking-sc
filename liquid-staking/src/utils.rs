@@ -3,9 +3,9 @@ use crate::{
         ClaimStatus, ClaimStatusType, DelegationContractData, DelegationContractInfo,
         DelegatorSelection,
     },
-    StorageCache, ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START,
-    ERROR_FAILED_TO_DISTRIBUTE, ERROR_FIRST_DELEGATION_NODE, ERROR_MINIMUM_ROUNDS_NOT_PASSED,
-    ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START, MIN_EGLD_TO_DELEGATE,
+    ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
+    ERROR_FIRST_DELEGATION_NODE, ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START,
+    MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -33,6 +33,7 @@ pub trait UtilsModule:
                 contract_data.delegation_contract_cap == BigUint::zero()
                     || &contract_data.delegation_contract_cap - &contract_data.total_staked
                         >= *amount_per_provider
+                        && contract_data.eligible
             },
             |selected_addresses, amount_to_delegate, min_egld, total_stake| {
                 self.distribute_amount(
@@ -286,9 +287,8 @@ pub trait UtilsModule:
 
     fn check_claim_operation(
         &self,
-        storage_cache: &StorageCache<Self>,
         current_claim_status: &ClaimStatus,
-        old_claim_status: ClaimStatus,
+        old_claim_status: &ClaimStatus,
         current_epoch: u64,
     ) {
         require!(
@@ -296,14 +296,16 @@ pub trait UtilsModule:
                 || current_claim_status.status == ClaimStatusType::Pending,
             ERROR_CLAIM_START
         );
-        require!(
-            old_claim_status.status == ClaimStatusType::Redelegated
-                || storage_cache.rewards_reserve < BigUint::from(MIN_EGLD_TO_DELEGATE),
-            ERROR_OLD_CLAIM_START
-        );
+
         require!(
             current_epoch > old_claim_status.last_claim_epoch,
             ERROR_CLAIM_EPOCH
+        );
+
+        require!(
+            old_claim_status.status == ClaimStatusType::Redelegated
+                || old_claim_status.status == ClaimStatusType::Insufficent,
+            ERROR_OLD_CLAIM_START
         );
     }
 
@@ -326,15 +328,15 @@ pub trait UtilsModule:
     }
 
     fn require_min_rounds_passed(&self) {
-        // TODO: Implement once new hooks are available in the VM
+        // TODO: Implement once new hooks are available in the VM with the future mainnet upgrade
         return;
-        let block_round = self.blockchain().get_block_round();
-        let rounds_per_epoch = self.rounds_per_epoch().get();
-        let minimum_rounds = self.minimum_rounds().get();
+        // let block_round = self.blockchain().get_block_round();
+        // let rounds_per_epoch = self.rounds_per_epoch().get();
+        // let minimum_rounds = self.minimum_rounds().get();
 
-        require!(
-            rounds_per_epoch - block_round <= minimum_rounds,
-            ERROR_MINIMUM_ROUNDS_NOT_PASSED
-        );
+        // require!(
+        //     rounds_per_epoch - block_round <= minimum_rounds,
+        //     ERROR_MINIMUM_ROUNDS_NOT_PASSED
+        // );
     }
 }

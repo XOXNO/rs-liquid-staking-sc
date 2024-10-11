@@ -38,6 +38,7 @@ pub struct DelegationContractData<M: ManagedTypeApi> {
     pub apy: u64,
     pub total_staked_from_ls_contract: BigUint<M>,
     pub total_unstaked_from_ls_contract: BigUint<M>,
+    pub eligible: bool,
 }
 
 #[derive(
