@@ -1,4 +1,4 @@
-use crate::structs::{ClaimStatus, DelegationContractData};
+use crate::structs::{ClaimStatus, DelegationContractInfo};
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -17,10 +17,10 @@ pub trait StorageModule {
     #[storage_mapper("maxDelegationAddresses")]
     fn max_delegation_addresses(&self) -> SingleValueMapper<usize>;
 
-    #[view(getDelegationContractData)]
-    #[storage_mapper("delegationContractData")]
+    #[view(getDelegationContractInfo)]
+    #[storage_mapper("delegationContractInfo")]
     fn delegation_contract_data(
         &self,
         contract_address: &ManagedAddress,
-    ) -> SingleValueMapper<DelegationContractData<Self::Api>>;
+    ) -> SingleValueMapper<DelegationContractInfo<Self::Api>>;
 }

@@ -125,11 +125,11 @@ pub trait ConfigModule {
     #[storage_mapper("unstakeTokenId")]
     fn unstake_token(&self) -> NonFungibleTokenMapper<Self::Api>;
 
-    #[view(getPendingEgld)]
+    #[view(getPendingEGLDForDelegate)]
     #[storage_mapper("pendingEgld")]
     fn pending_egld(&self) -> SingleValueMapper<BigUint>;
 
-    #[view(getPendingLsForUnstake)]
+    #[view(getPendingEGLDForUnDelegate)]
     #[storage_mapper("pendingLsForUnstake")]
     fn pending_egld_for_unstake(&self) -> SingleValueMapper<BigUint>;
 

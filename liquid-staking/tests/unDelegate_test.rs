@@ -6,8 +6,7 @@ use contract_setup::*;
 use utils::*;
 
 use liquid_staking::{
-    errors::{ERROR_INSUFFICIENT_PENDING_XEGLD, ERROR_MINIMUM_ROUNDS_NOT_PASSED},
-    structs::UnstakeTokenAttributes,
+    errors::ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, structs::UnstakeTokenAttributes,
 };
 use multiversx_sc_scenario::DebugApi;
 
@@ -281,6 +280,6 @@ fn undelegate_small_amount_error_test() {
         &first_user,
         LS_TOKEN_ID,
         3u64,
-        ERROR_INSUFFICIENT_PENDING_XEGLD,
+        ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD,
     );
 }

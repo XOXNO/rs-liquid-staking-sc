@@ -1,6 +1,6 @@
 use crate::{
     StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_INSUFFICIENT_PENDING_XEGLD, MIN_EGLD_TO_DELEGATE,
+    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -151,7 +151,7 @@ pub trait DelegateUtilsModule:
         // Should never fail, but just in case
         require!(
             storage_cache.pending_egld_for_unstake >= *egld_from_pending_used,
-            ERROR_INSUFFICIENT_PENDING_XEGLD
+            ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
         );
 
         storage_cache.pending_egld_for_unstake -= egld_from_pending_used;
@@ -163,7 +163,7 @@ pub trait DelegateUtilsModule:
         require!(
             storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
                 || storage_cache.pending_egld_for_unstake == BigUint::zero(),
-            ERROR_INSUFFICIENT_PENDING_XEGLD
+            ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
         );
 
         // Add the redeemed xEGLD to the final amount to send

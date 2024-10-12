@@ -3,7 +3,7 @@ use crate::{
         ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_NOT_WHITELISTED,
         ERROR_ONLY_DELEGATION_ADMIN,
     },
-    structs::DelegationContractData,
+    structs::DelegationContractInfo,
     ERROR_MAX_DELEGATION_ADDRESSES,
 };
 
@@ -51,7 +51,7 @@ pub trait DelegationModule:
             ERROR_DELEGATION_CAP
         );
 
-        let contract_data = DelegationContractData {
+        let contract_data = DelegationContractInfo {
             admin_address,
             total_staked,
             delegation_contract_cap,
@@ -90,6 +90,7 @@ pub trait DelegationModule:
         delegation_contract_cap: BigUint,
         nr_nodes: u64,
         apy: u64,
+        is_eligible: bool,
     ) {
         let caller = self.blockchain().get_caller();
         let delegation_address_mapper = self.delegation_contract_data(&contract_address);
@@ -114,6 +115,7 @@ pub trait DelegationModule:
             contract_data.delegation_contract_cap = delegation_contract_cap;
             contract_data.nr_nodes = nr_nodes;
             contract_data.apy = apy;
+            contract_data.eligible = is_eligible;
         });
     }
 

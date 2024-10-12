@@ -1,11 +1,11 @@
 use crate::contract_setup::LiquidStakingContractSetup;
 use crate::utils::*;
+use liquid_staking::config::ConfigModule;
 use liquid_staking::manage::ManageModule;
 use liquid_staking::storage::StorageModule;
 use liquid_staking::structs::UnstakeTokenAttributes;
 use liquid_staking::views::ViewsModule;
 use liquid_staking::LiquidStaking;
-use liquid_staking::config::ConfigModule;
 use multiversx_sc::types::Address;
 use multiversx_sc_scenario::{managed_address, num_bigint, rust_biguint, DebugApi};
 
@@ -103,6 +103,7 @@ where
                     to_managed_biguint(delegation_contract_cap_biguint),
                     nr_nodes,
                     apy,
+                    true,
                 );
             })
             .assert_ok();
@@ -465,11 +466,7 @@ where
             .assert_ok();
     }
 
-
-    pub fn check_pending_ls_for_unstake_denominated(
-        &mut self,
-        pending_ls_for_unstake: u128,
-    ) {
+    pub fn check_pending_ls_for_unstake_denominated(&mut self, pending_ls_for_unstake: u128) {
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {
                 assert_eq!(

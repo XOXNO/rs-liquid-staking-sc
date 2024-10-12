@@ -30,7 +30,7 @@ impl Default for ClaimStatus {
 #[derive(
     TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone, PartialEq, Eq, Debug,
 )]
-pub struct DelegationContractData<M: ManagedTypeApi> {
+pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub admin_address: ManagedAddress<M>,
     pub total_staked: BigUint<M>,
     pub delegation_contract_cap: BigUint<M>,
@@ -102,9 +102,12 @@ impl<M: ManagedTypeApi> DelegatorSelection<M> {
     Eq,
     Debug,
 )]
-pub struct DelegationContractInfo<M: ManagedTypeApi> {
+pub struct DelegationContractSelectionInfo<M: ManagedTypeApi> {
     pub address: ManagedAddress<M>,
+    pub score: BigUint<M>,
     pub total_staked: BigUint<M>,
+    pub apy: u64,
+    pub nr_nodes: u64,
     pub total_staked_from_ls_contract: BigUint<M>,
     pub space_left: Option<BigUint<M>>, // None means unlimited
 }

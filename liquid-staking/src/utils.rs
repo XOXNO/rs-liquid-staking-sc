@@ -1,6 +1,6 @@
 use crate::{
     structs::{
-        ClaimStatus, ClaimStatusType, DelegationContractData, DelegationContractInfo,
+        ClaimStatus, ClaimStatusType, DelegationContractInfo, DelegationContractSelectionInfo,
         DelegatorSelection,
     },
     ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
@@ -30,17 +30,24 @@ pub trait UtilsModule:
         self.get_delegation_contract(
             amount_to_delegate,
             |contract_data, amount_per_provider| {
-                contract_data.delegation_contract_cap == BigUint::zero()
+                (contract_data.delegation_contract_cap == BigUint::zero()
                     || &contract_data.delegation_contract_cap - &contract_data.total_staked
-                        >= *amount_per_provider
-                        && contract_data.eligible
+                        >= *amount_per_provider)
+                    && contract_data.eligible
             },
-            |selected_addresses, amount_to_delegate, min_egld, total_stake| {
+            |selected_addresses,
+             amount_to_delegate,
+             min_egld,
+             total_stake,
+             total_nodes,
+             total_apy| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_delegate,
                     min_egld,
                     total_stake,
+                    total_nodes,
+                    total_apy,
                     true,
                 )
             },
@@ -56,12 +63,19 @@ pub trait UtilsModule:
             |contract_data, _| {
                 contract_data.total_staked_from_ls_contract >= BigUint::from(MIN_EGLD_TO_DELEGATE)
             },
-            |selected_addresses, amount_to_undelegate, min_egld, total_stake| {
+            |selected_addresses,
+             amount_to_undelegate,
+             min_egld,
+             total_stake,
+             total_nodes,
+             total_apy| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_undelegate,
                     min_egld,
                     total_stake,
+                    total_nodes,
+                    total_apy,
                     false,
                 )
             },
@@ -75,12 +89,14 @@ pub trait UtilsModule:
         distribute_fn: D,
     ) -> ManagedVec<DelegatorSelection<Self::Api>>
     where
-        F: Fn(&DelegationContractData<Self::Api>, &BigUint) -> bool,
+        F: Fn(&DelegationContractInfo<Self::Api>, &BigUint) -> bool,
         D: Fn(
-            &ManagedVec<DelegationContractInfo<Self::Api>>,
+            &mut ManagedVec<DelegationContractSelectionInfo<Self::Api>>,
             &BigUint,
             &BigUint,
             &BigUint,
+            u64,
+            u64,
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
         require!(
@@ -94,157 +110,220 @@ pub trait UtilsModule:
 
         let mut selected_addresses = ManagedVec::new();
         let mut total_stake = BigUint::zero();
+        let mut total_nodes = 0;
+        let mut total_apy = 0;
 
         for delegation_address_node in self.delegation_addresses_list().iter().take(max_providers) {
             let delegation_address = delegation_address_node.get_value_as_ref();
             let contract_data = self.delegation_contract_data(delegation_address).get();
 
             if filter_fn(&contract_data, &amount_per_provider) {
-                selected_addresses.push(DelegationContractInfo {
+                total_stake += &contract_data.total_staked_from_ls_contract;
+                total_nodes += contract_data.nr_nodes;
+                total_apy += contract_data.apy;
+
+                selected_addresses.push(DelegationContractSelectionInfo {
                     address: delegation_address.clone(),
-                    total_staked: contract_data.total_staked.clone(),
-                    total_staked_from_ls_contract: contract_data
-                        .total_staked_from_ls_contract
-                        .clone(),
                     space_left: if contract_data.delegation_contract_cap == BigUint::zero() {
                         None
                     } else {
                         Some(&contract_data.delegation_contract_cap - &contract_data.total_staked)
                     },
+                    total_staked: contract_data.total_staked,
+                    apy: contract_data.apy,
+                    score: BigUint::zero(),
+                    nr_nodes: contract_data.nr_nodes,
+                    total_staked_from_ls_contract: contract_data.total_staked_from_ls_contract,
                 });
-                total_stake += &contract_data.total_staked_from_ls_contract;
             }
         }
 
         require!(!selected_addresses.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
 
-        distribute_fn(&selected_addresses, amount, &min_egld, &total_stake)
+        distribute_fn(
+            &mut selected_addresses,
+            amount,
+            &min_egld,
+            &total_stake,
+            total_nodes,
+            total_apy,
+        )
     }
 
     fn distribute_amount(
         &self,
-        selected_addresses: &ManagedVec<DelegationContractInfo<Self::Api>>,
+        selected_addresses: &mut ManagedVec<DelegationContractSelectionInfo<Self::Api>>,
         amount: &BigUint,
         min_egld: &BigUint,
         total_stake: &BigUint,
+        total_nodes: u64,
+        total_apy: u64,
         is_delegate: bool,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         let mut result = ManagedVec::new();
         let mut remaining_amount = amount.clone();
 
-        if is_delegate {
-            let amount_per_provider = amount / &BigUint::from(selected_addresses.len() as u64);
-            if total_stake == &BigUint::zero() {
-                for contract_info in selected_addresses.iter() {
-                    result.push(DelegatorSelection::new(
-                        contract_info.address.clone(),
-                        amount_per_provider.clone(),
-                        contract_info.space_left.clone(),
-                    ));
-                    remaining_amount -= &amount_per_provider;
-                }
-            } else {
-                let inverse_total_stake: BigUint<Self::Api> = selected_addresses
-                    .iter()
-                    .fold(BigUint::zero(), |acc, info| {
-                        acc + (total_stake - &info.total_staked_from_ls_contract)
-                    });
+        let total_score = self.update_selected_addresses_scores(
+            selected_addresses,
+            is_delegate,
+            total_stake,
+            total_apy,
+            total_nodes,
+            min_egld,
+        );
 
-                if inverse_total_stake == BigUint::zero() {
-                    // Distribute equally if inverse_total_stake is zero
-                    for contract_info in selected_addresses.iter() {
-                        result.push(DelegatorSelection::new(
-                            contract_info.address.clone(),
-                            amount_per_provider.clone(),
-                            contract_info.space_left.clone(),
-                        ));
-                        remaining_amount -= &amount_per_provider;
-                    }
+        let amount_per_provider = amount / &BigUint::from(selected_addresses.len() as u64);
+
+        for index in 0..selected_addresses.len() {
+            if remaining_amount == BigUint::zero() {
+                break;
+            }
+
+            let contract_info = selected_addresses.get(index);
+
+            // If total stake is zero or total score is zero, distribute equally
+            if (total_stake == &BigUint::zero() || total_score == BigUint::zero()) && is_delegate {
+                remaining_amount -= &amount_per_provider;
+                result.push(DelegatorSelection::new(
+                    contract_info.address,
+                    amount_per_provider.clone(),
+                    contract_info.space_left,
+                ));
+                continue;
+            }
+
+            let proportion = contract_info.score * amount / &total_score;
+
+            // Ensure the amount is not greater than the remaining amount
+            let mut amount_to_delegate = proportion.min(remaining_amount.clone());
+
+            // If there is a space left, ensure the amount is not greater than the space left
+            if let Some(space_left) = &contract_info.space_left {
+                amount_to_delegate = amount_to_delegate.min(space_left.clone());
+            }
+
+            // Ensure the amount is at least the minimum EGLD to delegate
+            amount_to_delegate = amount_to_delegate.max(min_egld.clone());
+            remaining_amount -= &amount_to_delegate;
+
+            result.push(DelegatorSelection::new(
+                contract_info.address,
+                amount_to_delegate,
+                if is_delegate {
+                    contract_info.space_left
                 } else {
-                    for contract_info in selected_addresses.iter() {
-                        let inverse_stake =
-                            total_stake - &contract_info.total_staked_from_ls_contract;
-
-                        let inverse_stake_ratio = inverse_stake * amount / &inverse_total_stake;
-
-                        let mut amount_to_delegate =
-                            inverse_stake_ratio.min(remaining_amount.clone());
-
-                        if let Some(space_left) = &contract_info.space_left {
-                            amount_to_delegate = amount_to_delegate.min(space_left.clone());
-                        }
-
-                        amount_to_delegate = amount_to_delegate.max(min_egld.clone());
-
-                        if amount_to_delegate <= remaining_amount {
-                            result.push(DelegatorSelection::new(
-                                contract_info.address.clone(),
-                                amount_to_delegate.clone(),
-                                contract_info.space_left.clone(),
-                            ));
-                            remaining_amount -= &amount_to_delegate;
-                        }
-                    }
-                }
-            }
-        } else {
-            for contract_info in selected_addresses.iter() {
-                let proportion =
-                    &contract_info.total_staked_from_ls_contract * amount / total_stake;
-                let amount_to_undelegate = proportion
-                    .max(min_egld.clone())
-                    .min(remaining_amount.clone());
-
-                if amount_to_undelegate > BigUint::zero() {
-                    result.push(DelegatorSelection::new(
-                        contract_info.address.clone(),
-                        amount_to_undelegate.clone(),
-                        Some(contract_info.total_staked_from_ls_contract.clone()),
-                    ));
-                    remaining_amount -= &amount_to_undelegate;
-                }
-
-                if remaining_amount == BigUint::zero() {
-                    break;
-                }
-            }
+                    Some(contract_info.total_staked_from_ls_contract)
+                },
+            ));
         }
 
-        if remaining_amount > BigUint::zero() {
-            for (index, delegator_selection) in result.clone().iter().enumerate() {
+        // In case of rounding dust due to math
+        // Most of the time this will add the remaining amount to the first provider
+        self._distribute_remaining_amount(&mut result, &mut remaining_amount);
+
+        result
+    }
+
+    fn _distribute_remaining_amount(
+        &self,
+        result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
+        remaining_amount: &mut BigUint,
+    ) {
+        // In case of rounding dust due to math
+        // Most of the time this will add the remaining amount to the first provider
+        if *remaining_amount > BigUint::zero() {
+            for index in 0..result.len() {
+                let delegator_selection = result.get(index);
                 let available_space = match &delegator_selection.space_left {
                     Some(space_left) => space_left - &delegator_selection.amount,
                     None => remaining_amount.clone(),
                 };
 
                 if available_space > BigUint::zero() {
-                    let amount_to_add = remaining_amount.clone().min(available_space);
+                    let amount_to_add = available_space.min(remaining_amount.clone());
                     let new_amount = &delegator_selection.amount + &amount_to_add;
 
                     let _ = result.set(
                         index,
                         &DelegatorSelection::new(
-                            delegator_selection.delegation_address.clone(),
+                            delegator_selection.delegation_address,
                             new_amount,
-                            delegator_selection.space_left.clone(),
+                            delegator_selection.space_left,
                         ),
                     );
 
-                    remaining_amount -= &amount_to_add;
+                    *remaining_amount -= &amount_to_add;
 
-                    if remaining_amount == BigUint::zero() {
+                    if *remaining_amount == BigUint::zero() {
                         break;
                     }
                 }
             }
+            require!(
+                *remaining_amount == BigUint::zero(),
+                ERROR_FAILED_TO_DISTRIBUTE
+            );
+        }
+    }
+
+    fn calculate_and_update_score(
+        &self,
+        info: &mut DelegationContractSelectionInfo<Self::Api>,
+        is_delegate: bool,
+        total_stake: &BigUint,
+        total_apy: u64,
+        total_nodes: u64,
+        min_egld: &BigUint,
+    ) -> BigUint {
+        let inverse_stake_score = if is_delegate && total_stake > &BigUint::zero() {
+            total_stake - &info.total_staked_from_ls_contract
+        } else {
+            info.total_staked_from_ls_contract.clone()
+        };
+
+        let apy_score = if is_delegate {
+            BigUint::from(info.apy).mul(min_egld)
+        } else {
+            BigUint::from(total_apy - info.apy).mul(min_egld)
+        };
+
+        let node_score = if is_delegate {
+            BigUint::from(total_nodes - info.nr_nodes).mul(min_egld)
+        } else {
+            BigUint::from(info.nr_nodes).mul(min_egld)
+        };
+
+        let score = inverse_stake_score + apy_score + node_score;
+        info.score = score.clone();
+        score
+    }
+
+    fn update_selected_addresses_scores(
+        &self,
+        selected_addresses: &mut ManagedVec<DelegationContractSelectionInfo<Self::Api>>,
+        is_delegate: bool,
+        total_stake: &BigUint,
+        total_apy: u64,
+        total_nodes: u64,
+        min_egld: &BigUint,
+    ) -> BigUint {
+        let mut total_score = BigUint::zero();
+
+        for index in 0..selected_addresses.len() {
+            let mut info = selected_addresses.get(index);
+            let score = self.calculate_and_update_score(
+                &mut info,
+                is_delegate,
+                total_stake,
+                total_apy,
+                total_nodes,
+                min_egld,
+            );
+            total_score += &score;
+            let _ = selected_addresses.set(index, &info);
         }
 
-        require!(
-            remaining_amount == BigUint::zero(),
-            ERROR_FAILED_TO_DISTRIBUTE
-        );
-
-        result
+        total_score
     }
 
     fn calculate_max_providers(
