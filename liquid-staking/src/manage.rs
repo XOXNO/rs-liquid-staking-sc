@@ -156,17 +156,20 @@ pub trait ManageModule:
 
             let next_node = delegation_address_node.get_next_node_id();
             let delegation_address = delegation_address_node.into_value();
+            let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
 
-            self.tx()
-                .to(&delegation_address)
-                .typed(delegation_proxy::DelegationMockProxy)
-                .claim_rewards()
-                .gas(MIN_GAS_FOR_ASYNC_CALL)
-                .callback(
-                    CallbackModule::callbacks(self).claim_rewards_callback(&delegation_address),
-                )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
-                .register_promise();
+            if delegation_contract_data.total_staked_from_ls_contract > BigUint::zero() {
+                self.tx()
+                    .to(&delegation_address)
+                    .typed(delegation_proxy::DelegationMockProxy)
+                    .claim_rewards()
+                    .gas(MIN_GAS_FOR_ASYNC_CALL)
+                    .callback(
+                        CallbackModule::callbacks(self).claim_rewards_callback(&delegation_address),
+                    )
+                    .gas_for_callback(MIN_GAS_FOR_CALLBACK)
+                    .register_promise();
+            }
 
             if next_node == 0 {
                 claim_status_mapper.set(current_claim_status.clone());
@@ -198,7 +201,9 @@ pub trait ManageModule:
         self.is_state_active(storage_cache.contract_state);
 
         require!(
-            claim_status.status == ClaimStatusType::Finished,
+            claim_status.last_claim_epoch == self.blockchain().get_block_epoch()
+                && (claim_status.status == ClaimStatusType::Finished
+                    || claim_status.status == ClaimStatusType::Redelegated), // In case we add extra rewards to the reserve from external sources
             ERROR_RECOMPUTE_RESERVES
         );
 
