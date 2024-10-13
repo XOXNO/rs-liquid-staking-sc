@@ -3,7 +3,8 @@ use crate::contexts::base::StorageCache;
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-#[derive(TypeAbi, TopEncode)]
+#[type_abi]
+#[derive(TopEncode)]
 pub struct ChangeLiquidityEvent<M: ManagedTypeApi> {
     caller: ManagedAddress<M>,
     ls_token_id: TokenIdentifier<M>,

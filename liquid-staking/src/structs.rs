@@ -1,7 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, TypeAbi, Clone)]
+#[type_abi]
+#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
 pub enum ClaimStatusType {
     None,
     Pending,
@@ -10,7 +11,8 @@ pub enum ClaimStatusType {
     Insufficent,
 }
 
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, TypeAbi, Clone)]
+#[type_abi]
+#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
 pub struct ClaimStatus {
     pub status: ClaimStatusType,
     pub last_claim_epoch: u64,
@@ -27,9 +29,8 @@ impl Default for ClaimStatus {
     }
 }
 
-#[derive(
-    TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone, PartialEq, Eq, Debug,
-)]
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
 pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub admin_address: ManagedAddress<M>,
     pub total_staked: BigUint<M>,
@@ -41,9 +42,8 @@ pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub eligible: bool,
 }
 
-#[derive(
-    TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone, PartialEq, Eq, Debug,
-)]
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
 pub struct UnstakeTokenAttributes {
     pub unstake_epoch: u64,
     pub unbond_epoch: u64,
@@ -58,17 +58,9 @@ impl UnstakeTokenAttributes {
     }
 }
 
+#[type_abi]
 #[derive(
-    ManagedVecItem,
-    TopEncode,
-    TopDecode,
-    NestedEncode,
-    NestedDecode,
-    TypeAbi,
-    Clone,
-    PartialEq,
-    Eq,
-    Debug,
+    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug,
 )]
 pub struct DelegatorSelection<M: ManagedTypeApi> {
     pub delegation_address: ManagedAddress<M>,
@@ -90,17 +82,9 @@ impl<M: ManagedTypeApi> DelegatorSelection<M> {
     }
 }
 
+#[type_abi]
 #[derive(
-    ManagedVecItem,
-    TopEncode,
-    TopDecode,
-    NestedEncode,
-    NestedDecode,
-    TypeAbi,
-    Clone,
-    PartialEq,
-    Eq,
-    Debug,
+    ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug,
 )]
 pub struct DelegationContractSelectionInfo<M: ManagedTypeApi> {
     pub address: ManagedAddress<M>,
@@ -112,7 +96,8 @@ pub struct DelegationContractSelectionInfo<M: ManagedTypeApi> {
     pub space_left: Option<BigUint<M>>, // None means unlimited
 }
 
-#[derive(TypeAbi, TopEncode, TopDecode, PartialEq, Eq, Copy, Clone, Debug)]
+#[type_abi]
+#[derive(TopEncode, TopDecode, PartialEq, Eq, Copy, Clone, Debug)]
 pub enum State {
     Inactive,
     Active,

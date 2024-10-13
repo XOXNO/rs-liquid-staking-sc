@@ -90,11 +90,11 @@ buildDocker() {
 
 ###PARAMS 
 ### Contracts - erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplllllscktaww
-DELEGATION_ADDRESS="erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqq80llllsrepk69"
+DELEGATION_ADDRESS="erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz0llllsup4dew"
 ADMIN_ADDRESS="erd1x45vnu7shhecfz0v03qqfmy8srndch50cdx7m763p743tzlwah0sgzewlm"
-TOTAL_STAKED=33494998151676258587423
-DELEGATION_CAP=33494998151676258587424
-NR_NODES=11
+TOTAL_STAKED=15032555858737269063515
+DELEGATION_CAP=28126500000000000000000
+NR_NODES=5
 APY=1800
 whitelistDelegationContract() {
     mxpy --verbose contract call ${ADDRESS} --recall-nonce \
@@ -112,7 +112,7 @@ changeDelegationContractParams() {
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
         --gas-limit=10000000 \
         --proxy=${PROXY} --chain=D \
-        --arguments ${DELEGATION_ADDRESS} ${TOTAL_STAKED} ${DELEGATION_CAP} ${NR_NODES} ${APY}\
+        --arguments ${DELEGATION_ADDRESS} ${TOTAL_STAKED} ${DELEGATION_CAP} ${NR_NODES} ${APY} 0x01 \
         --send || return
 }
 
