@@ -116,8 +116,8 @@ pub trait LiquidStaking<ContractReader>:
         self.process_instant_redemption(&mut storage_cache, &caller, &instant_amount);
 
         self.undelegate_amount(&mut storage_cache, &to_undelegate_amount, &caller);
-
-        self.emit_remove_liquidity_event(&storage_cache, &payment.amount);
+        
+        self.emit_remove_liquidity_event(&storage_cache, &unstaked_egld);
     }
 
     #[payable("*")]
