@@ -130,8 +130,12 @@ pub trait ConfigModule {
     fn pending_egld(&self) -> SingleValueMapper<BigUint>;
 
     #[view(getPendingEGLDForUnDelegate)]
-    #[storage_mapper("pendingLsForUnstake")]
+    #[storage_mapper("pendingEgldForUnstake")]
     fn pending_egld_for_unstake(&self) -> SingleValueMapper<BigUint>;
+
+    #[view(getPendingEgldForUnbond)]
+    #[storage_mapper("pendingEgldForUnbond")]
+    fn pending_egld_for_unbond(&self) -> SingleValueMapper<BigUint>;
 
     #[view(getUnstakeTokenNonce)]
     #[storage_mapper("unstakeTokenNonce")]

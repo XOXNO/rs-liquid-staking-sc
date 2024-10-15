@@ -29,6 +29,8 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract -= egld_to_unstake;
                         contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
                     });
+                storage_cache.pending_egld_for_unbond += egld_to_unstake;
+                self.emit_general_liquidity_event(&storage_cache);
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld_for_unstake += egld_to_unstake;
@@ -70,7 +72,10 @@ pub trait CallbackModule:
         if withdraw_amount > BigUint::zero() {
             let mut storage_cache = StorageCache::new(self);
             let delegation_contract_mapper = self.delegation_contract_data(&delegation_contract);
+            
             storage_cache.total_withdrawn_egld += &withdraw_amount;
+            storage_cache.pending_egld_for_unbond -= &withdraw_amount;
+
             delegation_contract_mapper.update(|contract_data| {
                 contract_data.total_unstaked_from_ls_contract -= &withdraw_amount;
             });

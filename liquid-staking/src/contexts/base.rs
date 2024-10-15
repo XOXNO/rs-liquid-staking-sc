@@ -16,6 +16,7 @@ where
     pub total_withdrawn_egld: BigUint<C::Api>,
     pub pending_egld: BigUint<C::Api>,
     pub pending_egld_for_unstake: BigUint<C::Api>,
+    pub pending_egld_for_unbond: BigUint<C::Api>,
 }
 
 impl<'a, C> StorageCache<'a, C>
@@ -32,6 +33,7 @@ where
             total_withdrawn_egld: sc_ref.total_withdrawn_egld().get(),
             pending_egld: sc_ref.pending_egld().get(),
             pending_egld_for_unstake: sc_ref.pending_egld_for_unstake().get(),
+            pending_egld_for_unbond: sc_ref.pending_egld_for_unbond().get(),
             sc_ref,
         }
     }
@@ -55,5 +57,8 @@ where
         self.sc_ref
             .pending_egld_for_unstake()
             .set(&self.pending_egld_for_unstake);
+        self.sc_ref
+            .pending_egld_for_unbond()
+            .set(&self.pending_egld_for_unbond);
     }
 }

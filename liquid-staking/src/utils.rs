@@ -175,7 +175,7 @@ pub trait UtilsModule:
         let amount_per_provider = amount / &BigUint::from(selected_addresses.len() as u64);
 
         for index in 0..selected_addresses.len() {
-            if remaining_amount == BigUint::zero() {
+            if remaining_amount == BigUint::zero() || remaining_amount < *min_egld {
                 break;
             }
 
@@ -197,18 +197,27 @@ pub trait UtilsModule:
             // Ensure the amount is not greater than the remaining amount
             let mut amount_to_delegate = proportion.min(remaining_amount.clone());
 
-            // If there is a space left, ensure the amount is not greater than the space left
-            if let Some(space_left) = &contract_info.space_left {
-                amount_to_delegate = amount_to_delegate.min(space_left.clone());
-            }
-
-            // Ensure the amount is at least the minimum EGLD to delegate
+            // Ensure the amount is at least the minimum EGLD to delegate or undelegation
             amount_to_delegate = amount_to_delegate.max(min_egld.clone());
+
+            if is_delegate {
+                // If there is a space left, ensure the amount is not greater than the space left
+                if let Some(space_left) = &contract_info.space_left {
+                    amount_to_delegate = amount_to_delegate.min(space_left.clone());
+                }
+            }
 
             if !is_delegate {
                 // Ensure that in case of undelegation, the amount is not greater than the total staked from the LS contract
-                amount_to_delegate = amount_to_delegate.min(contract_info.total_staked_from_ls_contract.clone());
+                amount_to_delegate =
+                    amount_to_delegate.min(contract_info.total_staked_from_ls_contract.clone());
             }
+
+            // If the amount is less than the minimum EGLD to delegate or undelegation, skip provider
+            if amount_to_delegate < *min_egld {
+                continue;
+            }
+
             remaining_amount -= &amount_to_delegate;
 
             result.push(DelegatorSelection::new(

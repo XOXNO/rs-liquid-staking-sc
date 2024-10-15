@@ -1,4 +1,4 @@
-ADDRESS=erd1qqqqqqqqqqqqqpgqml5spal4gmnx3atse5ek3wj6kfs3xucaah0s4r45dy
+ADDRESS=erd1qqqqqqqqqqqqqpgqrl094x7yu7e8ajrxv0jnzsnk50zzcdxzah0sg7y9g2
 PROXY=https://devnet-gateway.xoxno.com
 PROJECT="./output-docker/liquid-staking/liquid-staking.wasm"
 # PROJECT="./liquid-staking/output/liquid-staking.wasm"
