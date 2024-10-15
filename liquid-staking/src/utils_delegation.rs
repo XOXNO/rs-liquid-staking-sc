@@ -24,12 +24,14 @@ pub trait DelegateUtilsModule:
         if self.can_fully_instant_stake(storage_cache, payment, &min_egld_amount) {
             // Case 1: Full instant staking
             (payment.clone(), BigUint::zero())
-        } else if self.can_handle_pending_redemption(storage_cache, &min_egld_amount) {
-            // Handle both Case 2 and Case 3
-            self.handle_pending_redemption(storage_cache, payment, &min_egld_amount)
+        } else if self.can_fully_redeem(storage_cache, payment, &min_egld_amount) {
+            let egld_to_add_liquidity = payment - &storage_cache.pending_egld_for_unstake;
+            (
+                storage_cache.pending_egld_for_unstake.clone(),
+                egld_to_add_liquidity,
+            )
         } else {
-            // Fallback: use all the payment amount for normal staking flow
-            (BigUint::zero(), payment.clone())
+            self.handle_pending_redemption(storage_cache, payment, &min_egld_amount)
         }
     }
 
@@ -43,14 +45,7 @@ pub trait DelegateUtilsModule:
         let possible_instant_amount =
             self.calculate_instant_amount(payment, egld_from_pending, min_egld_amount);
 
-        if self.can_fully_redeem(storage_cache, payment, min_egld_amount) {
-            let egld_to_add_liquidity = payment - egld_from_pending;
-            (egld_from_pending.clone(), egld_to_add_liquidity)
-        } else if self.can_partially_redeem(
-            storage_cache,
-            &possible_instant_amount,
-            min_egld_amount,
-        ) {
+        if self.can_partially_redeem(storage_cache, &possible_instant_amount, min_egld_amount) {
             let egld_to_add_liquidity = payment - &possible_instant_amount;
             (possible_instant_amount, egld_to_add_liquidity)
         } else {
@@ -73,12 +68,12 @@ pub trait DelegateUtilsModule:
         &self,
         storage_cache: &StorageCache<Self>,
         possible_instant_amount: &BigUint,
-        min_xegld_amount: &BigUint,
+        min_egld_amount: &BigUint,
     ) -> bool {
         possible_instant_amount > &BigUint::zero()
             && &storage_cache.pending_egld_for_unstake >= possible_instant_amount
             && (&storage_cache.pending_egld_for_unstake - possible_instant_amount)
-                >= *min_xegld_amount
+                >= *min_egld_amount
     }
 
     fn can_fully_instant_stake(
@@ -89,9 +84,9 @@ pub trait DelegateUtilsModule:
     ) -> bool {
         staked_egld_amount == &storage_cache.pending_egld_for_unstake
             || (&storage_cache.pending_egld_for_unstake >= staked_egld_amount
-                && staked_egld_amount <= &(&storage_cache.pending_egld_for_unstake - min_egld_amount))
+                && staked_egld_amount
+                    <= &(&storage_cache.pending_egld_for_unstake - min_egld_amount))
     }
-    
 
     fn can_handle_pending_redemption(
         &self,

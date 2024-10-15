@@ -1,7 +1,8 @@
 use crate::{
     structs::UnstakeTokenAttributes, StorageCache, ERROR_BAD_PAYMENT_AMOUNT,
     ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, ERROR_LS_TOKEN_NOT_ISSUED, MIN_EGLD_TO_DELEGATE,
+    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, ERROR_LS_TOKEN_NOT_ISSUED,
+    ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT, MIN_EGLD_TO_DELEGATE,
 };
 
 pub const UNBOND_PERIOD: u64 = 10;
@@ -88,6 +89,11 @@ pub trait UnDelegateUtilsModule:
         instant_amount: &BigUint,
     ) {
         if *instant_amount > BigUint::zero() {
+            require!(
+                storage_cache.pending_egld >= *instant_amount,
+                ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT
+            );
+
             storage_cache.pending_egld -= instant_amount;
 
             require!(

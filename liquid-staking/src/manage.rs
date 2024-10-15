@@ -44,9 +44,10 @@ pub trait ManageModule:
         let delegation_contract =
             self.get_delegation_contract_for_delegate(&storage_cache.pending_egld);
 
+        // !!!! Required to prevent double delegation from the same amount, while the callback is not executed !!!!
+        storage_cache.pending_egld = BigUint::zero();
+
         for data in &delegation_contract {
-            // !!!! Required to prevent double delegation from the same amount, while the callback is not executed !!!!
-            storage_cache.pending_egld -= &data.amount;
             self.tx()
                 .to(&data.delegation_address)
                 .typed(delegation_proxy::DelegationMockProxy)
@@ -235,8 +236,10 @@ pub trait ManageModule:
         let delegation_contract =
             self.get_delegation_contract_for_delegate(&storage_cache.rewards_reserve);
 
+        // Important before delegating the rewards to the new contracts, set the rewards reserve to 0
+        storage_cache.rewards_reserve = BigUint::zero();
+
         for data in &delegation_contract {
-            storage_cache.rewards_reserve -= &data.amount;
             self.tx()
                 .to(&data.delegation_address)
                 .typed(delegation_proxy::DelegationMockProxy)
