@@ -6,6 +6,9 @@ use crate::errors::*;
 
 use super::config;
 
+pub const UNDELEGATE_TOKEN_URI: &[u8] =
+    b"https://ipfs.io/ipfs/QmTtBCeg5zLz2fnZedfukavPsfYhB7A95EXUkEddcNwNDX";
+
 #[multiversx_sc::module]
 pub trait LiquidityPoolModule: config::ConfigModule {
     fn pool_add_liquidity(
@@ -81,18 +84,23 @@ pub trait LiquidityPoolModule: config::ConfigModule {
     ) -> EsdtTokenPayment<Self::Api> {
         let nonce = self.unstake_token_nonce(epoch);
         if nonce.is_empty() {
-            let payment = self.unstake_token().nft_create_named(
-                amount.clone(),
+            let uri = ManagedBuffer::from(UNDELEGATE_TOKEN_URI);
+            let token_id = self.unstake_token().get_token_id();
+
+            // Always add extra one to the initial MetaESDT amount
+            // The extra 1 will remain in the contract and will be used to add later quantities for the same epoch
+            let new_nonce = self.send().esdt_nft_create(
+                &token_id,
+                &amount.add(&BigUint::from(1u64)),
                 &sc_format!("Release epoch #{}", epoch),
+                &BigUint::zero(),
+                &ManagedBuffer::new(),
                 attributes,
+                &ManagedVec::from_single_item(uri),
             );
 
-            // Always add one to the initial MetaESDT so we can add later quantities for the same epoch
-            self.unstake_token()
-                .nft_add_quantity(payment.token_nonce, BigUint::from(1u64));
-
-            nonce.set(payment.token_nonce);
-            payment
+            nonce.set(new_nonce);
+            EsdtTokenPayment::new(token_id, new_nonce, amount.clone())
         } else {
             let payment = self
                 .unstake_token()
