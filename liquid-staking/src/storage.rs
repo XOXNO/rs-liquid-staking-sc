@@ -17,6 +17,10 @@ pub trait StorageModule {
     #[storage_mapper("maxDelegationAddresses")]
     fn max_delegation_addresses(&self) -> SingleValueMapper<usize>;
 
+    #[view(maxSelectedProviders)]
+    #[storage_mapper("maxSelectedProviders")]
+    fn max_selected_providers(&self) -> SingleValueMapper<BigUint>;
+
     #[view(getDelegationContractInfo)]
     #[storage_mapper("delegationContractInfo")]
     fn delegation_contract_data(

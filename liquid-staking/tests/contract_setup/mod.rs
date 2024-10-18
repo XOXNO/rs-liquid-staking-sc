@@ -70,6 +70,8 @@ where
                     managed_biguint!(fees),
                     14400,
                     1400,
+                    managed_biguint!(25),
+                    100,
                 );
             })
             .assert_ok();

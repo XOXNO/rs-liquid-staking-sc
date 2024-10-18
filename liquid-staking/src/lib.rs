@@ -6,7 +6,6 @@ multiversx_sc::derive_imports!();
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
 pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
-pub const MAX_DELEGATION_ADDRESSES: usize = 50;
 
 pub mod accumulator;
 pub mod callback;
@@ -60,10 +59,24 @@ pub trait LiquidStaking<ContractReader>:
         fees: BigUint,
         rounds_per_epoch: u64,
         minimum_rounds: u64,
+        max_selected_providers: BigUint,
+        max_delegation_addresses: usize,
     ) {
         self.state().set(State::Inactive);
+
+        require!(
+            max_selected_providers >= BigUint::from(1u64),
+            ERROR_MAX_SELECTED_PROVIDERS
+        );
+
+        require!(
+            max_delegation_addresses >= 1,
+            ERROR_MAX_CHANGED_DELEGATION_ADDRESSES
+        );
+
         self.max_delegation_addresses()
-            .set(MAX_DELEGATION_ADDRESSES);
+            .set(max_delegation_addresses);
+        self.max_selected_providers().set(max_selected_providers);
 
         let current_epoch = self.blockchain().get_block_epoch();
         let claim_status = ClaimStatus {
@@ -116,7 +129,7 @@ pub trait LiquidStaking<ContractReader>:
         self.process_instant_redemption(&mut storage_cache, &caller, &instant_amount);
 
         self.undelegate_amount(&mut storage_cache, &to_undelegate_amount, &caller);
-        
+
         self.emit_remove_liquidity_event(&storage_cache, &unstaked_egld);
     }
 

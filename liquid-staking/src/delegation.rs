@@ -1,10 +1,7 @@
 use crate::{
     errors::{
-        ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_NOT_WHITELISTED,
-        ERROR_ONLY_DELEGATION_ADMIN,
-    },
-    structs::DelegationContractInfo,
-    ERROR_MAX_DELEGATION_ADDRESSES,
+        ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_MAX_SELECTED_PROVIDERS, ERROR_NOT_WHITELISTED, ERROR_ONLY_DELEGATION_ADMIN
+    }, structs::DelegationContractInfo, ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_DELEGATION_ADDRESSES
 };
 
 multiversx_sc::imports!();
@@ -20,9 +17,24 @@ pub trait DelegationModule:
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[only_owner]
-    #[endpoint(updateMaxDelegationAddressesNumber)]
-    fn update_max_delegation_addresses_number(&self, number: usize) {
+    #[endpoint(updateMaxDelegationAddresses)]
+    fn update_max_delegation_addresses(&self, number: usize) {
+        require!(
+            number >= 1,
+            ERROR_MAX_SELECTED_PROVIDERS
+        );
         self.max_delegation_addresses().set(number);
+    }
+
+    #[only_owner]
+    #[endpoint(updateMaxSelectedProviders)]
+    fn update_max_selected_providers(&self, number: BigUint) {
+        require!(
+            number >= BigUint::from(1u64),
+            ERROR_MAX_CHANGED_DELEGATION_ADDRESSES
+        );
+
+        self.max_selected_providers().set(number);
     }
 
     #[only_owner]

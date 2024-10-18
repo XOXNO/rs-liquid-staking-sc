@@ -6,9 +6,11 @@ TOTAL_ROUNDS=2400
 MIN_ROUNDS=400
 ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgqyxfc4r5fmw2ljcgwxj2nuzv72y9ryvyhah0sgn5vv2
 FEES=400
+MAX_SELECTED_PROVIDERS=20
+MAX_DELEGATION_ADDRESSES=100
 
 deploy() {
-    mxpy --verbose contract deploy --bytecode=${PROJECT} --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} --recall-nonce \
+    mxpy --verbose contract deploy --bytecode=${PROJECT} --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} --recall-nonce \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=150000000 --send --proxy=${PROXY} --chain=D || return
 
@@ -126,16 +128,6 @@ delegate() {
         --send || return
 }
 
-myPayableEndpoint() {
-    mxpy --verbose contract call ${CONTRACT_ADDRESS} --recall-nonce \
-        --pem=${WALLET_PEM} \
-        --gas-limit=6000000 \
-        --proxy=${PROXY} --chain=${CHAIN_ID} \
-        --function="ESDTTransfer" \
-        --arguments $my_token $token_amount $method_name\
-        --send || return
-}
-
 unDelegate() {
         method_name=str:unDelegate
         my_token=str:XEGLD-c67ed3
@@ -174,5 +166,25 @@ setMinimumRounds() {
         --gas-limit=10000000 \
         --function="setMinimumRounds" \
         --arguments 200 \
+        --send || return
+}
+
+updateMaxDelegationAddresses() {
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=D \
+        --gas-limit=10000000 \
+        --function="updateMaxDelegationAddresses" \
+        --arguments 100 \
+        --send || return
+}
+
+updateMaxSelectedProviders() {
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=D \
+        --gas-limit=10000000 \
+        --function="updateMaxSelectedProviders" \
+        --arguments 20 \
         --send || return
 }

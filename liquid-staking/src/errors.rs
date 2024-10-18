@@ -33,3 +33,5 @@ pub static ERROR_ONLY_DELEGATION_ADMIN: &[u8] =
 pub static ERROR_MINIMUM_ROUNDS_NOT_PASSED: &[u8] = b"Minimum rounds didn't pass";
 pub static ERROR_FAILED_TO_DISTRIBUTE: &[u8] = b"Failed to distribute entire amount";
 pub static ERROR_MAX_DELEGATION_ADDRESSES: &[u8] = b"Maximum number of delegation addresses reached";
+pub static ERROR_MAX_SELECTED_PROVIDERS: &[u8] = b"Max selected providers must be greater than 0";
+pub static ERROR_MAX_CHANGED_DELEGATION_ADDRESSES: &[u8] = b"Max delegation addresses must be greater than 0";

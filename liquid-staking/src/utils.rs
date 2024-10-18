@@ -61,7 +61,12 @@ pub trait UtilsModule:
         self.get_delegation_contract(
             amount_to_undelegate,
             |contract_data, amount_per_provider| {
-                contract_data.total_staked_from_ls_contract >= amount_per_provider.clone()
+                // PROTECTED: This is a protection to not allow undelegation if the provider has less than MIN_EGLD_TO_DELEGATE remaining
+                &contract_data.total_staked_from_ls_contract >= amount_per_provider
+                    && (&contract_data.total_staked_from_ls_contract - amount_per_provider
+                        >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                        || &contract_data.total_staked_from_ls_contract - amount_per_provider
+                            == BigUint::zero())
             },
             |selected_addresses,
              amount_to_undelegate,
@@ -211,6 +216,14 @@ pub trait UtilsModule:
                 // Ensure that in case of undelegation, the amount is not greater than the total staked from the LS contract
                 amount_to_delegate =
                     amount_to_delegate.min(contract_info.total_staked_from_ls_contract.clone());
+                let left_over_amount =
+                    &contract_info.total_staked_from_ls_contract - &amount_to_delegate;
+                // If the left over amount is less than the required minimum or not zero, skip provider
+                if left_over_amount < BigUint::from(MIN_EGLD_TO_DELEGATE)
+                    && left_over_amount > BigUint::zero()
+                {
+                    continue;
+                }
             }
 
             // If the amount is less than the minimum EGLD to delegate or undelegation, skip provider
@@ -233,7 +246,9 @@ pub trait UtilsModule:
 
         // In case of rounding dust due to math
         // Most of the time this will add the remaining amount to the first provider
-        self._distribute_remaining_amount(&mut result, &mut remaining_amount);
+        self._distribute_remaining_amount(&mut result, &mut remaining_amount, is_delegate);
+
+        require!(!result.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
 
         result
     }
@@ -242,6 +257,7 @@ pub trait UtilsModule:
         &self,
         result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
         remaining_amount: &mut BigUint,
+        is_delegate: bool,
     ) {
         // In case of rounding dust due to math
         // Most of the time this will add the remaining amount to the first provider
@@ -254,7 +270,16 @@ pub trait UtilsModule:
                 };
 
                 if available_space > BigUint::zero() {
-                    let amount_to_add = available_space.min(remaining_amount.clone());
+                    let amount_to_add = available_space.clone().min(remaining_amount.clone());
+                    if !is_delegate {
+                        let left_over_amount = &available_space - &amount_to_add;
+                        // If the left over amount is less than the required minimum or not zero, skip provider
+                        if left_over_amount < BigUint::from(MIN_EGLD_TO_DELEGATE)
+                            && left_over_amount > BigUint::zero()
+                        {
+                            continue;
+                        }
+                    }
                     let new_amount = &delegator_selection.amount + &amount_to_add;
 
                     let _ = result.set(
@@ -266,7 +291,7 @@ pub trait UtilsModule:
                         ),
                     );
 
-                    *remaining_amount -= &amount_to_add;
+                    *remaining_amount -= amount_to_add;
 
                     if *remaining_amount == BigUint::zero() {
                         break;
@@ -353,7 +378,7 @@ pub trait UtilsModule:
         let max_providers_decimal = amount_decimal / min_egld_decimal;
         let max_providers_biguint = max_providers_decimal.trunc();
 
-        let max_providers_limit = BigUint::from(MAX_PROVIDERS as u64);
+        let max_providers_limit = self.max_selected_providers().get();
         let max_providers = max_providers_biguint.min(max_providers_limit);
 
         max_providers.to_u64().unwrap() as usize
