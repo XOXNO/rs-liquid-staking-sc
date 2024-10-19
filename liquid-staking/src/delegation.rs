@@ -1,7 +1,10 @@
 use crate::{
     errors::{
-        ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_MAX_SELECTED_PROVIDERS, ERROR_NOT_WHITELISTED, ERROR_ONLY_DELEGATION_ADMIN
-    }, structs::DelegationContractInfo, ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_DELEGATION_ADDRESSES
+        ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_NOT_WHITELISTED,
+        ERROR_ONLY_DELEGATION_ADMIN,
+    },
+    structs::DelegationContractInfo,
+    ERROR_MAX_DELEGATION_ADDRESSES,
 };
 
 multiversx_sc::imports!();
@@ -16,28 +19,7 @@ pub trait DelegationModule:
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    #[only_owner]
-    #[endpoint(updateMaxDelegationAddresses)]
-    fn update_max_delegation_addresses(&self, number: usize) {
-        require!(
-            number >= 1,
-            ERROR_MAX_SELECTED_PROVIDERS
-        );
-        self.max_delegation_addresses().set(number);
-    }
-
-    #[only_owner]
-    #[endpoint(updateMaxSelectedProviders)]
-    fn update_max_selected_providers(&self, number: BigUint) {
-        require!(
-            number >= BigUint::from(1u64),
-            ERROR_MAX_CHANGED_DELEGATION_ADDRESSES
-        );
-
-        self.max_selected_providers().set(number);
-    }
-
-    #[only_owner]
+ 
     #[endpoint(whitelistDelegationContract)]
     fn whitelist_delegation_contract(
         &self,
@@ -52,6 +34,8 @@ pub trait DelegationModule:
             self.delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
             ERROR_MAX_DELEGATION_ADDRESSES
         );
+
+        self.is_manager(&self.blockchain().get_caller(), true);
 
         require!(
             self.delegation_contract_data(&contract_address).is_empty(),
@@ -79,7 +63,7 @@ pub trait DelegationModule:
         self.add_and_order_delegation_address_in_list(contract_address, apy);
     }
 
-    #[only_owner]
+
     #[endpoint(changeDelegationContractAdmin)]
     fn change_delegation_contract_admin(
         &self,
@@ -88,7 +72,7 @@ pub trait DelegationModule:
     ) {
         let delegation_address_mapper = self.delegation_contract_data(&contract_address);
         require!(!delegation_address_mapper.is_empty(), ERROR_NOT_WHITELISTED);
-
+        self.is_manager(&self.blockchain().get_caller(), true);
         delegation_address_mapper.update(|contract_data| {
             contract_data.admin_address = admin_address;
         });
@@ -107,11 +91,14 @@ pub trait DelegationModule:
         let caller = self.blockchain().get_caller();
         let delegation_address_mapper = self.delegation_contract_data(&contract_address);
         let old_contract_data = delegation_address_mapper.get();
+
         require!(!delegation_address_mapper.is_empty(), ERROR_NOT_WHITELISTED);
+
         require!(
-            old_contract_data.admin_address == caller,
+            old_contract_data.admin_address == caller || self.is_manager(&caller, false),
             ERROR_ONLY_DELEGATION_ADMIN
         );
+
         require!(
             delegation_contract_cap >= total_staked || delegation_contract_cap == BigUint::zero(),
             ERROR_DELEGATION_CAP

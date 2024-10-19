@@ -1,11 +1,10 @@
 use crate::{
     structs::{
-        ClaimStatus, ClaimStatusType, DelegationContractInfo, DelegationContractSelectionInfo,
+        DelegationContractInfo, DelegationContractSelectionInfo,
         DelegatorSelection,
     },
-    ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START, ERROR_FAILED_TO_DISTRIBUTE,
-    ERROR_FIRST_DELEGATION_NODE, ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START,
-    MIN_EGLD_TO_DELEGATE,
+    ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE,
+    ERROR_NO_DELEGATION_CONTRACTS, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -23,6 +22,15 @@ pub trait UtilsModule:
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
+    fn is_manager(&self, address: &ManagedAddress, required: bool) -> bool {
+        let owner = self.blockchain().get_owner_address();
+        let is_manager = self.managers().contains(address) || address == &owner;
+        if required && !is_manager {
+            sc_panic!("Caller is not authorized as a manager");
+        }
+        is_manager
+    }
+
     fn get_delegation_contract_for_delegate(
         &self,
         amount_to_delegate: &BigUint,
@@ -30,10 +38,20 @@ pub trait UtilsModule:
         self.get_delegation_contract(
             amount_to_delegate,
             |contract_data, amount_per_provider| {
-                (contract_data.delegation_contract_cap == BigUint::zero()
-                    || &contract_data.delegation_contract_cap - &contract_data.total_staked
-                        >= *amount_per_provider)
-                    && contract_data.eligible
+                // Required to check if the total_staked is less than the delegation_contract_cap
+                // In rare cases of capped providers, via external redelegations the total_Staked can be greater than the delegation_contract_cap
+                // In this case the provider is not eligible for delegation as the cap is already reached
+                // Preventing also a negative value for the space left in the delegation contract
+                if contract_data.delegation_contract_cap != BigUint::zero()
+                    && contract_data.delegation_contract_cap < contract_data.total_staked
+                {
+                    return false;
+                }
+
+                contract_data.eligible
+                    && (contract_data.delegation_contract_cap == BigUint::zero()
+                        || &contract_data.delegation_contract_cap - &contract_data.total_staked
+                            >= *amount_per_provider)
             },
             |selected_addresses,
              amount_to_delegate,
@@ -104,13 +122,14 @@ pub trait UtilsModule:
             u64,
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
+        let map_list = self.delegation_addresses_list();
         require!(
-            !self.delegation_addresses_list().is_empty(),
+            !map_list.is_empty(),
             ERROR_NO_DELEGATION_CONTRACTS
         );
 
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
-        let max_providers = self.calculate_max_providers(amount, &min_egld);
+        let max_providers = self.calculate_max_providers(amount, &min_egld, map_list.len());
         let amount_per_provider = amount / &BigUint::from(max_providers as u64);
 
         let mut selected_addresses = ManagedVec::new();
@@ -118,10 +137,16 @@ pub trait UtilsModule:
         let mut total_nodes = 0;
         let mut total_apy = 0;
 
-        for delegation_address_node in self.delegation_addresses_list().iter().take(max_providers) {
+        sc_print!("max_providers: {}", max_providers);
+        for delegation_address_node in map_list.iter().take(max_providers) {
             let delegation_address = delegation_address_node.get_value_as_ref();
             let contract_data = self.delegation_contract_data(delegation_address).get();
-
+            sc_print!("original_amount_to:                          {}", amount);
+            sc_print!("contract_data.total_staked_from_ls_contract: {}", contract_data.total_staked_from_ls_contract);
+            sc_print!("amount_per_provider:                         {}", amount_per_provider);
+            sc_print!("contract_data.eligible:                      {}", contract_data.eligible);
+            sc_print!("contract_data.delegation_contract_cap:       {}", contract_data.delegation_contract_cap);
+            sc_print!("contract_data.total_staked:                  {}", contract_data.total_staked);
             if filter_fn(&contract_data, &amount_per_provider) {
                 total_stake += &contract_data.total_staked_from_ls_contract;
                 total_nodes += contract_data.nr_nodes;
@@ -369,6 +394,7 @@ pub trait UtilsModule:
         &self,
         amount_to_delegate: &BigUint<Self::Api>,
         min_egld: &BigUint<Self::Api>,
+        providers_len: usize,
     ) -> usize {
         let amount_decimal =
             ManagedDecimal::<Self::Api, ConstDecimals<DECIMALS>>::from(amount_to_delegate.clone());
@@ -379,7 +405,8 @@ pub trait UtilsModule:
         let max_providers_biguint = max_providers_decimal.trunc();
 
         let max_providers_limit = self.max_selected_providers().get();
-        let max_providers = max_providers_biguint.min(max_providers_limit);
+        let max_providers = max_providers_biguint.min(max_providers_limit).min(BigUint::from(providers_len as u64));
+
 
         max_providers.to_u64().unwrap() as usize
     }
@@ -400,44 +427,6 @@ pub trait UtilsModule:
             max_instant
         } else {
             pending_amount - min_amount
-        }
-    }
-
-    fn check_claim_operation(
-        &self,
-        current_claim_status: &ClaimStatus,
-        old_claim_status: &ClaimStatus,
-        current_epoch: u64,
-    ) {
-        require!(
-            current_claim_status.status == ClaimStatusType::None
-                || current_claim_status.status == ClaimStatusType::Pending,
-            ERROR_CLAIM_START
-        );
-
-        require!(
-            current_epoch > old_claim_status.last_claim_epoch,
-            ERROR_CLAIM_EPOCH
-        );
-
-        require!(
-            old_claim_status.status == ClaimStatusType::Redelegated
-                || old_claim_status.status == ClaimStatusType::Insufficent,
-            ERROR_OLD_CLAIM_START
-        );
-    }
-
-    fn prepare_claim_operation(&self, current_claim_status: &mut ClaimStatus, current_epoch: u64) {
-        if current_claim_status.status == ClaimStatusType::None {
-            let delegation_addresses_mapper = self.delegation_addresses_list();
-            require!(
-                delegation_addresses_mapper.front().unwrap().get_node_id() != 0,
-                ERROR_FIRST_DELEGATION_NODE
-            );
-            current_claim_status.status = ClaimStatusType::Pending;
-            current_claim_status.last_claim_epoch = current_epoch;
-            current_claim_status.current_node =
-                delegation_addresses_mapper.front().unwrap().get_node_id();
         }
     }
 

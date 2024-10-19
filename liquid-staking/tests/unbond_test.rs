@@ -31,7 +31,7 @@ fn liquid_staking_unbond_success_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -50,7 +50,7 @@ fn liquid_staking_unbond_success_test() {
 
     sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_storage(10, 10, 0, 0, 0, 0);
 
@@ -59,7 +59,7 @@ fn liquid_staking_unbond_success_test() {
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(61u64);
 
-    sc_setup.withdraw_pending(&user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     sc_setup.check_delegation_contract_values(&delegation_contract, 10, 0);
 
@@ -94,7 +94,7 @@ fn liquid_staking_unbond_error_epoch_too_soon_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -102,12 +102,12 @@ fn liquid_staking_unbond_error_epoch_too_soon_test() {
     // Remove liquidity
     sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(55u64);
 
-    sc_setup.withdraw_pending(&user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     // // Perform unbond operation
     sc_setup.withdraw_error(
@@ -133,7 +133,7 @@ fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -141,7 +141,7 @@ fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
     // Remove liquidity
     sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(60u64);
@@ -171,7 +171,7 @@ fn liquid_staking_unbond_error_not_active_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -179,14 +179,14 @@ fn liquid_staking_unbond_error_not_active_test() {
     // Remove liquidity
     sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(60u64);
 
-    sc_setup.withdraw_pending(&user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
-    sc_setup.set_inactive_state(&user);
+    sc_setup.set_inactive_state(&sc_setup.owner_address.clone());
 
     // // Perform unbond operation
     sc_setup.withdraw_error(&user, UNSTAKE_TOKEN_ID, 1, exp18(90), ERROR_NOT_ACTIVE);
@@ -207,7 +207,7 @@ fn liquid_staking_unbond_error_not_amount_sent_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -215,12 +215,12 @@ fn liquid_staking_unbond_error_not_amount_sent_test() {
     // Remove liquidity
     sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(60u64);
 
-    sc_setup.withdraw_pending(&user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     // // Perform unbond operation
     sc_setup.withdraw_error(
@@ -247,7 +247,7 @@ fn liquid_staking_unbond_error_bad_token_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
     // Delegate pending tokens
-    sc_setup.delegate_pending(&user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Set block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -255,12 +255,12 @@ fn liquid_staking_unbond_error_bad_token_test() {
     // Remove liquidity
     sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 90u64);
 
-    sc_setup.un_delegate_pending(&user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(60u64);
 
-    sc_setup.withdraw_pending(&user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     // // Perform unbond operation with bad token
 

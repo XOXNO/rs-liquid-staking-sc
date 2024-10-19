@@ -1,3 +1,4 @@
+use manage::DELEGATION_MANAGER;
 use multiversx_sc::{
     storage::mappers::StorageTokenWrapper,
     types::{Address, EsdtLocalRole},
@@ -12,9 +13,12 @@ use liquid_staking::config::ConfigModule;
 use liquid_staking::*;
 
 extern crate accumulator;
+extern crate delegation_mock;
+extern crate delegation_manager_mock;
 
 pub const LIQUID_STAKING_WASM_PATH: &str = "liquid-staking/output/liquid-staking.wasm";
 pub const ACCUMULATOR_WASM_PATH: &str = "liquid-staking/tests/accumulator.wasm";
+pub const DELEGATION_WASM_PATH: &str = "liquid-staking/tests/delegation-manager-mock.wasm";
 
 pub static LS_TOKEN_ID: &[u8] = b"LSTOKEN-123456";
 pub static UNSTAKE_TOKEN_ID: &[u8] = b"UNSTAKE-123456";
@@ -63,6 +67,15 @@ where
             ACCUMULATOR_WASM_PATH,
         );
 
+
+        let delegation_manager_wrapper = b_mock.create_sc_account_fixed_address(
+            &Address::from(DELEGATION_MANAGER),
+            &rust_zero,
+            Some(&owner_address),
+            delegation_manager_mock::contract_obj,
+            DELEGATION_WASM_PATH,
+        );
+
         b_mock
             .execute_tx(&owner_address, &sc_wrapper, &rust_zero, |sc| {
                 sc.init(
@@ -72,6 +85,7 @@ where
                     1400,
                     managed_biguint!(25),
                     100,
+                    10,
                 );
             })
             .assert_ok();

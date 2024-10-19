@@ -15,7 +15,7 @@ pub trait DelegateUtilsModule:
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    fn determine_delegate_amounts(
+    fn get_delegate_amount(
         &self,
         storage_cache: &mut StorageCache<Self>,
         payment: &BigUint,
@@ -88,15 +88,7 @@ pub trait DelegateUtilsModule:
                     <= &(&storage_cache.pending_egld_for_unstake - min_egld_amount))
     }
 
-    fn can_handle_pending_redemption(
-        &self,
-        storage_cache: &StorageCache<Self>,
-        min_egld_amount: &BigUint,
-    ) -> bool {
-        &storage_cache.pending_egld_for_unstake >= min_egld_amount
-    }
-
-    fn process_redemption_and_staking(
+    fn process_delegation(
         &self,
         storage_cache: &mut StorageCache<Self>,
         egld_from_pending_used: &BigUint,
@@ -106,7 +98,7 @@ pub trait DelegateUtilsModule:
 
         // Process redemption of pending xEGLD by the user via his EGLD
         if egld_from_pending_used > &BigUint::zero() {
-            self.process_pending_redemption(
+            self.process_pending_swapping(
                 storage_cache,
                 egld_from_pending_used,
                 &mut final_amount_to_mint,
@@ -136,7 +128,7 @@ pub trait DelegateUtilsModule:
         }
     }
 
-    fn process_pending_redemption(
+    fn process_pending_swapping(
         &self,
         storage_cache: &mut StorageCache<Self>,
         egld_from_pending_used: &BigUint,

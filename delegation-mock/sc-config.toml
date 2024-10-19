@@ -20,3 +20,6 @@ path = "src/delegation_proxy.rs"
 
 [[proxy]]
 path = "../liquid-staking/src/delegation_proxy.rs"
+
+[[proxy]]
+path = "../delegation-manager-mock/src/delegation_proxy.rs"

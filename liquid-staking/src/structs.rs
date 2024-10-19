@@ -2,34 +2,6 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 #[type_abi]
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
-pub enum ClaimStatusType {
-    None,
-    Pending,
-    Finished,
-    Redelegated,
-    Insufficent,
-}
-
-#[type_abi]
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
-pub struct ClaimStatus {
-    pub status: ClaimStatusType,
-    pub last_claim_epoch: u64,
-    pub current_node: u32,
-}
-
-impl Default for ClaimStatus {
-    fn default() -> Self {
-        Self {
-            status: ClaimStatusType::None,
-            last_claim_epoch: 0,
-            current_node: 0,
-        }
-    }
-}
-
-#[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
 pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub admin_address: ManagedAddress<M>,

@@ -1,0 +1,22 @@
+[package]
+name = "delegation-manager-mock"
+version = "0.0.0"
+authors = ["Mihai Eremia <mihai@xoxno.com>"]
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/delegation_manager.rs"
+
+[dependencies.multiversx-sc]
+version = "0.53.2"
+
+[dependencies.itertools]
+version = "0.13.0"
+default-features = false
+
+[dev-dependencies.multiversx-sc-scenario]
+version = "0.53.2"
+
+[dependencies.delegation-mock]
+path = "../delegation-mock"

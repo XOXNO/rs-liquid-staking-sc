@@ -4,6 +4,7 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
+pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_000_000;
 pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 
@@ -11,6 +12,7 @@ pub mod accumulator;
 pub mod callback;
 pub mod config;
 pub mod delegation;
+pub mod delegation_manager_proxy;
 pub mod delegation_proxy;
 pub mod errors;
 pub mod manage;
@@ -25,10 +27,7 @@ mod contexts;
 mod events;
 mod liquidity_pool;
 
-use crate::{
-    errors::*,
-    structs::{ClaimStatus, ClaimStatusType},
-};
+use crate::errors::*;
 
 use contexts::base::*;
 use structs::{State, UnstakeTokenAttributes};
@@ -61,6 +60,7 @@ pub trait LiquidStaking<ContractReader>:
         minimum_rounds: u64,
         max_selected_providers: BigUint,
         max_delegation_addresses: usize,
+        unbond_period: u64,
     ) {
         self.state().set(State::Inactive);
 
@@ -74,18 +74,11 @@ pub trait LiquidStaking<ContractReader>:
             ERROR_MAX_CHANGED_DELEGATION_ADDRESSES
         );
 
+        self.unbond_period().set(unbond_period);
         self.max_delegation_addresses()
             .set(max_delegation_addresses);
         self.max_selected_providers().set(max_selected_providers);
 
-        let current_epoch = self.blockchain().get_block_epoch();
-        let claim_status = ClaimStatus {
-            status: ClaimStatusType::Insufficent,
-            last_claim_epoch: current_epoch,
-            current_node: 0,
-        };
-
-        self.delegation_claim_status().set(claim_status);
         self.accumulator_contract().set(accumulator_contract);
         self.fees().set(fees);
         self.rounds_per_epoch().set(rounds_per_epoch);
@@ -101,14 +94,9 @@ pub trait LiquidStaking<ContractReader>:
 
         self.validate_delegate_conditions(&mut storage_cache, &payment);
 
-        let (egld_from_pending_used, egld_to_add_liquidity) =
-            self.determine_delegate_amounts(&mut storage_cache, &payment);
+        let (pending, extra) = self.get_delegate_amount(&mut storage_cache, &payment);
 
-        self.process_redemption_and_staking(
-            &mut storage_cache,
-            &egld_from_pending_used,
-            &egld_to_add_liquidity,
-        );
+        self.process_delegation(&mut storage_cache, &pending, &extra);
     }
 
     #[payable("*")]
@@ -123,12 +111,12 @@ pub trait LiquidStaking<ContractReader>:
         let unstaked_egld = self.pool_remove_liquidity(&payment.amount, &mut storage_cache);
         self.burn_ls_token(&payment.amount);
 
-        let (instant_amount, to_undelegate_amount) =
-            self.determine_undelegate_amounts(&mut storage_cache, &unstaked_egld);
+        let (instant, to_undelegate) =
+            self.get_undelegate_amount(&mut storage_cache, &unstaked_egld);
 
-        self.process_instant_redemption(&mut storage_cache, &caller, &instant_amount);
+        self.process_instant_redemption(&mut storage_cache, &caller, &instant);
 
-        self.undelegate_amount(&mut storage_cache, &to_undelegate_amount, &caller);
+        self.undelegate_amount(&mut storage_cache, &to_undelegate, &caller);
 
         self.emit_remove_liquidity_event(&storage_cache, &unstaked_egld);
     }
@@ -138,39 +126,45 @@ pub trait LiquidStaking<ContractReader>:
     fn withdraw(&self) {
         let mut storage_cache = StorageCache::new(self);
         let caller = self.blockchain().get_caller();
-        let payment = self.call_value().single_esdt();
+        let payments = self.call_value().all_esdt_transfers();
 
         self.is_state_active(storage_cache.contract_state);
+        let unstake_token_id = self.unstake_token().get_token_id();
+        let mut to_send = BigUint::zero();
 
-        require!(
-            payment.token_identifier == self.unstake_token().get_token_id(),
-            ERROR_BAD_PAYMENT_TOKEN
-        );
+        for payment in payments.iter() {
+            require!(
+                payment.token_identifier == unstake_token_id,
+                ERROR_BAD_PAYMENT_TOKEN
+            );
 
-        require!(payment.amount > BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
+            require!(payment.amount > BigUint::zero(), ERROR_BAD_PAYMENT_AMOUNT);
 
-        let unstake_token_attributes: UnstakeTokenAttributes = self
-            .unstake_token()
-            .get_token_attributes(payment.token_nonce);
+            let unstake_token_attributes: UnstakeTokenAttributes = self
+                .unstake_token()
+                .get_token_attributes(payment.token_nonce);
 
-        let current_epoch = self.blockchain().get_block_epoch();
+            let current_epoch = self.blockchain().get_block_epoch();
 
-        require!(
-            current_epoch >= unstake_token_attributes.unbond_epoch,
-            ERROR_UNSTAKE_PERIOD_NOT_PASSED
-        );
+            require!(
+                current_epoch >= unstake_token_attributes.unbond_epoch,
+                ERROR_UNSTAKE_PERIOD_NOT_PASSED
+            );
 
-        require!(
-            storage_cache.total_withdrawn_egld >= payment.amount,
-            ERROR_INSUFFICIENT_UNBONDED_AMOUNT
-        );
+            require!(
+                storage_cache.total_withdrawn_egld >= payment.amount,
+                ERROR_INSUFFICIENT_UNBONDED_AMOUNT
+            );
 
-        self.burn_unstake_tokens(payment.token_nonce, &payment.amount);
+            self.burn_unstake_tokens(payment.token_nonce, &payment.amount);
 
-        storage_cache.total_withdrawn_egld -= &payment.amount;
+            storage_cache.total_withdrawn_egld -= &payment.amount;
+            to_send += payment.amount;
+        }
 
-        self.tx().to(&caller).egld(&payment.amount).transfer();
-
-        self.emit_general_liquidity_event(&storage_cache);
+        if to_send > BigUint::zero() {
+            self.tx().to(&caller).egld(&to_send).transfer();
+            self.emit_general_liquidity_event(&storage_cache);
+        }
     }
 }

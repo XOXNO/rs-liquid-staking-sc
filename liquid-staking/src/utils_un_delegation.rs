@@ -5,7 +5,6 @@ use crate::{
     ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT, MIN_EGLD_TO_DELEGATE,
 };
 
-pub const UNBOND_PERIOD: u64 = 10;
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
@@ -18,7 +17,7 @@ pub trait UnDelegateUtilsModule:
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    fn determine_undelegate_amounts(
+    fn get_undelegate_amount(
         &self,
         storage_cache: &mut StorageCache<Self>,
         unstaked_egld: &BigUint,
@@ -145,7 +144,7 @@ pub trait UnDelegateUtilsModule:
         );
 
         let current_epoch = self.blockchain().get_block_epoch();
-        let unbond_epoch = current_epoch + UNBOND_PERIOD;
+        let unbond_epoch = current_epoch + self.unbond_period().get();
 
         let virtual_position = UnstakeTokenAttributes {
             unstake_epoch: current_epoch,

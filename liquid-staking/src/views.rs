@@ -1,4 +1,4 @@
-use crate::{structs::ClaimStatusType, StorageCache};
+use crate::StorageCache;
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -34,18 +34,13 @@ pub trait ViewsModule:
         const INITIAL_EXCHANGE_RATE: u64 = 1_000_000_000_000_000_000;
 
         // The initial exchange rate between EGLD and XEGLD is fixed to one
-        if storage_cache.ls_token_supply.clone() == BigUint::zero() {
+        if &storage_cache.ls_token_supply == &BigUint::zero() {
             return BigUint::from(INITIAL_EXCHANGE_RATE);
         }
 
-        storage_cache.virtual_egld_reserve.clone() * BigUint::from(INITIAL_EXCHANGE_RATE)
-            / storage_cache.ls_token_supply.clone()
-    }
-
-    #[view(getDelegationStatus)]
-    fn get_delegation_status(&self) -> ClaimStatusType {
-        let claim_status = self.delegation_claim_status().get();
-        claim_status.status
+        (&storage_cache.virtual_egld_reserve + &storage_cache.rewards_reserve)
+            * BigUint::from(INITIAL_EXCHANGE_RATE)
+            / &storage_cache.ls_token_supply
     }
 
     #[view(getDelegationContractStakedAmount)]

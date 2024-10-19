@@ -77,7 +77,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     sc_setup.b_mock.set_block_round(14000u64);
 
     // Delegate the pending EGLD for the first user
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Check the contract storage again to ensure the values are updated
     // 100: total_egld_staked
@@ -173,7 +173,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     sc_setup.b_mock.set_block_round(14000u64);
 
     // Delegate the pending EGLD for the first user
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Check the contract storage again to ensure the values are updated
     // 100: total_egld_staked
@@ -274,7 +274,7 @@ fn liquid_staking_add_liquidity_exp17_error_test() {
 
     // Action: First user adds 3 EGLD as liquidity to the contract
     sc_setup.add_liquidity(&first_user, 3u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Action: First user removes 15 * 10^17 (1.5 EGLD) as liquidity from the contract using exp17
     sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 15u64);
@@ -338,7 +338,7 @@ fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
     sc_setup.check_contract_storage(5, 5, 0, 0, 5, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
 
@@ -375,7 +375,7 @@ fn liquid_staking_add_liquidity_fallback_test() {
 
     sc_setup.b_mock.set_block_round(14000u64);
 
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
 

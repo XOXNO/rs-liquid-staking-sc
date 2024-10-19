@@ -6,9 +6,8 @@ use contract_setup::*;
 
 use liquid_staking::{
     errors::{
-        ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_INSUFFICIENT_REWARDS,
-        ERROR_NOT_ACTIVE, ERROR_NO_DELEGATION_CONTRACTS, ERROR_OLD_CLAIM_START,
-        ERROR_RECOMPUTE_RESERVES,
+        ERROR_BAD_DELEGATION_ADDRESS, ERROR_INSUFFICIENT_REWARDS, ERROR_NOT_ACTIVE,
+        ERROR_NO_DELEGATION_CONTRACTS,
     },
     structs::UnstakeTokenAttributes,
 };
@@ -38,24 +37,24 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_delegation_contract_values(&delegation_contract, 100u64, 0u64);
     sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
 
     sc_setup.b_mock.set_block_epoch(50u64);
 
-    sc_setup.claim_rewards(&first_user);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_rewards_storage_denominated(1369863013698630136);
 
-    sc_setup.delegate_rewards(&first_user);
+    sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_rewards_storage_denominated(0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
     sc_setup.check_pending_ls_for_unstake_denominated(91183561643835616437u128);
-    sc_setup.un_delegate_pending(&first_user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.check_pending_ls_for_unstake(0);
 
     sc_setup.check_delegation_contract_unstaked_value_denominated(
@@ -73,7 +72,7 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
 
     sc_setup.b_mock.set_block_epoch(60u64);
 
-    sc_setup.withdraw_pending(&first_user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     sc_setup.withdraw(
         &first_user,
@@ -89,6 +88,7 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
 #[test]
 fn liquid_staking_multiple_operations() {
     let _ = DebugApi::dummy();
+
     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     let delegation_contract1 = sc_setup.deploy_staking_contract(
@@ -127,14 +127,13 @@ fn liquid_staking_multiple_operations() {
         11_000u64,
     );
 
-    let manager = sc_setup.setup_new_user(100u64);
     let first_user = sc_setup.setup_new_user(1000u64);
     let second_user = sc_setup.setup_new_user(1000u64);
     let third_user = sc_setup.setup_new_user(1000u64);
     sc_setup.add_liquidity(&first_user, 100u64);
 
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&manager);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_delegation_contract_values(&delegation_contract1, 25u64, 0u64);
     sc_setup.check_delegation_contract_values(&delegation_contract2, 25u64, 0u64);
@@ -142,14 +141,14 @@ fn liquid_staking_multiple_operations() {
     sc_setup.check_delegation_contract_values(&delegation_contract4, 25u64, 0u64);
 
     sc_setup.add_liquidity(&first_user, 200u64);
-    sc_setup.delegate_pending(&manager);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     // sc_setup.check_delegation_contract_values(&delegation_contract1, 75u64, 0u64);
     // sc_setup.check_delegation_contract_values(&delegation_contract2, 75u64, 0u64);
     // sc_setup.check_delegation_contract_values(&delegation_contract3, 75u64, 0u64);
     // sc_setup.check_delegation_contract_values(&delegation_contract4, 75u64, 0u64);
 
     sc_setup.add_liquidity(&second_user, 500u64);
-    sc_setup.delegate_pending(&manager);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // sc_setup.check_delegation_contract_values(&delegation_contract1, 175u64, 0u64);
     // sc_setup.check_delegation_contract_values(&delegation_contract2, 175u64, 0u64);
@@ -167,16 +166,18 @@ fn liquid_staking_multiple_operations() {
     );
 
     sc_setup.add_liquidity(&third_user, 600u64);
-    sc_setup.delegate_pending(&manager);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
+
     // sc_setup.check_delegation_contract_values(&delegation_contract1, 275u64, 0u64);
     sc_setup.check_delegation_contract_values_denominated(
         &delegation_contract2,
-        393248047809162229578u128,
+        396644526461469443760u128,
     );
+
     // sc_setup.check_delegation_contract_values(&delegation_contract3, 275u64, 0u64);
     sc_setup.check_delegation_contract_values_denominated(
         &delegation_contract4,
-        468601828357726701648u128,
+        865205349705419487466u128,
     );
 
     sc_setup.update_staking_contract_params(
@@ -201,7 +202,7 @@ fn liquid_staking_multiple_operations() {
     sc_setup.check_user_balance(&third_user, LS_TOKEN_ID, 600u64);
 
     sc_setup.b_mock.set_block_epoch(10u64);
-    sc_setup.claim_rewards(&manager);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
 
     sc_setup.check_user_egld_balance_denominated(
         sc_setup.sc_wrapper.address_ref(),
@@ -228,7 +229,7 @@ fn liquid_staking_multiple_withdraw_test() {
     sc_setup.add_liquidity(&third_user, 40u64);
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.check_contract_storage(130, 130, 0, 0, 130, 0);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.b_mock.set_block_epoch(50u64);
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 20u64);
     sc_setup.check_user_nft_balance_denominated(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(20), None);
@@ -239,11 +240,10 @@ fn liquid_staking_multiple_withdraw_test() {
 
     sc_setup.check_contract_storage(50, 50, 0, 0, 0, 80);
 
-    // return;
-    sc_setup.un_delegate_pending(&first_user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.b_mock.set_block_epoch(60u64);
 
-    sc_setup.withdraw_pending(&first_user, &delegation_contract);
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
     sc_setup.check_contract_storage(50, 50, 0, 80, 0, 0);
 
@@ -279,13 +279,13 @@ fn full_flow_test() {
 
     sc_setup.check_user_egld_balance(&sc_setup.sc_wrapper.address_ref(), 90);
 
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.check_user_egld_balance(&delegation_contract, 90);
     sc_setup.check_user_egld_balance(&sc_setup.sc_wrapper.address_ref(), 0);
 
     sc_setup.b_mock.set_block_epoch(50u64);
-    sc_setup.claim_rewards(&first_user);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
 
     let pending_rewards = sc_setup.get_pending_rewards();
 
@@ -307,7 +307,7 @@ fn full_flow_test() {
     );
 
     // Due to the fees, less rewards are sent back to the delegation contract
-    sc_setup.delegate_rewards(&first_user);
+    sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 
     // The liquid staking contract should have delegated the rewards to the delegation contract
     sc_setup.check_user_egld_balance_denominated(&sc_setup.sc_wrapper.address_ref(), 0);
@@ -316,6 +316,7 @@ fn full_flow_test() {
     sc_setup.check_user_egld_balance_denominated(&delegation_contract, 91183561643835616439u128);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 25u64);
+
     sc_setup.check_user_nft_balance_denominated(
         &first_user,
         UNSTAKE_TOKEN_ID,
@@ -348,14 +349,13 @@ fn full_flow_test() {
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
-    sc_setup.un_delegate_pending(&first_user);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone());
 
     sc_setup.b_mock.set_block_epoch(60u64);
 
     sc_setup.check_user_egld_balance_denominated(&sc_setup.sc_wrapper.address_ref(), 0);
 
-    sc_setup.withdraw_pending(&first_user, &delegation_contract);
-
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
     // The unstaked EGLD is sent back to the main liquid staking contract
     sc_setup.check_user_egld_balance_denominated(
         &sc_setup.sc_wrapper.address_ref(),
@@ -372,7 +372,6 @@ fn full_flow_test() {
         &sc_setup.sc_wrapper.address_ref(),
         91183561643835616439u128,
     );
-
     sc_setup.withdraw(
         &first_user,
         UNSTAKE_TOKEN_ID,
@@ -415,81 +414,20 @@ fn claim_rewards_multiple_times_test() {
 
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.b_mock.set_block_epoch(50u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.delegate_rewards(&first_user);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
+    sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
     let pending_rewards = sc_setup.get_pending_rewards();
     assert_eq!(pending_rewards, 0, "pending_rewards should be 0");
     sc_setup.b_mock.set_block_epoch(100u64);
-    sc_setup.claim_rewards(&first_user);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
     let pending_rewards = sc_setup.get_pending_rewards();
-    assert_eq!(pending_rewards, 1387877650591105273u128, "pending_rewards should be 1387877650591105273");
-    sc_setup.delegate_rewards(&first_user);
-}
-
-#[test]
-fn claim_rewards_multiple_same_epoch_error_test() {
-    let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
-
-    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
-
-    let first_user = sc_setup.setup_new_user(100u64);
-
-    sc_setup.add_liquidity(&first_user, 100u64);
-    sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
-    sc_setup.b_mock.set_block_epoch(50u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.claim_rewards_error(&first_user, ERROR_CLAIM_EPOCH);
-}
-
-#[test]
-fn claim_rewards_multiple_not_delegated_error_test() {
-    let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
-
-    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
-
-    let first_user = sc_setup.setup_new_user(1000u64);
-
-    sc_setup.add_liquidity(&first_user, 1000u64);
-    sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
-    sc_setup.b_mock.set_block_epoch(1u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(2u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(3u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(4u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(5u64);
-    sc_setup.claim_rewards_error(&first_user, ERROR_OLD_CLAIM_START);
-}
-
-#[test]
-fn claim_rewards_multiple_under_min_egld_error_test() {
-    let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
-
-    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
-
-    let first_user = sc_setup.setup_new_user(1000u64);
-
-    sc_setup.add_liquidity(&first_user, 1000u64);
-    sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
-    sc_setup.b_mock.set_block_epoch(1u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(2u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(3u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.b_mock.set_block_epoch(4u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.delegate_rewards(&first_user);
+    assert_eq!(
+        pending_rewards, 1387877650591105273u128,
+        "pending_rewards should be 1387877650591105273"
+    );
+    sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 }
 
 #[test]
@@ -501,7 +439,7 @@ fn add_liquidity_no_valid_delegation_contract_error_test() {
 
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending_error(&first_user, ERROR_NO_DELEGATION_CONTRACTS);
+    sc_setup.delegate_pending_error(&sc_setup.owner_address.clone(), ERROR_NO_DELEGATION_CONTRACTS);
 }
 
 #[test]
@@ -513,7 +451,7 @@ fn add_liquidity_no_available_delegation_contract_error_test() {
 
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending_error(&first_user, ERROR_BAD_DELEGATION_ADDRESS);
+    sc_setup.delegate_pending_error(&sc_setup.owner_address.clone(), ERROR_BAD_DELEGATION_ADDRESS);
 }
 
 #[test]
@@ -527,10 +465,10 @@ fn delegate_rewards_not_enough_egld_error_test() {
 
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.b_mock.set_block_epoch(1u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.delegate_rewards_error(&first_user, ERROR_INSUFFICIENT_REWARDS);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
+    sc_setup.delegate_rewards_error(&sc_setup.owner_address.clone(), ERROR_INSUFFICIENT_REWARDS);
 }
 
 #[test]
@@ -544,21 +482,21 @@ fn delegate_rewards_inactive_state_error_test() {
 
     sc_setup.add_liquidity(&first_user, 100u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     sc_setup.b_mock.set_block_epoch(1u64);
-    sc_setup.claim_rewards(&first_user);
-    sc_setup.set_inactive_state(&first_user);
-    sc_setup.delegate_rewards_error(&first_user, ERROR_NOT_ACTIVE);
+    sc_setup.claim_rewards(&sc_setup.owner_address.clone());
+    sc_setup.set_inactive_state(&sc_setup.owner_address.clone());
+    sc_setup.delegate_rewards_error(&sc_setup.owner_address.clone(), ERROR_NOT_ACTIVE);
 }
 
-#[test]
-fn delegate_rewards_not_finished_claim_status_error_test() {
-    let _ = DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+// #[test]
+// fn delegate_rewards_not_finished_claim_status_error_test() {
+//     let _ = DebugApi::dummy();
+//     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
-    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+//     sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
 
-    let first_user = sc_setup.setup_new_user(100u64);
+//     let first_user = sc_setup.setup_new_user(100u64);
 
-    sc_setup.delegate_rewards_error(&first_user, ERROR_RECOMPUTE_RESERVES);
-}
+//     sc_setup.delegate_rewards_error(&first_user, ERROR_RECOMPUTE_RESERVES);
+// }

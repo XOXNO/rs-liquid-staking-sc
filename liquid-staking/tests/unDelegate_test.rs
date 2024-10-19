@@ -72,7 +72,7 @@ fn undelegate_partially_instant_test() {
 
     // Delegate the pending tokens
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Add liquidity of 90.5 tokens from the second user to the contract
     sc_setup.add_liquidity_exp17(&second_user, 905u64);
@@ -127,7 +127,7 @@ fn calculate_partial_undelegate_fallback_test() {
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
 
     // Delegate the pending tokens
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
     // Check the contract storage to ensure the pending tokens are delegated
     sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
 
@@ -193,7 +193,7 @@ fn undelegate_can_fully_pending_redeem() {
     // Set the block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
     // Delegate the pending tokens
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Check the values of the first delegation contract
     sc_setup.check_delegation_contract_values(&delegation_contract1, 50u64, 0u64);
@@ -270,7 +270,7 @@ fn undelegate_small_amount_error_test() {
 
     // Delegate the pending tokens
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&first_user);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
 
     // Add liquidity of 1.2 tokens from the second user to the contract
     sc_setup.add_liquidity_exp17(&second_user, 12u64);

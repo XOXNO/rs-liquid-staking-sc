@@ -3,5 +3,7 @@ members = [
   "liquid-staking",
   "liquid-staking/meta",
   "delegation-mock",
-  "delegation-mock/meta"
+  "delegation-mock/meta",
+  "delegation-manager-mock",
+  "delegation-manager-mock/meta"
 ]

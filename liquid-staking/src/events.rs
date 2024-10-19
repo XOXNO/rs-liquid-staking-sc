@@ -23,6 +23,7 @@ pub struct ChangeLiquidityEvent<M: ManagedTypeApi> {
 #[multiversx_sc::module]
 pub trait EventsModule:
     crate::config::ConfigModule
+    + crate::storage::StorageModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     fn emit_add_liquidity_event(&self, storage_cache: &StorageCache<Self>, egld_amount: &BigUint) {
@@ -69,12 +70,7 @@ pub trait EventsModule:
         )
     }
 
-    fn emit_claim_rewards_event(
-        &self,
-        storage_cache: &StorageCache<Self>,
-        egld_amount: &BigUint,
-        delegation_contract: &ManagedAddress,
-    ) {
+    fn emit_claim_rewards_event(&self, storage_cache: &StorageCache<Self>, egld_amount: &BigUint) {
         let epoch = self.blockchain().get_block_epoch();
         let caller = self.blockchain().get_caller();
         self.claim_rewards_event(
@@ -93,7 +89,6 @@ pub trait EventsModule:
                 epoch,
                 timestamp: self.blockchain().get_block_timestamp(),
             },
-            &delegation_contract,
         )
     }
 
@@ -207,7 +202,6 @@ pub trait EventsModule:
         &self,
         #[indexed] amount: &BigUint,
         #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
-        #[indexed] delegation_contract: &ManagedAddress,
     );
 
     #[event("protocol_revenue")]

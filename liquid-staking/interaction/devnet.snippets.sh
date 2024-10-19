@@ -188,3 +188,13 @@ updateMaxSelectedProviders() {
         --arguments 20 \
         --send || return
 }
+
+setUnbondPeriod() {
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=D \
+        --gas-limit=10000000 \
+        --function="setUnbondPeriod" \
+        --arguments 1 \
+        --send || return
+}

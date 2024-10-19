@@ -2,7 +2,7 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 use crate::contexts::base::StorageCache;
-use crate::errors::*;
+use crate::{errors::*, storage};
 
 use super::config;
 
@@ -10,7 +10,7 @@ pub const UNDELEGATE_TOKEN_URI: &[u8] =
     b"https://ipfs.io/ipfs/QmTtBCeg5zLz2fnZedfukavPsfYhB7A95EXUkEddcNwNDX";
 
 #[multiversx_sc::module]
-pub trait LiquidityPoolModule: config::ConfigModule {
+pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
     fn pool_add_liquidity(
         &self,
         token_amount: &BigUint,
@@ -59,6 +59,7 @@ pub trait LiquidityPoolModule: config::ConfigModule {
         let ls_amount = if storage_cache.virtual_egld_reserve > BigUint::zero() {
             token_amount.clone() * &storage_cache.ls_token_supply
                 / &storage_cache.virtual_egld_reserve
+                + &storage_cache.rewards_reserve
         } else {
             token_amount.clone()
         };

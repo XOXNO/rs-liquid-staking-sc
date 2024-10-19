@@ -1,17 +1,17 @@
-use multiversx_sc_modules::ongoing_operation::{
-    CONTINUE_OP, DEFAULT_MIN_GAS_TO_SAVE_PROGRESS, STOP_OP,
-};
+use multiversx_sc::hex_literal::hex;
 
 use crate::{
     accumulator,
     callback::{CallbackModule, CallbackProxy},
-    delegation_proxy,
+    delegation_manager_proxy, delegation_proxy,
     errors::ERROR_NO_DELEGATION_CONTRACTS,
-    structs::{ClaimStatus, ClaimStatusType},
     StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
-    ERROR_NOT_WHITELISTED, ERROR_RECOMPUTE_RESERVES, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
-    MIN_GAS_FOR_CALLBACK,
+    ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
+    MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS, MIN_GAS_FOR_CALLBACK,
 };
+
+pub const DELEGATION_MANAGER: [u8; 32] =
+    hex!("000000000000000000010000000000000000000000000000000000000004ffff");
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -34,6 +34,8 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
+        self.is_manager(&self.blockchain().get_caller(), true);
+
         self.require_min_rounds_passed();
 
         require!(
@@ -44,7 +46,7 @@ pub trait ManageModule:
         let delegation_contract =
             self.get_delegation_contract_for_delegate(&storage_cache.pending_egld);
 
-        // !!!! Required to prevent double delegation from the same amount, while the callback is not executed !!!!
+        // Important before delegating the amount to the new contracts, set the reserve to 0
         storage_cache.pending_egld = BigUint::zero();
 
         for data in &delegation_contract {
@@ -70,6 +72,8 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
+        self.is_manager(&self.blockchain().get_caller(), true);
+
         self.require_min_rounds_passed();
 
         require!(
@@ -80,6 +84,7 @@ pub trait ManageModule:
         let delegation_contract =
             self.get_delegation_contract_for_undelegate(&storage_cache.pending_egld_for_unstake);
 
+        // Important before un delegating the amount from the new contracts, set the amount to 0
         storage_cache.pending_egld_for_unstake = BigUint::zero();
 
         for data in &delegation_contract {
@@ -103,6 +108,8 @@ pub trait ManageModule:
     fn withdraw_pending(&self, contract: ManagedAddress) {
         let storage_cache = StorageCache::new(self);
 
+        self.is_manager(&self.blockchain().get_caller(), true);
+
         self.is_state_active(storage_cache.contract_state);
 
         require!(
@@ -124,6 +131,8 @@ pub trait ManageModule:
     fn claim_rewards(&self) {
         let storage_cache = StorageCache::new(self);
 
+        self.is_manager(&self.blockchain().get_caller(), true);
+
         self.is_state_active(storage_cache.contract_state);
 
         let delegation_addresses_mapper = self.delegation_addresses_list();
@@ -133,82 +142,30 @@ pub trait ManageModule:
             ERROR_NO_DELEGATION_CONTRACTS
         );
 
-        let claim_status_mapper = self.delegation_claim_status();
+        let addresses = delegation_addresses_mapper
+            .iter()
+            .map(|node| node.into_value())
+            .collect::<MultiValueEncoded<ManagedAddress>>();
 
-        let mut old_claim_status = claim_status_mapper.get();
+        let required_gas = MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS * addresses.len() as u64;
 
-        // If the claim status is finished and the rewards reserve is less than the minimum eGLD to delegate, set the claim status to Insufficient
-        // This is to prevent the contract from getting stuck in the claim operation
-        if old_claim_status.status == ClaimStatusType::Finished
-            && storage_cache.rewards_reserve < BigUint::from(MIN_EGLD_TO_DELEGATE)
-        {
-            old_claim_status.status = ClaimStatusType::Insufficent;
-        }
-
-        let current_epoch = self.blockchain().get_block_epoch();
-
-        let mut current_claim_status = self.load_operation::<ClaimStatus>();
-
-        self.check_claim_operation(&current_claim_status, &old_claim_status, current_epoch);
-        self.prepare_claim_operation(&mut current_claim_status, current_epoch);
-
-        let run_result = self.run_while_it_has_gas(DEFAULT_MIN_GAS_TO_SAVE_PROGRESS, || {
-            let delegation_address_node = delegation_addresses_mapper
-                .get_node_by_id(current_claim_status.current_node)
-                .unwrap();
-
-            let next_node = delegation_address_node.get_next_node_id();
-            let delegation_address = delegation_address_node.into_value();
-            let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
-
-            if delegation_contract_data.total_staked_from_ls_contract > BigUint::zero() {
-                self.tx()
-                    .to(&delegation_address)
-                    .typed(delegation_proxy::DelegationMockProxy)
-                    .claim_rewards()
-                    .gas(MIN_GAS_FOR_ASYNC_CALL)
-                    .callback(
-                        CallbackModule::callbacks(self).claim_rewards_callback(&delegation_address),
-                    )
-                    .gas_for_callback(MIN_GAS_FOR_CALLBACK)
-                    .register_promise();
-            }
-
-            if next_node == 0 {
-                claim_status_mapper.set(current_claim_status.clone());
-                return STOP_OP;
-            } else {
-                current_claim_status.current_node = next_node;
-            }
-
-            CONTINUE_OP
-        });
-
-        match run_result {
-            OperationCompletionStatus::InterruptedBeforeOutOfGas => {
-                self.save_progress(&current_claim_status);
-            }
-            OperationCompletionStatus::Completed => {
-                claim_status_mapper.update(|claim_status| {
-                    claim_status.status = ClaimStatusType::Finished;
-                });
-            }
-        };
+        self.tx()
+            .to(&ManagedAddress::new_from_bytes(&DELEGATION_MANAGER))
+            .typed(delegation_manager_proxy::DelegationManagerMockProxy)
+            .claim_multiple(addresses)
+            .gas(required_gas)
+            .callback(CallbackModule::callbacks(self).claim_rewards_callback())
+            .gas_for_callback(MIN_GAS_FOR_CALLBACK)
+            .register_promise();
     }
 
     #[endpoint(delegateRewards)]
     fn delegate_rewards(&self) {
         let mut storage_cache = StorageCache::new(self);
-        let claim_status = self.delegation_claim_status().get();
+
+        self.is_manager(&self.blockchain().get_caller(), true);
 
         self.is_state_active(storage_cache.contract_state);
-
-        require!(
-            claim_status.last_claim_epoch == self.blockchain().get_block_epoch()
-                && (claim_status.status == ClaimStatusType::Finished
-                    || claim_status.status == ClaimStatusType::Redelegated), // In case we add extra rewards to the reserve from external sources
-            ERROR_RECOMPUTE_RESERVES
-        );
 
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
         require!(
@@ -235,7 +192,6 @@ pub trait ManageModule:
 
         let delegation_contract =
             self.get_delegation_contract_for_delegate(&storage_cache.rewards_reserve);
-
         // Important before delegating the rewards to the new contracts, set the rewards reserve to 0
         storage_cache.rewards_reserve = BigUint::zero();
 
@@ -253,9 +209,7 @@ pub trait ManageModule:
                 .gas_for_callback(MIN_GAS_FOR_CALLBACK)
                 .register_promise();
         }
-        if storage_cache.rewards_reserve == BigUint::zero() {
-            self.delegation_claim_status()
-                .update(|claim_status| claim_status.status = ClaimStatusType::Redelegated);
-        }
+
+        self.emit_general_liquidity_event(&storage_cache);
     }
 }

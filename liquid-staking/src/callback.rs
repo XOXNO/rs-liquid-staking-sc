@@ -1,4 +1,4 @@
-use crate::{structs::ClaimStatusType, StorageCache};
+use crate::StorageCache;
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -26,17 +26,17 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Ok(()) => {
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
+                        contract_data.total_staked -= egld_to_unstake;
                         contract_data.total_staked_from_ls_contract -= egld_to_unstake;
                         contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
                     });
                 storage_cache.pending_egld_for_unbond += egld_to_unstake;
-                self.emit_general_liquidity_event(&storage_cache);
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld_for_unstake += egld_to_unstake;
-                self.emit_general_liquidity_event(&storage_cache);
             }
         }
+        self.emit_general_liquidity_event(&storage_cache);
     }
 
     #[promises_callback]
@@ -52,6 +52,8 @@ pub trait CallbackModule:
                 self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract += staked_tokens;
+                        // Pre update before the next providers contract sync
+                        contract_data.total_staked += staked_tokens;
                     });
             }
             ManagedAsyncCallResult::Err(_) => {
@@ -72,7 +74,7 @@ pub trait CallbackModule:
         if withdraw_amount > BigUint::zero() {
             let mut storage_cache = StorageCache::new(self);
             let delegation_contract_mapper = self.delegation_contract_data(&delegation_contract);
-            
+
             storage_cache.total_withdrawn_egld += &withdraw_amount;
             storage_cache.pending_egld_for_unbond -= &withdraw_amount;
 
@@ -84,14 +86,17 @@ pub trait CallbackModule:
     }
 
     #[promises_callback]
-    fn claim_rewards_callback(&self, delegation_contract: &ManagedAddress) {
-        let rewards = self.call_value().egld_value().clone_value();
+    fn claim_rewards_callback(&self, #[call_result] result: ManagedAsyncCallResult<BigUint>) {
+        match result {
+            ManagedAsyncCallResult::Ok(total_rewards) => {
+                if total_rewards > BigUint::zero() {
+                    let mut storage_cache = StorageCache::new(self);
 
-        if rewards > BigUint::zero() {
-            let mut storage_cache = StorageCache::new(self);
-
-            storage_cache.rewards_reserve += &rewards;
-            self.emit_claim_rewards_event(&storage_cache, &rewards, delegation_contract);
+                    storage_cache.rewards_reserve += &total_rewards;
+                    self.emit_claim_rewards_event(&storage_cache, &total_rewards);
+                }
+            }
+            ManagedAsyncCallResult::Err(_) => {}
         }
     }
 
@@ -108,6 +113,7 @@ pub trait CallbackModule:
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract += staked_tokens;
+                        contract_data.total_staked += staked_tokens;
                     });
 
                 storage_cache.virtual_egld_reserve += staked_tokens;
@@ -120,9 +126,6 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Err(_) => {
                 // Revert the deduction made in the parent function
                 storage_cache.rewards_reserve += staked_tokens;
-
-                self.delegation_claim_status()
-                    .update(|claim_status| claim_status.status = ClaimStatusType::Finished);
 
                 self.move_delegation_contract_to_back(&delegation_contract);
                 self.delegation_contract_data(&delegation_contract)

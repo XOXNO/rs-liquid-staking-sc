@@ -252,6 +252,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "delegation-manager-mock"
+version = "0.0.0"
+dependencies = [
+ "delegation-mock",
+ "itertools",
+ "multiversx-sc",
+ "multiversx-sc-scenario",
+]
+
+[[package]]
+name = "delegation-manager-mock-meta"
+version = "0.0.0"
+dependencies = [
+ "delegation-manager-mock",
+ "multiversx-sc-meta-lib",
+]
+
+[[package]]
 name = "delegation-mock"
 version = "0.0.0"
 dependencies = [
@@ -443,6 +461,7 @@ name = "liquid-staking"
 version = "0.0.0"
 dependencies = [
  "accumulator",
+ "delegation-manager-mock",
  "delegation-mock",
  "itertools",
  "multiversx-sc",

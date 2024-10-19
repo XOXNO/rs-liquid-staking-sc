@@ -1,0 +1,14 @@
+[package]
+name = "delegation-manager-mock-meta"
+version = "0.0.0"
+edition = "2021"
+publish = false
+authors = ["Mihai Eremia <mihai@xoxno.com>"]
+
+[dev-dependencies]
+
+[dependencies.delegation-manager-mock]
+path = ".."
+
+[dependencies.multiversx-sc-meta-lib]
+version = "0.53.2"
