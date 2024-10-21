@@ -1,6 +1,6 @@
 use crate::{
-    structs::{State, UnstakeTokenAttributes},
-    ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_SELECTED_PROVIDERS, ERROR_NOT_ACTIVE,
+    structs::State, ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_SELECTED_PROVIDERS,
+    ERROR_NOT_ACTIVE,
 };
 
 multiversx_sc::imports!();
@@ -113,26 +113,6 @@ pub trait ConfigModule: crate::storage::StorageModule {
     #[endpoint(removeManager)]
     fn remove_manager(&self, manager: ManagedAddress) {
         self.managers().swap_remove(&manager);
-    }
-
-    #[endpoint(cleanUnbondEpochs)]
-    fn clean_unbond_epochs(&self, nonce: u64) {
-        let epoch = self.blockchain().get_block_epoch();
-        let map_token = self.unstake_token();
-
-        let balance = map_token.get_balance(nonce);
-
-        if balance == BigUint::zero() {
-            return;
-        }
-
-        let attributes: UnstakeTokenAttributes = map_token.get_token_attributes(nonce);
-        if attributes.unstake_epoch < epoch {
-            self.unstake_token_nonce(attributes.unbond_epoch).clear();
-            // The protocol always holds 1 unit of the MetaESDT token in the contract
-            let balance = map_token.get_balance(nonce);
-            map_token.nft_burn(nonce, &balance);
-        }
     }
 
     #[inline]

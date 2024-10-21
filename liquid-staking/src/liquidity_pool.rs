@@ -2,6 +2,7 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 use crate::contexts::base::StorageCache;
+use crate::structs::UnstakeTokenAttributes;
 use crate::{errors::*, storage};
 
 use super::config;
@@ -101,6 +102,11 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
             );
 
             nonce.set(new_nonce);
+
+            if new_nonce > 1 {
+                self.clean_old_unbond_epochs(new_nonce - 1);
+            }
+
             EsdtTokenPayment::new(token_id, new_nonce, amount.clone())
         } else {
             let payment = self
@@ -112,5 +118,24 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
 
     fn burn_unstake_tokens(&self, token_nonce: u64, amount: &BigUint) {
         self.unstake_token().nft_burn(token_nonce, amount);
+    }
+
+    fn clean_old_unbond_epochs(&self, nonce: u64) {
+        let epoch = self.blockchain().get_block_epoch();
+        let map_token = self.unstake_token();
+
+        let balance = map_token.get_balance(nonce);
+
+        if balance == BigUint::zero() {
+            return;
+        }
+
+        let attributes: UnstakeTokenAttributes = map_token.get_token_attributes(nonce);
+        if attributes.unstake_epoch < epoch {
+            self.unstake_token_nonce(attributes.unbond_epoch).clear();
+            // The protocol always holds 1 unit of the MetaESDT token in the contract
+            let balance = map_token.get_balance(nonce);
+            map_token.nft_burn(nonce, &balance);
+        }
     }
 }
