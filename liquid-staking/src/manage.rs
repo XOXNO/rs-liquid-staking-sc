@@ -142,10 +142,11 @@ pub trait ManageModule:
             ERROR_NO_DELEGATION_CONTRACTS
         );
 
-        let addresses = delegation_addresses_mapper
-            .iter()
-            .map(|node| node.into_value())
-            .collect::<MultiValueEncoded<ManagedAddress>>();
+        let mut addresses = MultiValueEncoded::new();
+
+        for node in delegation_addresses_mapper.iter() {
+            addresses.push(node.into_value());
+        }
 
         let required_gas = MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS * addresses.len() as u64;
 

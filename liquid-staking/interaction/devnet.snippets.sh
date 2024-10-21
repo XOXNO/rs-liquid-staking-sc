@@ -19,7 +19,7 @@ deploy() {
 
 upgrade() {
     echo "Upgrade smart contract address: ${ADDRESS}"
-    mxpy  contract upgrade ${ADDRESS} --bytecode=${PROJECT} --recall-nonce \
+    mxpy  contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode=${PROJECT} --recall-nonce \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=600000000 --send --proxy=${PROXY} --chain="D" || return
 }
@@ -196,5 +196,17 @@ setUnbondPeriod() {
         --gas-limit=10000000 \
         --function="setUnbondPeriod" \
         --arguments 1 \
+        --send || return
+}
+
+setManagers() {
+    MANAGER_ADDRESS="erd1fmd662htrgt07xxd8me09newa9s0euzvpz3wp0c4pz78f83grt9qm6pn57"
+    MANAGER_ADDRESS2="erd1vn9s8uj4e7r6skmqfw5py3hxnluw3ftv6dh47yt449vtvdnn9w2stmwm7l"
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=D \
+        --gas-limit=12000000 \
+        --function="setManagers" \
+        --arguments ${MANAGER_ADDRESS} ${MANAGER_ADDRESS2} \
         --send || return
 }
