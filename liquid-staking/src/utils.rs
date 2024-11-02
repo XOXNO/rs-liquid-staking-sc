@@ -422,6 +422,24 @@ pub trait UtilsModule:
         total_amount * cut_percentage / PERCENTAGE_TOTAL
     }
 
+    fn add_delegation_address_in_list(&self, contract_address: ManagedAddress) {
+        let mut delegation_addresses_mapper = self.delegation_addresses_list();
+
+        delegation_addresses_mapper.insert(contract_address);
+    }
+
+    fn remove_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
+        self.delegation_addresses_list()
+            .swap_remove(contract_address);
+    }
+
+    fn move_delegation_contract_to_back(&self, delegation_contract: &ManagedAddress) {
+        self.remove_delegation_address_from_list(delegation_contract);
+
+        self.delegation_addresses_list()
+            .insert(delegation_contract.clone());
+    }
+
     fn require_min_rounds_passed(&self) {
         // TODO: Implement once new hooks are available in the VM with the future mainnet upgrade
         return;

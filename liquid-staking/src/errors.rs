@@ -34,3 +34,5 @@ pub static ERROR_FAILED_TO_DISTRIBUTE: &[u8] = b"Failed to distribute entire amo
 pub static ERROR_MAX_DELEGATION_ADDRESSES: &[u8] = b"Maximum number of delegation addresses reached";
 pub static ERROR_MAX_SELECTED_PROVIDERS: &[u8] = b"Max selected providers must be greater than 0";
 pub static ERROR_MAX_CHANGED_DELEGATION_ADDRESSES: &[u8] = b"Max delegation addresses must be greater than 0";
+
+pub static ERROR_MIN_EGLD_TO_DELEGATE: &[u8] = b"Minimum EGLD to delegate must be greater than 1 EGLD";

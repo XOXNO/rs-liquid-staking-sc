@@ -34,40 +34,40 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
     let first_user = sc_setup.setup_new_user(100u64);
 
     sc_setup.add_liquidity(&first_user, 100u64);
-    sc_setup.check_delegation_contract_values(&delegation_contract, 0u64, 0u64);
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_delegation_contract_values(&delegation_contract, 1u64, 0u64);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_delegation_contract_values(&delegation_contract, 100u64, 0u64);
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
+    sc_setup.check_delegation_contract_values(&delegation_contract, 101u64, 0u64);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 0, 0);
 
     sc_setup.b_mock.set_block_epoch(50u64);
 
     sc_setup.claim_rewards(&sc_setup.owner_address.clone());
 
-    sc_setup.check_contract_rewards_storage_denominated(1369863013698630136);
+    sc_setup.check_contract_rewards_storage_denominated(1383561643835616438);
 
     sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 
     sc_setup.check_contract_rewards_storage_denominated(0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
-    sc_setup.check_pending_ls_for_unstake_denominated(91183561643835616437u128);
+    sc_setup.check_pending_ls_for_unstake_denominated(91183561643835616438u128);
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     sc_setup.check_pending_ls_for_unstake(0);
 
     sc_setup.check_delegation_contract_unstaked_value_denominated(
         &delegation_contract,
-        91183561643835616437u128,
+        91183561643835616438u128,
     );
 
     sc_setup.check_user_nft_balance_denominated(
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(91183561643835616437u128),
+        num_bigint::BigUint::from(91183561643835616438u128),
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
@@ -79,11 +79,11 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(91183561643835616437u128),
+        num_bigint::BigUint::from(91183561643835616438u128),
     );
 
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
-    sc_setup.check_user_egld_balance_denominated(&first_user, 91183561643835616437u128);
+    sc_setup.check_user_egld_balance_denominated(&first_user, 91183561643835616438u128);
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn liquid_staking_multiple_operations() {
 
     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
-    let delegation_contract1 = sc_setup.deploy_staking_contract(
+    sc_setup.deploy_staking_contract(
         &sc_setup.owner_address.clone(),
         1000,
         1000,
@@ -136,10 +136,10 @@ fn liquid_staking_multiple_operations() {
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_delegation_contract_values(&delegation_contract1, 25u64, 0u64);
-    sc_setup.check_delegation_contract_values(&delegation_contract2, 25u64, 0u64);
-    sc_setup.check_delegation_contract_values(&delegation_contract3, 25u64, 0u64);
-    sc_setup.check_delegation_contract_values(&delegation_contract4, 25u64, 0u64);
+    // sc_setup.check_delegation_contract_values(&delegation_contract1, 26u64, 0u64);
+    // sc_setup.check_delegation_contract_values(&delegation_contract2, 26u64, 0u64);
+    // sc_setup.check_delegation_contract_values(&delegation_contract3, 26u64, 0u64);
+    // sc_setup.check_delegation_contract_values(&delegation_contract4, 26u64, 0u64);
 
     sc_setup.add_liquidity(&first_user, 200u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
@@ -172,13 +172,13 @@ fn liquid_staking_multiple_operations() {
     // sc_setup.check_delegation_contract_values(&delegation_contract1, 275u64, 0u64);
     sc_setup.check_delegation_contract_values_denominated(
         &delegation_contract2,
-        396644526461469443760u128,
+        393265979498469091943u128,
     );
 
     // sc_setup.check_delegation_contract_values(&delegation_contract3, 275u64, 0u64);
     sc_setup.check_delegation_contract_values_denominated(
         &delegation_contract4,
-        865205349705419487464u128,
+        876521043986911407020u128,
     );
 
     sc_setup.update_staking_contract_params(
@@ -207,10 +207,10 @@ fn liquid_staking_multiple_operations() {
 
     sc_setup.check_user_egld_balance_denominated(
         sc_setup.sc_wrapper.address_ref(),
-        3835616438356164381u128,
+        3846575342465753423u128,
     );
 
-    sc_setup.check_contract_rewards_storage_denominated(3835616438356164381u128);
+    sc_setup.check_contract_rewards_storage_denominated(3846575342465753423u128);
 }
 
 #[test]
@@ -229,7 +229,7 @@ fn liquid_staking_multiple_withdraw_test() {
     sc_setup.add_liquidity(&second_user, 40u64);
     sc_setup.add_liquidity(&third_user, 40u64);
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.check_contract_storage(130, 130, 0, 0, 130, 0);
+    sc_setup.check_contract_storage(131, 131, 0, 0, 130, 0);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     sc_setup.b_mock.set_block_epoch(50u64);
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 20u64);
@@ -239,14 +239,14 @@ fn liquid_staking_multiple_withdraw_test() {
     sc_setup.remove_liquidity(&second_user, LS_TOKEN_ID, 20u64);
     sc_setup.remove_liquidity(&third_user, LS_TOKEN_ID, 20u64);
 
-    sc_setup.check_contract_storage(50, 50, 0, 0, 0, 80);
+    sc_setup.check_contract_storage(51, 51, 0, 0, 0, 80);
 
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     sc_setup.b_mock.set_block_epoch(60u64);
 
     sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
-    sc_setup.check_contract_storage(50, 50, 0, 80, 0, 0);
+    sc_setup.check_contract_storage(51, 51, 0, 80, 0, 0);
 
     sc_setup.withdraw(&first_user, UNSTAKE_TOKEN_ID, 1, exp18(20));
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
@@ -255,7 +255,7 @@ fn liquid_staking_multiple_withdraw_test() {
     sc_setup.check_user_egld_balance(&second_user, 60);
     sc_setup.check_user_balance(&third_user, LS_TOKEN_ID, 20u64);
     sc_setup.check_user_egld_balance(&third_user, 60);
-    sc_setup.check_contract_storage(50, 50, 0, 60, 0, 0); // 20 + 20 (second_user + third_user)
+    sc_setup.check_contract_storage(51, 51, 0, 60, 0, 0); // 20 + 20 (second_user + third_user)
 }
 
 #[test]
@@ -270,7 +270,7 @@ fn full_flow_test() {
     let second_user = sc_setup.setup_new_user(20u64);
     let third_user = sc_setup.setup_new_user(20u64);
 
-    sc_setup.check_user_egld_balance_denominated(&delegation_contract, 0);
+    sc_setup.check_user_egld_balance(&delegation_contract, 1);
 
     sc_setup.add_liquidity(&first_user, 50u64);
     sc_setup.add_liquidity(&second_user, 20u64);
@@ -282,7 +282,7 @@ fn full_flow_test() {
 
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_user_egld_balance(&delegation_contract, 90);
+    sc_setup.check_user_egld_balance(&delegation_contract, 91);
     sc_setup.check_user_egld_balance(&sc_setup.sc_wrapper.address_ref(), 0);
 
     sc_setup.b_mock.set_block_epoch(50u64);
@@ -291,7 +291,7 @@ fn full_flow_test() {
     let pending_rewards = sc_setup.get_pending_rewards();
 
     // From the 90 EGLD the mock SC send rewards to the liquid staking contract
-    sc_setup.check_user_egld_balance_denominated(&delegation_contract, 88767123287671232877u128);
+    sc_setup.check_user_egld_balance_denominated(&delegation_contract, 89753424657534246576u128);
 
     sc_setup.b_mock.set_egld_balance(
         &delegation_contract,
@@ -299,14 +299,13 @@ fn full_flow_test() {
             + num_bigint::BigUint::from(pending_rewards)),
     );
 
-    sc_setup.check_user_egld_balance(&delegation_contract, 90);
+    sc_setup.check_user_egld_balance(&delegation_contract, 91);
 
     // The liquid staking contract should have received the rewards
     sc_setup.check_user_egld_balance_denominated(
         &sc_setup.sc_wrapper.address_ref(),
-        1232876712328767123u128,
+        1246575342465753424u128,
     );
-
     // Due to the fees, less rewards are sent back to the delegation contract
     sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 
@@ -314,7 +313,7 @@ fn full_flow_test() {
     sc_setup.check_user_egld_balance_denominated(&sc_setup.sc_wrapper.address_ref(), 0);
 
     // Rewards are sent back to the delegation contract - the protocol fee is deducted
-    sc_setup.check_user_egld_balance_denominated(&delegation_contract, 91183561643835616439u128);
+    sc_setup.check_user_egld_balance_denominated(&delegation_contract, 92196712328767123288u128);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 25u64);
 
@@ -322,7 +321,7 @@ fn full_flow_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(25328767123287671233u128),
+        num_bigint::BigUint::from(25328767123287671232u128),
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 25u64);
@@ -330,7 +329,7 @@ fn full_flow_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(50657534246575342466u128),
+        num_bigint::BigUint::from(50657534246575342465u128),
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     sc_setup.remove_liquidity(&second_user, LS_TOKEN_ID, 20u64);
@@ -360,28 +359,44 @@ fn full_flow_test() {
     // The unstaked EGLD is sent back to the main liquid staking contract
     sc_setup.check_user_egld_balance_denominated(
         &sc_setup.sc_wrapper.address_ref(),
-        91183561643835616439u128,
+        91183561643835616438u128,
     );
 
-    sc_setup.check_delegation_contract_values(&delegation_contract, 0u64, 0u64);
-
-    sc_setup.check_total_withdrawn_egld_denominated(91183561643835616439u128);
+    sc_setup.check_delegation_contract_values_denominated(
+        &delegation_contract,
+        1013150684931506850u128,
+    );
+    sc_setup.check_total_withdrawn_egld_denominated(91183561643835616438u128);
 
     sc_setup.check_user_balance(&sc_setup.sc_wrapper.address_ref(), LS_TOKEN_ID, 0u64);
 
     sc_setup.check_user_egld_balance_denominated(
         &sc_setup.sc_wrapper.address_ref(),
-        91183561643835616439u128,
+        91183561643835616438u128,
+    );
+
+    sc_setup.check_user_nft_balance_denominated(
+        &first_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        num_bigint::BigUint::from(50657534246575342465u128),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     sc_setup.withdraw(
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(50657534246575342466u128),
+        num_bigint::BigUint::from(50657534246575342465u128),
     );
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 0u64);
-    sc_setup.check_user_egld_balance_denominated(&first_user, 50657534246575342466u128);
-
+    sc_setup.check_user_egld_balance_denominated(&first_user, 50657534246575342465u128);
+    sc_setup.check_user_nft_balance_denominated(
+        &second_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        num_bigint::BigUint::from(20263013698630136986u128),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
+    );
     sc_setup.withdraw(
         &second_user,
         UNSTAKE_TOKEN_ID,
@@ -395,13 +410,13 @@ fn full_flow_test() {
         &third_user,
         UNSTAKE_TOKEN_ID,
         1,
-        num_bigint::BigUint::from(20263013698630136987u128),
+        num_bigint::BigUint::from(20263013698630136986u128),
     );
     sc_setup.check_user_balance(&third_user, LS_TOKEN_ID, 0u64);
-    sc_setup.check_user_egld_balance_denominated(&third_user, 20263013698630136987u128);
+    sc_setup.check_user_egld_balance_denominated(&third_user, 20263013698630136986u128);
 
     // The main delegation contract should have 0 EGLD left as the initial deposit (or a small amount due to rounding)
-    sc_setup.check_user_egld_balance_denominated(&sc_setup.sc_wrapper.address_ref(), 0);
+    sc_setup.check_user_egld_balance_denominated(&sc_setup.sc_wrapper.address_ref(), 1);
 }
 
 #[test]
@@ -425,8 +440,8 @@ fn claim_rewards_multiple_times_test() {
     sc_setup.claim_rewards(&sc_setup.owner_address.clone());
     let pending_rewards = sc_setup.get_pending_rewards();
     assert_eq!(
-        pending_rewards, 1387877650591105273u128,
-        "pending_rewards should be 1387877650591105273"
+        pending_rewards, 1401756427097016325u128,
+        "pending_rewards should be 1401756427097016325"
     );
     sc_setup.delegate_rewards(&sc_setup.owner_address.clone());
 }

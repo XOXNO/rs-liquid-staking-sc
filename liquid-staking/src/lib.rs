@@ -6,16 +6,17 @@ multiversx_sc::derive_imports!();
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
 pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_500_000;
 pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
+pub const MIN_GAS_FOR_WHITELIST_CALLBACK: u64 = 20_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 
-pub mod proxy_accumulator;
 pub mod callback;
 pub mod config;
 pub mod delegation;
-pub mod proxy_delegation_manager;
-pub mod proxy_delegation;
 pub mod errors;
 pub mod manage;
+pub mod proxy_accumulator;
+pub mod proxy_delegation;
+pub mod proxy_delegation_manager;
 pub mod storage;
 pub mod structs;
 pub mod utils;
@@ -45,7 +46,6 @@ pub trait LiquidStaking<ContractReader>:
     + utils_un_delegation::UnDelegateUtilsModule
     + delegation::DelegationModule
     + callback::CallbackModule
-    + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[upgrade]

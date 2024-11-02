@@ -49,23 +49,23 @@ fn liquid_staking_unbond_success_test() {
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
 
-    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 0, 90);
 
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 0, 0);
 
-    sc_setup.check_delegation_contract_values(&delegation_contract, 10, 90);
+    sc_setup.check_delegation_contract_values(&delegation_contract, 11, 90);
 
     // // Set block epoch to 60 (after unstake deadline)
     sc_setup.b_mock.set_block_epoch(61u64);
 
     sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
 
-    sc_setup.check_delegation_contract_values(&delegation_contract, 10, 0);
+    sc_setup.check_delegation_contract_values(&delegation_contract, 11, 0);
 
     // // Check contract storage after withdraw unbond
-    sc_setup.check_contract_storage(10, 10, 0, 90, 0, 0);
+    sc_setup.check_contract_storage(11, 11, 0, 90, 0, 0);
 
     // // Perform unbond operation
     sc_setup.withdraw(&user, UNSTAKE_TOKEN_ID, 1, exp18(90));
@@ -77,7 +77,7 @@ fn liquid_staking_unbond_success_test() {
     sc_setup.check_user_nft_balance_denominated(&user, UNSTAKE_TOKEN_ID, 1, exp18(0), None);
 
     // // Check contract storage after unbond
-    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 0, 0);
 }
 
 #[test]

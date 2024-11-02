@@ -8,8 +8,8 @@
 // Upgrade:                              1
 // Endpoints:                           50
 // Async Callback:                       1
-// Promise callbacks:                    5
-// Total number of exported functions:  58
+// Promise callbacks:                    6
+// Total number of exported functions:  59
 
 #![no_std]
 
@@ -76,6 +76,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         withdraw_tokens_callback => withdraw_tokens_callback
         claim_rewards_callback => claim_rewards_callback
         delegate_rewards_callback => delegate_rewards_callback
+        whitelist_delegation_contract_callback => whitelist_delegation_contract_callback
     )
 }
 

@@ -8,7 +8,7 @@ use multiversx_sc::imports::OptionalValue;
 use utils::*;
 
 use liquid_staking::{
-    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_MINIMUM_ROUNDS_NOT_PASSED, ERROR_NOT_ACTIVE},
+    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_ACTIVE},
     structs::UnstakeTokenAttributes,
 };
 use multiversx_sc_scenario::DebugApi;
@@ -32,7 +32,7 @@ fn liquid_staking_add_liquidity_test() {
     // 0: total_pending_egld
     // 100: total_pending_ls_token (increased by 100 due to liquidity addition)
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     // Check the first user's balance of LS tokens after liquidity addition
     // Expected balance: 100 LS tokens (equal to the amount of EGLD added as liquidity)
@@ -73,7 +73,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // 0: total_pending_egld
     // 100: total_pending_ls_token
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
 
@@ -92,7 +92,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token (decreased by 100 after delegation)
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 0, 0);
 
     // First user removes 90 LS tokens as liquidity from the contract
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
@@ -104,7 +104,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token
     // 90: total_unstaked_egld (increased by 90 after liquidity removal)
-    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 0, 90);
 
     // Check the first user's balance of LS tokens
     // Expected balance: 10 LS tokens (100 - 90 removed)
@@ -137,7 +137,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // 90: total_pending_egld (the 90 EGLD from the first user's liquidity removal)
     // 10: total_pending_ls_token (increased by 10 due to the second user's liquidity addition)
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(110, 110, 0, 90, 10, 0);
+    sc_setup.check_contract_storage(111, 111, 0, 90, 10, 0);
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // 0: total_pending_egld
     // 100: total_pending_ls_token
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
 
@@ -188,7 +188,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token (decreased by 100 after delegation)
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 0, 0);
 
     // First user removes 90 LS tokens as liquidity from the contract
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
@@ -200,7 +200,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // 0: total_pending_egld
     // 0: total_pending_ls_token
     // 90: total_unstaked_egld (increased by 90 after liquidity removal)
-    sc_setup.check_contract_storage(10, 10, 0, 0, 0, 90);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 0, 90);
 
     // Check the first user's balance of LS tokens
     // Expected balance: 10 LS tokens (100 - 90 removed)
@@ -233,7 +233,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // 90: total_pending_egld (the 90 EGLD from the first user's liquidity removal)
     // 10: total_pending_ls_token (increased by 10 due to the second user's liquidity addition)
     // 0: total_unstaked_egld
-    sc_setup.check_contract_storage(100, 100, 0, 90, 0, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 90, 0, 0);
 }
 
 #[test]
@@ -315,9 +315,12 @@ fn liquid_staking_delegate_custom_amount_pending_error_test() {
 
     // Action: First user adds 3 EGLD as liquidity to the contract
     sc_setup.add_liquidity(&first_user, 3u64);
-    sc_setup.delegate_pending_error(&sc_setup.owner_address.clone(), OptionalValue::Some(40), ERROR_INSUFFICIENT_PENDING_EGLD);
+    sc_setup.delegate_pending_error(
+        &sc_setup.owner_address.clone(),
+        OptionalValue::Some(40),
+        ERROR_INSUFFICIENT_PENDING_EGLD,
+    );
 }
-
 
 #[test]
 fn liquid_staking_delegate_custom_amount_under_min_pending_error_test() {
@@ -348,7 +351,11 @@ fn liquid_staking_delegate_custom_amount_left_over_pending_error_test() {
 
     // Action: First user adds 3 EGLD as liquidity to the contract
     sc_setup.add_liquidity(&first_user, 3u64);
-    sc_setup.delegate_pending_error(&sc_setup.owner_address.clone(), OptionalValue::Some(25), ERROR_INSUFFICIENT_PENDING_EGLD);
+    sc_setup.delegate_pending_error(
+        &sc_setup.owner_address.clone(),
+        OptionalValue::Some(25),
+        ERROR_INSUFFICIENT_PENDING_EGLD,
+    );
 }
 
 #[test]
@@ -402,15 +409,15 @@ fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
     let first_user = sc_setup.setup_new_user(10u64);
 
     sc_setup.add_liquidity(&first_user, 5u64);
-    sc_setup.check_contract_storage(5, 5, 0, 0, 5, 0);
+    sc_setup.check_contract_storage(6, 6, 0, 0, 5, 0);
 
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(6, 6, 0, 0, 0, 0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 2u64);
-    sc_setup.check_contract_storage(3, 3, 0, 0, 0, 2);
+    sc_setup.check_contract_storage(4, 4, 0, 0, 0, 2);
 
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 3u64);
     // Try to add 1.5 EGLD when there is not enough left pending xEGLD
@@ -444,7 +451,7 @@ fn liquid_staking_add_liquidity_fallback_test() {
 
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.check_contract_storage(5, 5, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(6, 6, 0, 0, 0, 0);
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 1u64);
 

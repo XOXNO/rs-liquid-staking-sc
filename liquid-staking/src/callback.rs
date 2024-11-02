@@ -7,11 +7,9 @@ multiversx_sc::derive_imports!();
 pub trait CallbackModule:
     crate::config::ConfigModule
     + crate::events::EventsModule
-    + crate::delegation::DelegationModule
     + crate::storage::StorageModule
     + crate::utils::UtilsModule
     + crate::liquidity_pool::LiquidityPoolModule
-    + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[promises_callback]
@@ -129,6 +127,37 @@ pub trait CallbackModule:
                     });
 
                 self.emit_general_liquidity_event(&storage_cache);
+            }
+        }
+    }
+
+    #[promises_callback]
+    fn whitelist_delegation_contract_callback(
+        &self,
+        contract_address: ManagedAddress,
+        staked_tokens: &BigUint,
+        caller: &ManagedAddress,
+        #[call_result] result: ManagedAsyncCallResult<()>,
+    ) {
+        let mut storage_cache = StorageCache::new(self);
+        match result {
+            ManagedAsyncCallResult::Ok(()) => {
+                self.delegation_contract_data(&contract_address)
+                    .update(|contract_data| {
+                        contract_data.total_staked_from_ls_contract += staked_tokens;
+                    });
+
+                self.add_delegation_address_in_list(contract_address);
+
+                let ls_amount = self.pool_add_liquidity(&staked_tokens, &mut storage_cache);
+                let user_payment = self.mint_ls_token(ls_amount);
+
+                self.emit_add_liquidity_event(&storage_cache, staked_tokens);
+                self.tx().to(caller).esdt(user_payment).transfer();
+            }
+            ManagedAsyncCallResult::Err(_) => {
+                self.delegation_contract_data(&contract_address).clear();
+                self.tx().to(caller).egld(staked_tokens).transfer();
             }
         }
     }

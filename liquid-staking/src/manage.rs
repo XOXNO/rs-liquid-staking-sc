@@ -1,14 +1,12 @@
-use itertools::Itertools;
 use multiversx_sc::hex_literal::hex;
 
 use crate::{
-    proxy_accumulator,
     callback::{CallbackModule, CallbackProxy},
-    proxy_delegation_manager, proxy_delegation,
     errors::ERROR_NO_DELEGATION_CONTRACTS,
-    StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
-    ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
-    MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS, MIN_GAS_FOR_CALLBACK,
+    proxy_accumulator, proxy_delegation, proxy_delegation_manager, StorageCache,
+    ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS, ERROR_NOT_WHITELISTED,
+    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS,
+    MIN_GAS_FOR_CALLBACK,
 };
 
 pub const DELEGATION_MANAGER: [u8; 32] =
@@ -26,7 +24,6 @@ pub trait ManageModule:
     + crate::storage::StorageModule
     + crate::utils::UtilsModule
     + crate::liquidity_pool::LiquidityPoolModule
-    + multiversx_sc_modules::ongoing_operation::OngoingOperationModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[endpoint(delegatePending)]
@@ -132,9 +129,7 @@ pub trait ManageModule:
             OptionalValue::None => storage_cache.pending_egld_for_unstake.clone(),
         };
 
-
-        let delegation_contract =
-            self.get_delegation_contract_for_undelegate(&amount_to_unstake);
+        let delegation_contract = self.get_delegation_contract_for_undelegate(&amount_to_unstake);
 
         // Important before un delegating the amount from the new contracts, set the amount to 0
         storage_cache.pending_egld_for_unstake -= amount_to_unstake;

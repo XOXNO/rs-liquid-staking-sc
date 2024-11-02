@@ -32,12 +32,12 @@ fn undelegate_can_fully_instant_redeem() {
     // Add liquidity of 100 tokens from the user to the contract
     sc_setup.add_liquidity(&first_user, 100u64);
     // Check the contract storage to ensure the liquidity is added correctly
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     // Remove liquidity of 90 tokens from the user
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
     // Check the contract storage to ensure the liquidity is removed correctly
-    sc_setup.check_contract_storage(10, 10, 0, 0, 10, 0);
+    sc_setup.check_contract_storage(11, 11, 0, 0, 10, 0);
 
     // Check the user's balance of LS tokens to ensure they have 10 tokens remaining
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
@@ -70,7 +70,7 @@ fn undelegate_partially_instant_test() {
     sc_setup.b_mock.set_block_epoch(50u64);
 
     // Check the contract storage to ensure the liquidity is added correctly
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     // Delegate the pending tokens
     sc_setup.b_mock.set_block_round(14000u64);
@@ -187,12 +187,12 @@ fn calculate_partial_undelegate_fallback_test() {
     sc_setup.b_mock.set_block_epoch(50u64);
 
     // Check the contract storage to ensure the liquidity is added correctly
-    sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 100, 0);
 
     // Delegate the pending tokens
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     // Check the contract storage to ensure the pending tokens are delegated
-    sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
+    sc_setup.check_contract_storage(101, 101, 0, 0, 0, 0);
 
     // Set up a second user with an initial balance of 2 tokens
     let second_user = sc_setup.setup_new_user(2u64);
@@ -259,9 +259,9 @@ fn undelegate_can_fully_pending_redeem() {
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     // Check the values of the first delegation contract
-    sc_setup.check_delegation_contract_values(&delegation_contract1, 50u64, 0u64);
+    sc_setup.check_delegation_contract_values(&delegation_contract1, 51u64, 0u64);
     // Check the values of the second delegation contract
-    sc_setup.check_delegation_contract_values(&delegation_contract2, 50u64, 0u64);
+    sc_setup.check_delegation_contract_values(&delegation_contract2, 51u64, 0u64);
 
     // Add liquidity of 30 tokens from the second user to the contract
     sc_setup.add_liquidity(&second_user, 30u64);

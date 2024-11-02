@@ -1,10 +1,13 @@
 use crate::{
+    callback::{CallbackModule, CallbackProxy},
     errors::{
         ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_NOT_WHITELISTED,
         ERROR_ONLY_DELEGATION_ADMIN,
     },
+    proxy_delegation,
     structs::DelegationContractInfo,
-    ERROR_MAX_DELEGATION_ADDRESSES,
+    ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE, MIN_EGLD_TO_DELEGATE,
+    MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
 };
 
 multiversx_sc::imports!();
@@ -16,9 +19,11 @@ pub trait DelegationModule:
     + crate::storage::StorageModule
     + crate::utils::UtilsModule
     + crate::events::EventsModule
+    + crate::callback::CallbackModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
+    #[payable("EGLD")]
     #[endpoint(whitelistDelegationContract)]
     fn whitelist_delegation_contract(
         &self,
@@ -35,15 +40,21 @@ pub trait DelegationModule:
         );
 
         self.is_manager(&self.blockchain().get_caller(), true);
-
+        let map_delegation_contract_data = self.delegation_contract_data(&contract_address);
         require!(
-            self.delegation_contract_data(&contract_address).is_empty(),
+            map_delegation_contract_data.is_empty(),
             ERROR_ALREADY_WHITELISTED
         );
 
         require!(
             delegation_contract_cap >= total_staked || delegation_contract_cap == BigUint::zero(),
             ERROR_DELEGATION_CAP
+        );
+
+        let payment = self.call_value().egld_value().clone_value();
+        require!(
+            payment >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            ERROR_MIN_EGLD_TO_DELEGATE
         );
 
         let contract_data = DelegationContractInfo {
@@ -57,9 +68,24 @@ pub trait DelegationModule:
             eligible: true,
         };
 
-        self.delegation_contract_data(&contract_address)
-            .set(contract_data);
-        self.add_delegation_address_in_list(contract_address);
+        map_delegation_contract_data.set(contract_data);
+
+        let caller = self.blockchain().get_caller();
+        self.tx()
+            .to(&contract_address)
+            .typed(proxy_delegation::DelegationMockProxy)
+            .delegate()
+            .egld(&payment)
+            .gas(MIN_GAS_FOR_ASYNC_CALL)
+            .callback(
+                CallbackModule::callbacks(self).whitelist_delegation_contract_callback(
+                    contract_address.clone(),
+                    &payment,
+                    &caller,
+                ),
+            )
+            .gas_for_callback(MIN_GAS_FOR_WHITELIST_CALLBACK)
+            .register_promise();
     }
 
     #[endpoint(changeDelegationContractAdmin)]
@@ -109,23 +135,5 @@ pub trait DelegationModule:
             contract_data.apy = apy;
             contract_data.eligible = is_eligible;
         });
-    }
-
-    fn add_delegation_address_in_list(&self, contract_address: ManagedAddress) {
-        let mut delegation_addresses_mapper = self.delegation_addresses_list();
-
-        delegation_addresses_mapper.insert(contract_address);
-    }
-
-    fn remove_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
-        self.delegation_addresses_list()
-            .swap_remove(contract_address);
-    }
-
-    fn move_delegation_contract_to_back(&self, delegation_contract: &ManagedAddress) {
-        self.remove_delegation_address_from_list(delegation_contract);
-
-        self.delegation_addresses_list()
-            .insert(delegation_contract.clone());
     }
 }

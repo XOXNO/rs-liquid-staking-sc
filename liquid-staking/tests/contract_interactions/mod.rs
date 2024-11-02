@@ -26,12 +26,13 @@ where
         apy: u64,
     ) -> Address {
         let rust_zero = rust_biguint!(0u64);
+        let rust_one_egld = exp18(1);
         let egld_balance_biguint = &exp18(egld_balance);
         let total_staked_biguint = exp18(total_staked);
         let delegation_contract_cap_biguint = exp18(delegation_contract_cap);
 
         self.b_mock
-            .set_egld_balance(owner_address, egld_balance_biguint);
+            .set_egld_balance(owner_address, &(egld_balance_biguint + &rust_one_egld));
 
         let delegation_wrapper = self.b_mock.create_sc_account(
             &rust_zero,
@@ -58,7 +59,7 @@ where
             .assert_ok();
 
         self.b_mock
-            .execute_tx(owner_address, &self.sc_wrapper, &rust_zero, |sc| {
+            .execute_tx(owner_address, &self.sc_wrapper, &rust_one_egld, |sc| {
                 sc.whitelist_delegation_contract(
                     managed_address!(delegation_wrapper.address_ref()),
                     managed_address!(owner_address),
