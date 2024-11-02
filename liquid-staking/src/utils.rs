@@ -1,10 +1,7 @@
 use crate::{
-    structs::{
-        DelegationContractInfo, DelegationContractSelectionInfo,
-        DelegatorSelection,
-    },
-    ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE,
-    ERROR_NO_DELEGATION_CONTRACTS, MIN_EGLD_TO_DELEGATE,
+    structs::{DelegationContractInfo, DelegationContractSelectionInfo, DelegatorSelection},
+    ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE, ERROR_NO_DELEGATION_CONTRACTS,
+    MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -123,10 +120,7 @@ pub trait UtilsModule:
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
         let map_list = self.delegation_addresses_list();
-        require!(
-            !map_list.is_empty(),
-            ERROR_NO_DELEGATION_CONTRACTS
-        );
+        require!(!map_list.is_empty(), ERROR_NO_DELEGATION_CONTRACTS);
 
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
         let max_providers = self.calculate_max_providers(amount, &min_egld, map_list.len());
@@ -137,16 +131,9 @@ pub trait UtilsModule:
         let mut total_nodes = 0;
         let mut total_apy = 0;
 
-        sc_print!("max_providers: {}", max_providers);
-        for delegation_address_node in map_list.iter().take(max_providers) {
-            let delegation_address = delegation_address_node.get_value_as_ref();
-            let contract_data = self.delegation_contract_data(delegation_address).get();
-            sc_print!("original_amount_to:                          {}", amount);
-            sc_print!("contract_data.total_staked_from_ls_contract: {}", contract_data.total_staked_from_ls_contract);
-            sc_print!("amount_per_provider:                         {}", amount_per_provider);
-            sc_print!("contract_data.eligible:                      {}", contract_data.eligible);
-            sc_print!("contract_data.delegation_contract_cap:       {}", contract_data.delegation_contract_cap);
-            sc_print!("contract_data.total_staked:                  {}", contract_data.total_staked);
+        for delegation_address in map_list.iter().take(max_providers) {
+            let contract_data = self.delegation_contract_data(&delegation_address).get();
+
             if filter_fn(&contract_data, &amount_per_provider) {
                 total_stake += &contract_data.total_staked_from_ls_contract;
                 total_nodes += contract_data.nr_nodes;
@@ -405,8 +392,9 @@ pub trait UtilsModule:
         let max_providers_biguint = max_providers_decimal.trunc();
 
         let max_providers_limit = self.max_selected_providers().get();
-        let max_providers = max_providers_biguint.min(max_providers_limit).min(BigUint::from(providers_len as u64));
-
+        let max_providers = max_providers_biguint
+            .min(max_providers_limit)
+            .min(BigUint::from(providers_len as u64));
 
         max_providers.to_u64().unwrap() as usize
     }
@@ -430,7 +418,7 @@ pub trait UtilsModule:
         }
     }
 
-    fn calculate_split(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
+    fn calculate_share(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
         total_amount * cut_percentage / PERCENTAGE_TOTAL
     }
 

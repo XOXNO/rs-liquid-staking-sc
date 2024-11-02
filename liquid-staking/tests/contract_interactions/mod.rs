@@ -6,7 +6,7 @@ use liquid_staking::storage::StorageModule;
 use liquid_staking::structs::UnstakeTokenAttributes;
 use liquid_staking::views::ViewsModule;
 use liquid_staking::LiquidStaking;
-use multiversx_sc::types::Address;
+use multiversx_sc::{imports::OptionalValue, types::Address};
 use multiversx_sc_scenario::{managed_address, num_bigint, rust_biguint, DebugApi};
 
 use delegation_mock::*;
@@ -264,38 +264,68 @@ where
             .assert_error(4, bytes_to_str(error));
     }
 
-    pub fn delegate_pending(&mut self, caller: &Address) {
+    pub fn delegate_pending(&mut self, caller: &Address, amount: OptionalValue<u64>) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_pending();
+                sc.delegate_pending(match amount {
+                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
+                        to_managed_biguint(exp18(amount)),
+                    ),
+                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
+                });
             })
             .assert_ok();
     }
 
-    pub fn delegate_pending_error(&mut self, caller: &Address, error: &[u8]) {
+    pub fn delegate_pending_error(
+        &mut self,
+        caller: &Address,
+        amount: OptionalValue<u64>,
+        error: &[u8],
+    ) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_pending();
+                sc.delegate_pending(match amount {
+                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
+                        to_managed_biguint(exp17(amount)),
+                    ),
+                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
+                });
             })
             .assert_error(4, bytes_to_str(error));
     }
 
-    pub fn un_delegate_pending(&mut self, caller: &Address) {
+    pub fn un_delegate_pending(&mut self, caller: &Address, amount: OptionalValue<u64>) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.un_delegate_pending();
+                sc.un_delegate_pending(match amount {
+                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
+                        to_managed_biguint(exp18(amount)),
+                    ),
+                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
+                });
             })
             .assert_ok();
     }
 
-    pub fn un_delegate_pending_error(&mut self, caller: &Address, error: &[u8]) {
+    pub fn un_delegate_pending_error(
+        &mut self,
+        caller: &Address,
+        amount: OptionalValue<u64>,
+        error: &[u8],
+    ) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
             .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.un_delegate_pending();
+                sc.un_delegate_pending(match amount {
+                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
+                        to_managed_biguint(exp17(amount)),
+                    ),
+                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
+                });
             })
             .assert_error(4, bytes_to_str(error));
     }
@@ -557,6 +587,18 @@ where
             .assert_ok();
 
         u128::from(rewards_value_biguint)
+    }
+
+    pub fn print_pending_egld(&mut self) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                let pending_egld_value_biguint = sc.pending_egld().get().to_display();
+                println!(
+                    "pending_egld_value_biguint {:?}",
+                    pending_egld_value_biguint
+                );
+            })
+            .assert_ok();
     }
 
     pub fn check_delegation_contract_values_denominated(

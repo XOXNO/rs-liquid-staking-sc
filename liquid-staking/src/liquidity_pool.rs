@@ -82,9 +82,10 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
         &self,
         attributes: &T,
         amount: &BigUint,
-        epoch: u64,
+        unbond_epoch: u64,
+        current_epoch: u64,
     ) -> EsdtTokenPayment<Self::Api> {
-        let nonce = self.unstake_token_nonce(epoch);
+        let nonce = self.unstake_token_nonce(unbond_epoch);
         if nonce.is_empty() {
             let uri = ManagedBuffer::from(UNDELEGATE_TOKEN_URI);
             let token_id = self.unstake_token().get_token_id();
@@ -94,7 +95,7 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
             let new_nonce = self.send().esdt_nft_create(
                 &token_id,
                 &amount.add(&BigUint::from(1u64)),
-                &sc_format!("Release epoch #{}", epoch),
+                &sc_format!("Release epoch #{}", unbond_epoch),
                 &BigUint::zero(),
                 &ManagedBuffer::new(),
                 attributes,
@@ -104,7 +105,7 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
             nonce.set(new_nonce);
 
             if new_nonce > 1 {
-                self.clean_old_unbond_epochs(new_nonce - 1);
+                self.clean_old_unbond_epochs(new_nonce - 1, current_epoch);
             }
 
             EsdtTokenPayment::new(token_id, new_nonce, amount.clone())
@@ -120,18 +121,11 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
         self.unstake_token().nft_burn(token_nonce, amount);
     }
 
-    fn clean_old_unbond_epochs(&self, nonce: u64) {
-        let epoch = self.blockchain().get_block_epoch();
+    fn clean_old_unbond_epochs(&self, nonce: u64, current_epoch: u64) {
         let map_token = self.unstake_token();
 
-        let balance = map_token.get_balance(nonce);
-
-        if balance == BigUint::zero() {
-            return;
-        }
-
         let attributes: UnstakeTokenAttributes = map_token.get_token_attributes(nonce);
-        if attributes.unstake_epoch < epoch {
+        if attributes.unstake_epoch < current_epoch {
             self.unstake_token_nonce(attributes.unbond_epoch).clear();
             // The protocol always holds 1 unit of the MetaESDT token in the contract
             let balance = map_token.get_balance(nonce);

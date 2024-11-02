@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           51
+// Endpoints:                           50
 // Async Callback:                       1
 // Promise callbacks:                    5
-// Total number of exported functions:  59
+// Total number of exported functions:  58
 
 #![no_std]
 
@@ -36,7 +36,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         setUnbondPeriod => set_unbond_period
         setManagers => set_managers
         removeManager => remove_manager
-        cleanUnbondEpochs => clean_unbond_epochs
         fees => fees
         getAccumulatorContract => accumulator_contract
         roundsPerEpoch => rounds_per_epoch

@@ -26,7 +26,6 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Ok(()) => {
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
-                        contract_data.total_staked -= egld_to_unstake;
                         contract_data.total_staked_from_ls_contract -= egld_to_unstake;
                         contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
                     });
@@ -52,8 +51,6 @@ pub trait CallbackModule:
                 self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract += staked_tokens;
-                        // Pre update before the next providers contract sync
-                        contract_data.total_staked += staked_tokens;
                     });
             }
             ManagedAsyncCallResult::Err(_) => {
@@ -65,7 +62,6 @@ pub trait CallbackModule:
                     });
             }
         }
-        self.move_delegation_contract_to_back(delegation_contract);
     }
 
     #[promises_callback]
@@ -113,7 +109,6 @@ pub trait CallbackModule:
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract += staked_tokens;
-                        contract_data.total_staked += staked_tokens;
                     });
 
                 storage_cache.virtual_egld_reserve += staked_tokens;

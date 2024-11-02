@@ -3,10 +3,12 @@ mod contract_setup;
 mod utils;
 
 use contract_setup::*;
+use multiversx_sc::imports::OptionalValue;
 use utils::*;
 
 use liquid_staking::{
-    errors::ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, structs::UnstakeTokenAttributes,
+    errors::{ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD},
+    structs::UnstakeTokenAttributes,
 };
 use multiversx_sc_scenario::DebugApi;
 
@@ -72,7 +74,7 @@ fn undelegate_partially_instant_test() {
 
     // Delegate the pending tokens
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     // Add liquidity of 90.5 tokens from the second user to the contract
     sc_setup.add_liquidity_exp17(&second_user, 905u64);
@@ -97,6 +99,67 @@ fn undelegate_partially_instant_test() {
 
     // Check the user's EGLD balance to ensure they received some instant EGLD back the maximum possible
     sc_setup.check_user_egld_balance(&first_user, 89);
+}
+
+#[test]
+fn clean_old_unbond_epochs_test() {
+    // Create a dummy debug API instance
+    let _ = DebugApi::dummy();
+    // Set up the liquid staking contract
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    // Deploy the staking contract with the specified parameters
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    // Set up a new user with an initial balance of 100 tokens
+    let first_user = sc_setup.setup_new_user(100u64);
+    let second_user = sc_setup.setup_new_user(200u64);
+
+    // Add liquidity of 100 tokens from the user to the contract
+    sc_setup.add_liquidity(&first_user, 100u64);
+
+    // Set the block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Delegate the pending tokens
+    sc_setup.b_mock.set_block_round(14000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    // Add liquidity of 90.5 tokens from the second user to the contract
+    sc_setup.add_liquidity_exp17(&second_user, 905u64);
+
+    // Remove liquidity of 90 tokens from the user
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 90u64);
+
+    sc_setup.check_pending_egld_exp17(15u64);
+    sc_setup.check_pending_ls_for_unstake(1);
+
+    // Check the user's balance of LS tokens to ensure they have 10 tokens remaining
+    sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 10u64);
+
+    // Check the user's NFT balance to ensure they received an NFT representing their unstaked tokens
+    sc_setup.check_user_nft_balance_denominated(
+        &first_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp18(1),
+        Some(&UnstakeTokenAttributes::new(50, 60)),
+    );
+
+    // Check the user's EGLD balance to ensure they received some instant EGLD back the maximum possible
+    sc_setup.check_user_egld_balance(&first_user, 89);
+
+    sc_setup.b_mock.set_block_epoch(51u64);
+
+    sc_setup.remove_liquidity_exp17(&second_user, LS_TOKEN_ID, 905u64);
+    // Check the user's NFT balance to ensure they received an NFT representing their unstaked tokens
+    sc_setup.check_user_nft_balance_denominated(
+        &second_user,
+        UNSTAKE_TOKEN_ID,
+        2,
+        exp17(890),
+        Some(&UnstakeTokenAttributes::new(51, 61)),
+    );
 }
 
 // Test: liquid_staking_remove_liquidity_not_partially_instant_test
@@ -127,7 +190,7 @@ fn calculate_partial_undelegate_fallback_test() {
     sc_setup.check_contract_storage(100, 100, 0, 0, 100, 0);
 
     // Delegate the pending tokens
-    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     // Check the contract storage to ensure the pending tokens are delegated
     sc_setup.check_contract_storage(100, 100, 0, 0, 0, 0);
 
@@ -193,7 +256,7 @@ fn undelegate_can_fully_pending_redeem() {
     // Set the block epoch to 50
     sc_setup.b_mock.set_block_epoch(50u64);
     // Delegate the pending tokens
-    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     // Check the values of the first delegation contract
     sc_setup.check_delegation_contract_values(&delegation_contract1, 50u64, 0u64);
@@ -270,7 +333,7 @@ fn undelegate_small_amount_error_test() {
 
     // Delegate the pending tokens
     sc_setup.b_mock.set_block_round(14000u64);
-    sc_setup.delegate_pending(&sc_setup.owner_address.clone());
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     // Add liquidity of 1.2 tokens from the second user to the contract
     sc_setup.add_liquidity_exp17(&second_user, 12u64);
@@ -282,4 +345,83 @@ fn undelegate_small_amount_error_test() {
         3u64,
         ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD,
     );
+}
+
+#[test]
+fn liquid_staking_un_delegate_custom_amount_under_min_pending_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    // Action: First user adds 3 EGLD as liquidity to the contract
+    sc_setup.add_liquidity(&first_user, 3u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 3u64);
+
+    sc_setup.un_delegate_pending_error(
+        &sc_setup.owner_address.clone(),
+        OptionalValue::Some(5),
+        ERROR_INSUFFICIENT_PENDING_EGLD,
+    );
+}
+
+#[test]
+fn liquid_staking_un_delegate_custom_amount_pending_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    // Action: First user adds 3 EGLD as liquidity to the contract
+    sc_setup.add_liquidity(&first_user, 3u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 3u64);
+
+    sc_setup.un_delegate_pending_error(
+        &sc_setup.owner_address.clone(),
+        OptionalValue::Some(40),
+        ERROR_INSUFFICIENT_PENDING_EGLD,
+    );
+}
+
+#[test]
+fn liquid_staking_un_delegate_custom_amount_left_over_pending_error_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    // Action: First user adds 3 EGLD as liquidity to the contract
+    sc_setup.add_liquidity(&first_user, 3u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 3u64);
+    sc_setup.un_delegate_pending_error(
+        &sc_setup.owner_address.clone(),
+        OptionalValue::Some(25),
+        ERROR_INSUFFICIENT_PENDING_EGLD,
+    );
+}
+
+#[test]
+fn liquid_staking_un_delegate_custom_amount_full_pending_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let first_user = sc_setup.setup_new_user(10u64);
+
+    // Action: First user adds 3 EGLD as liquidity to the   contract
+    sc_setup.add_liquidity(&first_user, 3u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 3u64);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::Some(3));
 }

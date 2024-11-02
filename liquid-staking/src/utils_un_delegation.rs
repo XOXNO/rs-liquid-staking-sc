@@ -1,8 +1,7 @@
 use crate::{
     structs::UnstakeTokenAttributes, StorageCache, ERROR_BAD_PAYMENT_AMOUNT,
     ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, ERROR_LS_TOKEN_NOT_ISSUED,
-    ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT, MIN_EGLD_TO_DELEGATE,
+    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, ERROR_LS_TOKEN_NOT_ISSUED, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -88,11 +87,6 @@ pub trait UnDelegateUtilsModule:
         instant_amount: &BigUint,
     ) {
         if *instant_amount > BigUint::zero() {
-            require!(
-                storage_cache.pending_egld >= *instant_amount,
-                ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT
-            );
-
             storage_cache.pending_egld -= instant_amount;
 
             require!(
@@ -131,36 +125,38 @@ pub trait UnDelegateUtilsModule:
         egld_to_unstake: &BigUint,
         caller: &ManagedAddress,
     ) {
-        if *egld_to_unstake == BigUint::zero() {
-            return;
+        if *egld_to_unstake > BigUint::zero() {
+            storage_cache.pending_egld_for_unstake += egld_to_unstake;
+
+            require!(
+                storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                    || storage_cache.pending_egld_for_unstake == BigUint::zero(),
+                ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
+            );
+
+            let current_epoch = self.blockchain().get_block_epoch();
+            let unbond_epoch = current_epoch + self.unbond_period().get();
+
+            let virtual_position = UnstakeTokenAttributes {
+                unstake_epoch: current_epoch,
+                unbond_epoch,
+            };
+
+            let user_payment = self.mint_unstake_tokens(
+                &virtual_position,
+                egld_to_unstake,
+                unbond_epoch,
+                current_epoch,
+            );
+
+            self.tx()
+                .to(caller)
+                .single_esdt(
+                    &user_payment.token_identifier,
+                    user_payment.token_nonce,
+                    &user_payment.amount,
+                )
+                .transfer();
         }
-
-        storage_cache.pending_egld_for_unstake += egld_to_unstake;
-
-        require!(
-            storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
-                || storage_cache.pending_egld_for_unstake == BigUint::zero(),
-            ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
-        );
-
-        let current_epoch = self.blockchain().get_block_epoch();
-        let unbond_epoch = current_epoch + self.unbond_period().get();
-
-        let virtual_position = UnstakeTokenAttributes {
-            unstake_epoch: current_epoch,
-            unbond_epoch,
-        };
-
-        let user_payment =
-            self.mint_unstake_tokens(&virtual_position, egld_to_unstake, unbond_epoch);
-
-        self.tx()
-            .to(caller)
-            .single_esdt(
-                &user_payment.token_identifier,
-                user_payment.token_nonce,
-                &user_payment.amount,
-            )
-            .transfer();
     }
 }

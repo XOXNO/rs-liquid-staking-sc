@@ -134,13 +134,6 @@ pub trait DelegateUtilsModule:
         egld_from_pending_used: &BigUint,
         final_amount_to_mint: &mut BigUint,
     ) {
-        // Subtract the xEGLD from the pending_ls_for_unstake
-        // Should never fail, but just in case
-        require!(
-            storage_cache.pending_egld_for_unstake >= *egld_from_pending_used,
-            ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
-        );
-
         storage_cache.pending_egld_for_unstake -= egld_from_pending_used;
 
         // Add the instant_unbound_balance to the total_withdrawn_egld

@@ -13,7 +13,6 @@ pub static ERROR_BAD_PAYMENT_TOKEN: &[u8] = b"Bad payment token";
 pub static ERROR_BAD_PAYMENT_AMOUNT: &[u8] = b"Insufficient delegated amount";
 pub static ERROR_INSUFFICIENT_PENDING_EGLD: &[u8] = b"Insufficient pending EGLD";
 pub static ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD: &[u8] = b"Insufficient unstake pending EGLD";
-pub static ERROR_PENDING_EGLD_UNDER_INSTANT_AMOUNT: &[u8] = b"Pending EGLD is under instant amount";
 pub static ERROR_INSUFFICIENT_UNSTAKE_AMOUNT: &[u8] = b"Insufficient unstake amount";
 pub static ERROR_INSUFFICIENT_UNBONDED_AMOUNT: &[u8] = b"Insufficient incoming withdraw amount";
 pub static ERROR_INSUFFICIENT_LIQUIDITY: &[u8] = b"Insufficient liquidity minted";

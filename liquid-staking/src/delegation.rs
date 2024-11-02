@@ -19,7 +19,6 @@ pub trait DelegationModule:
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
- 
     #[endpoint(whitelistDelegationContract)]
     fn whitelist_delegation_contract(
         &self,
@@ -60,9 +59,8 @@ pub trait DelegationModule:
 
         self.delegation_contract_data(&contract_address)
             .set(contract_data);
-        self.add_and_order_delegation_address_in_list(contract_address, apy);
+        self.add_delegation_address_in_list(contract_address);
     }
-
 
     #[endpoint(changeDelegationContractAdmin)]
     fn change_delegation_contract_admin(
@@ -104,11 +102,6 @@ pub trait DelegationModule:
             ERROR_DELEGATION_CAP
         );
 
-        if old_contract_data.apy != apy {
-            self.remove_delegation_address_from_list(&contract_address);
-            self.add_and_order_delegation_address_in_list(contract_address, apy)
-        }
-
         delegation_address_mapper.update(|contract_data| {
             contract_data.total_staked = total_staked;
             contract_data.delegation_contract_cap = delegation_contract_cap;
@@ -118,44 +111,21 @@ pub trait DelegationModule:
         });
     }
 
-    fn add_and_order_delegation_address_in_list(&self, contract_address: ManagedAddress, apy: u64) {
+    fn add_delegation_address_in_list(&self, contract_address: ManagedAddress) {
         let mut delegation_addresses_mapper = self.delegation_addresses_list();
-        if delegation_addresses_mapper.is_empty() {
-            delegation_addresses_mapper.push_front(contract_address);
-        } else {
-            let mut check_if_added = false;
-            for delegation_address_element in delegation_addresses_mapper.iter() {
-                let node_id = delegation_address_element.get_node_id();
-                let delegation_address = delegation_address_element.into_value();
-                let delegation_contract_data =
-                    self.delegation_contract_data(&delegation_address).get();
-                if apy >= delegation_contract_data.apy {
-                    self.delegation_addresses_list()
-                        .push_before_node_id(node_id, contract_address.clone());
-                    check_if_added = true;
-                    break;
-                }
-            }
-            if !check_if_added {
-                delegation_addresses_mapper.push_back(contract_address);
-            }
-        }
+
+        delegation_addresses_mapper.insert(contract_address);
     }
 
     fn remove_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
-        for delegation_address_element in self.delegation_addresses_list().iter() {
-            let node_id = delegation_address_element.get_node_id();
-            let delegation_address = delegation_address_element.into_value();
-            if contract_address == &delegation_address {
-                self.delegation_addresses_list().remove_node_by_id(node_id);
-                break;
-            }
-        }
+        self.delegation_addresses_list()
+            .swap_remove(contract_address);
     }
 
     fn move_delegation_contract_to_back(&self, delegation_contract: &ManagedAddress) {
-        self.remove_delegation_address_from_list(&delegation_contract);
+        self.remove_delegation_address_from_list(delegation_contract);
+
         self.delegation_addresses_list()
-            .push_back(delegation_contract.clone());
+            .insert(delegation_contract.clone());
     }
 }

@@ -4,16 +4,16 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
-pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_000_000;
+pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_500_000;
 pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 
-pub mod accumulator;
+pub mod proxy_accumulator;
 pub mod callback;
 pub mod config;
 pub mod delegation;
-pub mod delegation_manager_proxy;
-pub mod delegation_proxy;
+pub mod proxy_delegation_manager;
+pub mod proxy_delegation;
 pub mod errors;
 pub mod manage;
 pub mod storage;
@@ -103,20 +103,19 @@ pub trait LiquidStaking<ContractReader>:
     #[endpoint(unDelegate)]
     fn un_delegate(&self) {
         let mut storage_cache = StorageCache::new(self);
-        let caller = self.blockchain().get_caller();
         let payment = self.call_value().single_esdt();
-
         self.validate_undelegate_conditions(&mut storage_cache, &payment);
+
+        let caller = self.blockchain().get_caller();
 
         let unstaked_egld = self.pool_remove_liquidity(&payment.amount, &mut storage_cache);
         self.burn_ls_token(&payment.amount);
 
-        let (instant, to_undelegate) =
-            self.get_undelegate_amount(&mut storage_cache, &unstaked_egld);
+        let (instant, undelegate) = self.get_undelegate_amount(&mut storage_cache, &unstaked_egld);
 
         self.process_instant_redemption(&mut storage_cache, &caller, &instant);
 
-        self.undelegate_amount(&mut storage_cache, &to_undelegate, &caller);
+        self.undelegate_amount(&mut storage_cache, &undelegate, &caller);
 
         self.emit_remove_liquidity_event(&storage_cache, &unstaked_egld);
     }
@@ -125,11 +124,13 @@ pub trait LiquidStaking<ContractReader>:
     #[endpoint(withdraw)]
     fn withdraw(&self) {
         let mut storage_cache = StorageCache::new(self);
+        self.is_state_active(storage_cache.contract_state);
+
         let caller = self.blockchain().get_caller();
         let payments = self.call_value().all_esdt_transfers();
-
-        self.is_state_active(storage_cache.contract_state);
         let unstake_token_id = self.unstake_token().get_token_id();
+        let current_epoch = self.blockchain().get_block_epoch();
+
         let mut to_send = BigUint::zero();
 
         for payment in payments.iter() {
@@ -143,8 +144,6 @@ pub trait LiquidStaking<ContractReader>:
             let unstake_token_attributes: UnstakeTokenAttributes = self
                 .unstake_token()
                 .get_token_attributes(payment.token_nonce);
-
-            let current_epoch = self.blockchain().get_block_epoch();
 
             require!(
                 current_epoch >= unstake_token_attributes.unbond_epoch,

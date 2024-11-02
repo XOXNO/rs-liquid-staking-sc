@@ -1,9 +1,10 @@
+use itertools::Itertools;
 use multiversx_sc::hex_literal::hex;
 
 use crate::{
-    accumulator,
+    proxy_accumulator,
     callback::{CallbackModule, CallbackProxy},
-    delegation_manager_proxy, delegation_proxy,
+    proxy_delegation_manager, proxy_delegation,
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
     ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
@@ -29,7 +30,7 @@ pub trait ManageModule:
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[endpoint(delegatePending)]
-    fn delegate_pending(&self) {
+    fn delegate_pending(&self, amount: OptionalValue<BigUint>) {
         let mut storage_cache = StorageCache::new(self);
 
         self.is_state_active(storage_cache.contract_state);
@@ -43,16 +44,41 @@ pub trait ManageModule:
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
-        let delegation_contract =
-            self.get_delegation_contract_for_delegate(&storage_cache.pending_egld);
+        let amount_to_delegate = match amount {
+            OptionalValue::Some(amount) => {
+                require!(
+                    &amount <= &storage_cache.pending_egld,
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
 
-        // Important before delegating the amount to the new contracts, set the reserve to 0
-        storage_cache.pending_egld = BigUint::zero();
+                require!(
+                    amount >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
+
+                let left_over = &storage_cache.pending_egld - &amount;
+
+                require!(
+                    left_over >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                        || left_over == BigUint::zero(),
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
+
+                amount
+            }
+            OptionalValue::None => storage_cache.pending_egld.clone(),
+        };
+
+        let delegation_contract = self.get_delegation_contract_for_delegate(&amount_to_delegate);
+
+        // Important before delegating the amount to the new contracts, set the reserve to 0 or deduct the amount delegated when not full
+        storage_cache.pending_egld -= amount_to_delegate;
 
         for data in &delegation_contract {
+            self.move_delegation_contract_to_back(&data.delegation_address);
             self.tx()
                 .to(&data.delegation_address)
-                .typed(delegation_proxy::DelegationMockProxy)
+                .typed(proxy_delegation::DelegationMockProxy)
                 .delegate()
                 .egld(&data.amount)
                 .gas(MIN_GAS_FOR_ASYNC_CALL)
@@ -67,7 +93,7 @@ pub trait ManageModule:
     }
 
     #[endpoint(unDelegatePending)]
-    fn un_delegate_pending(&self) {
+    fn un_delegate_pending(&self, amount: OptionalValue<BigUint>) {
         let mut storage_cache = StorageCache::new(self);
 
         self.is_state_active(storage_cache.contract_state);
@@ -81,16 +107,42 @@ pub trait ManageModule:
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
+        let amount_to_unstake = match amount {
+            OptionalValue::Some(amount) => {
+                require!(
+                    &amount <= &storage_cache.pending_egld_for_unstake,
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
+
+                require!(
+                    amount >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
+
+                let left_over = &storage_cache.pending_egld_for_unstake - &amount;
+
+                require!(
+                    left_over >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                        || left_over == BigUint::zero(),
+                    ERROR_INSUFFICIENT_PENDING_EGLD
+                );
+
+                amount
+            }
+            OptionalValue::None => storage_cache.pending_egld_for_unstake.clone(),
+        };
+
+
         let delegation_contract =
-            self.get_delegation_contract_for_undelegate(&storage_cache.pending_egld_for_unstake);
+            self.get_delegation_contract_for_undelegate(&amount_to_unstake);
 
         // Important before un delegating the amount from the new contracts, set the amount to 0
-        storage_cache.pending_egld_for_unstake = BigUint::zero();
+        storage_cache.pending_egld_for_unstake -= amount_to_unstake;
 
         for data in &delegation_contract {
             self.tx()
                 .to(&data.delegation_address)
-                .typed(delegation_proxy::DelegationMockProxy)
+                .typed(proxy_delegation::DelegationMockProxy)
                 .undelegate(&data.amount)
                 .gas(MIN_GAS_FOR_ASYNC_CALL)
                 .callback(
@@ -119,7 +171,7 @@ pub trait ManageModule:
 
         self.tx()
             .to(&contract)
-            .typed(delegation_proxy::DelegationMockProxy)
+            .typed(proxy_delegation::DelegationMockProxy)
             .withdraw()
             .gas(MIN_GAS_FOR_ASYNC_CALL)
             .callback(CallbackModule::callbacks(self).withdraw_tokens_callback(&contract))
@@ -144,15 +196,15 @@ pub trait ManageModule:
 
         let mut addresses = MultiValueEncoded::new();
 
-        for node in delegation_addresses_mapper.iter() {
-            addresses.push(node.into_value());
+        for provider in delegation_addresses_mapper.iter() {
+            addresses.push(provider);
         }
 
         let required_gas = MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS * addresses.len() as u64;
 
         self.tx()
             .to(&ManagedAddress::new_from_bytes(&DELEGATION_MANAGER))
-            .typed(delegation_manager_proxy::DelegationManagerMockProxy)
+            .typed(proxy_delegation_manager::DelegationManagerMockProxy)
             .claim_multiple(addresses)
             .gas(required_gas)
             .callback(CallbackModule::callbacks(self).claim_rewards_callback())
@@ -174,16 +226,16 @@ pub trait ManageModule:
             ERROR_INSUFFICIENT_REWARDS
         );
 
-        let fees = self.calculate_split(&storage_cache.rewards_reserve, &self.fees().get());
+        let fees = self.calculate_share(&storage_cache.rewards_reserve, &self.fees().get());
 
-        let rewards_after = &storage_cache.rewards_reserve - &fees;
+        let post_fees_reserve = &storage_cache.rewards_reserve - &fees;
 
-        if rewards_after >= min_egld {
-            storage_cache.rewards_reserve = rewards_after;
+        if post_fees_reserve >= min_egld {
+            storage_cache.rewards_reserve = post_fees_reserve;
 
             self.tx()
                 .to(&self.accumulator_contract().get())
-                .typed(accumulator::AccumulatorProxy)
+                .typed(proxy_accumulator::AccumulatorProxy)
                 .deposit()
                 .egld(&fees)
                 .transfer_execute();
@@ -199,7 +251,7 @@ pub trait ManageModule:
         for data in &delegation_contract {
             self.tx()
                 .to(&data.delegation_address)
-                .typed(delegation_proxy::DelegationMockProxy)
+                .typed(proxy_delegation::DelegationMockProxy)
                 .delegate()
                 .egld(&data.amount)
                 .gas(MIN_GAS_FOR_ASYNC_CALL)

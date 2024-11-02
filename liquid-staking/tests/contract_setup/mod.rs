@@ -13,8 +13,8 @@ use liquid_staking::config::ConfigModule;
 use liquid_staking::*;
 
 extern crate accumulator;
-extern crate delegation_mock;
 extern crate delegation_manager_mock;
+extern crate delegation_mock;
 
 pub const LIQUID_STAKING_WASM_PATH: &str = "liquid-staking/output/liquid-staking.wasm";
 pub const ACCUMULATOR_WASM_PATH: &str = "liquid-staking/tests/accumulator.wasm";
@@ -67,8 +67,7 @@ where
             ACCUMULATOR_WASM_PATH,
         );
 
-
-        let delegation_manager_wrapper = b_mock.create_sc_account_fixed_address(
+        b_mock.create_sc_account_fixed_address(
             &Address::from(DELEGATION_MANAGER),
             &rust_zero,
             Some(&owner_address),
