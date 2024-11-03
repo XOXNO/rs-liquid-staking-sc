@@ -6,8 +6,8 @@ multiversx_sc::derive_imports!();
 #[multiversx_sc::module]
 pub trait StorageModule {
     #[view(getDelegationAddressesList)]
-    #[storage_mapper("delegationAddressesList")]
-    fn delegation_addresses_list(&self) -> UnorderedSetMapper<ManagedAddress>;
+    #[storage_mapper("delegationAddressesMap")]
+    fn delegation_addresses_list(&self) -> SetMapper<ManagedAddress>;
 
     #[view(getDelegationContractInfo)]
     #[storage_mapper("delegationContractInfo")]

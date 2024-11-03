@@ -429,8 +429,7 @@ pub trait UtilsModule:
     }
 
     fn remove_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
-        self.delegation_addresses_list()
-            .swap_remove(contract_address);
+        self.delegation_addresses_list().remove(contract_address);
     }
 
     fn move_delegation_contract_to_back(&self, delegation_contract: &ManagedAddress) {
