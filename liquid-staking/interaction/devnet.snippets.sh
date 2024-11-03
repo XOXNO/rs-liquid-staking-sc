@@ -1,4 +1,4 @@
-ADDRESS=erd1qqqqqqqqqqqqqpgqrl094x7yu7e8ajrxv0jnzsnk50zzcdxzah0sg7y9g2
+ADDRESS=erd1qqqqqqqqqqqqqpgqwsphgs3r4nvcsljp6trdvqlhgrkdmy7pah0sfphc3v
 PROXY=https://devnet-gateway.xoxno.com
 PROJECT="./output-docker/liquid-staking/liquid-staking.wasm"
 # PROJECT="./liquid-staking/output/liquid-staking.wasm"
@@ -8,9 +8,10 @@ ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgqyxfc4r5fmw2ljcgwxj2nuzv72y9ryvyhah0sg
 FEES=400
 MAX_SELECTED_PROVIDERS=20
 MAX_DELEGATION_ADDRESSES=100
+UNBOND_PERIOD=1
 
 deploy() {
-    mxpy --verbose contract deploy --bytecode=${PROJECT} --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} --recall-nonce \
+    mxpy --verbose contract deploy --bytecode=${PROJECT}  --metadata-payable-by-sc --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} ${UNBOND_PERIOD} --recall-nonce \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
     --gas-limit=150000000 --send --proxy=${PROXY} --chain=D || return
 
@@ -185,7 +186,7 @@ updateMaxSelectedProviders() {
         --proxy=${PROXY} --chain=D \
         --gas-limit=10000000 \
         --function="updateMaxSelectedProviders" \
-        --arguments 20 \
+        --arguments ${MAX_SELECTED_PROVIDERS} \
         --send || return
 }
 
@@ -195,18 +196,19 @@ setUnbondPeriod() {
         --proxy=${PROXY} --chain=D \
         --gas-limit=10000000 \
         --function="setUnbondPeriod" \
-        --arguments 1 \
+        --arguments ${UNBOND_PERIOD} \
         --send || return
 }
 
 setManagers() {
     MANAGER_ADDRESS="erd1fmd662htrgt07xxd8me09newa9s0euzvpz3wp0c4pz78f83grt9qm6pn57"
     MANAGER_ADDRESS2="erd1vn9s8uj4e7r6skmqfw5py3hxnluw3ftv6dh47yt449vtvdnn9w2stmwm7l"
+    MANAGER_ADDRESS3="erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"
     mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
         --proxy=${PROXY} --chain=D \
         --gas-limit=12000000 \
         --function="setManagers" \
-        --arguments ${MANAGER_ADDRESS} ${MANAGER_ADDRESS2} \
+        --arguments ${MANAGER_ADDRESS} ${MANAGER_ADDRESS2} ${MANAGER_ADDRESS3} \
         --send || return
 }

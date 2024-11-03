@@ -31,13 +31,17 @@ pub trait ViewsModule:
     #[view(getExchangeRate)]
     fn get_exchange_rate(&self) -> BigUint {
         let storage_cache = StorageCache::new(self);
+        // 1 EGLD = 10^18 atomic units
         const INITIAL_EXCHANGE_RATE: u64 = 1_000_000_000_000_000_000;
 
-        // The initial exchange rate between EGLD and XEGLD is fixed to one
-        if &storage_cache.ls_token_supply == &BigUint::zero() {
+        // When no liquidity, 1 LS token = 1 EGLD
+        if storage_cache.ls_token_supply == BigUint::zero() {
             return BigUint::from(INITIAL_EXCHANGE_RATE);
         }
 
+        // Exchange Rate = (Total EGLD in protocol / Total LS Supply) * PRECISION
+        // This gives us how many atomic units of EGLD you get for 1 LS token
+        // Example: If rate = 1.1 * 10^18, it means 1 LS token = 1.1 EGLD
         (&storage_cache.virtual_egld_reserve + &storage_cache.rewards_reserve)
             * BigUint::from(INITIAL_EXCHANGE_RATE)
             / &storage_cache.ls_token_supply
