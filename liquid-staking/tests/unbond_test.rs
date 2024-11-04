@@ -158,6 +158,68 @@ fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
 }
 
 #[test]
+fn liquid_staking_unbond_partial_withdraw_pending_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    let delegation_contract =
+        sc_setup.deploy_staking_contract(&sc_setup.owner_address.clone(), 1000, 1000, 1500, 0, 0);
+
+    let user = sc_setup.setup_new_user(40u64);
+    let second_user = sc_setup.setup_new_user(100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, 40u64);
+    // Add liquidity
+    sc_setup.add_liquidity(&second_user, 100u64);
+
+    sc_setup.b_mock.set_block_round(14000u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    // Set block epoch to 50
+    sc_setup.b_mock.set_block_epoch(50u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&user, LS_TOKEN_ID, 40u64);
+
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    // Set block epoch to 51
+    sc_setup.b_mock.set_block_epoch(51u64);
+
+    // Remove liquidity
+    sc_setup.remove_liquidity(&second_user, LS_TOKEN_ID, 90u64);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(60u64);
+
+    sc_setup.withdraw_pending(&sc_setup.owner_address.clone(), &delegation_contract);
+
+    // // Set block epoch to 60 (after unstake deadline)
+    sc_setup.b_mock.set_block_epoch(61u64);
+
+    sc_setup.withdraw(&second_user, UNSTAKE_TOKEN_ID, 2, exp18(90));
+
+    sc_setup.check_user_nft_balance_denominated(
+        &second_user,
+        UNSTAKE_TOKEN_ID,
+        2,
+        exp18(50),
+        Some(&UnstakeTokenAttributes::new(51, 61)),
+    );
+
+    // Perform unbond operation
+    sc_setup.withdraw_error(
+        &user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp18(40),
+        ERROR_INSUFFICIENT_UNBONDED_AMOUNT,
+    );
+}
+
+#[test]
 fn liquid_staking_unbond_error_not_active_test() {
     let _ = DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);

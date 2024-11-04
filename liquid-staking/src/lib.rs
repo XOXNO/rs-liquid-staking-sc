@@ -167,12 +167,6 @@ pub trait LiquidStaking<ContractReader>:
                         &storage_cache.total_withdrawn_egld,
                     );
 
-                    // Burn the used amount from the MetaESDT
-                    self.burn_unstake_tokens(
-                        payment.token_nonce,
-                        &storage_cache.total_withdrawn_egld,
-                    );
-
                     let remaining_amount = payment.amount - &storage_cache.total_withdrawn_egld;
 
                     // Send the remaining amount to the user
