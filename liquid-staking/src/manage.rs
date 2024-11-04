@@ -66,7 +66,8 @@ pub trait ManageModule:
             OptionalValue::None => storage_cache.pending_egld.clone(),
         };
 
-        let delegation_contract = self.get_delegation_contract_for_delegate(&amount_to_delegate);
+        let delegation_contract =
+            self.get_delegation_contract_for_delegate(&amount_to_delegate, &mut storage_cache);
 
         // Important before delegating the amount to the new contracts, set the reserve to 0 or deduct the amount delegated when not full
         storage_cache.pending_egld -= amount_to_delegate;
@@ -129,7 +130,8 @@ pub trait ManageModule:
             OptionalValue::None => storage_cache.pending_egld_for_unstake.clone(),
         };
 
-        let delegation_contract = self.get_delegation_contract_for_undelegate(&amount_to_unstake);
+        let delegation_contract =
+            self.get_delegation_contract_for_undelegate(&amount_to_unstake, &mut storage_cache);
 
         // Important before un delegating the amount from the new contracts, set the amount to 0
         storage_cache.pending_egld_for_unstake -= amount_to_unstake;
@@ -238,8 +240,11 @@ pub trait ManageModule:
             self.protocol_revenue_event(&fees, self.blockchain().get_block_epoch());
         }
 
+        let amount_to_delegate = storage_cache.rewards_reserve.clone();
+
         let delegation_contract =
-            self.get_delegation_contract_for_delegate(&storage_cache.rewards_reserve);
+            self.get_delegation_contract_for_delegate(&amount_to_delegate, &mut storage_cache);
+
         // Important before delegating the rewards to the new contracts, set the rewards reserve to 0
         storage_cache.rewards_reserve = BigUint::zero();
 

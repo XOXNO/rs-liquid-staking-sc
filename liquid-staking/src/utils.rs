@@ -1,7 +1,7 @@
 use crate::{
     structs::{DelegationContractInfo, DelegationContractSelectionInfo, DelegatorSelection},
-    ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE, ERROR_NO_DELEGATION_CONTRACTS,
-    MIN_EGLD_TO_DELEGATE,
+    StorageCache, ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE,
+    ERROR_NO_DELEGATION_CONTRACTS, MIN_EGLD_TO_DELEGATE,
 };
 
 multiversx_sc::imports!();
@@ -31,6 +31,7 @@ pub trait UtilsModule:
     fn get_delegation_contract_for_delegate(
         &self,
         amount_to_delegate: &BigUint,
+        storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         self.get_delegation_contract(
             amount_to_delegate,
@@ -55,7 +56,8 @@ pub trait UtilsModule:
              min_egld,
              total_stake,
              total_nodes,
-             total_apy| {
+             total_apy,
+             storage_cache| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_delegate,
@@ -64,14 +66,17 @@ pub trait UtilsModule:
                     total_nodes,
                     total_apy,
                     true,
+                    storage_cache,
                 )
             },
+            storage_cache,
         )
     }
 
     fn get_delegation_contract_for_undelegate(
         &self,
         amount_to_undelegate: &BigUint,
+        storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         self.get_delegation_contract(
             amount_to_undelegate,
@@ -88,7 +93,8 @@ pub trait UtilsModule:
              min_egld,
              total_stake,
              total_nodes,
-             total_apy| {
+             total_apy,
+             storage_cache| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_undelegate,
@@ -97,8 +103,10 @@ pub trait UtilsModule:
                     total_nodes,
                     total_apy,
                     false,
+                    storage_cache,
                 )
             },
+            storage_cache,
         )
     }
 
@@ -107,6 +115,7 @@ pub trait UtilsModule:
         amount: &BigUint,
         filter_fn: F,
         distribute_fn: D,
+        storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>>
     where
         F: Fn(&DelegationContractInfo<Self::Api>, &BigUint) -> bool,
@@ -117,6 +126,7 @@ pub trait UtilsModule:
             &BigUint,
             u64,
             u64,
+            &mut StorageCache<Self>,
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
         let map_list = self.delegation_addresses_list();
@@ -131,7 +141,7 @@ pub trait UtilsModule:
         let mut total_nodes = 0;
         let mut total_apy = 0;
 
-        for delegation_address in map_list.iter().take(max_providers) {
+        for delegation_address in map_list.iter() {
             let contract_data = self.delegation_contract_data(&delegation_address).get();
 
             if filter_fn(&contract_data, &amount_per_provider) {
@@ -153,6 +163,10 @@ pub trait UtilsModule:
                     total_staked_from_ls_contract: contract_data.total_staked_from_ls_contract,
                 });
             }
+
+            if selected_addresses.len() == max_providers {
+                break;
+            }
         }
 
         require!(!selected_addresses.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
@@ -164,6 +178,7 @@ pub trait UtilsModule:
             &total_stake,
             total_nodes,
             total_apy,
+            storage_cache,
         )
     }
 
@@ -176,6 +191,7 @@ pub trait UtilsModule:
         total_nodes: u64,
         total_apy: u64,
         is_delegate: bool,
+        storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         let mut result = ManagedVec::new();
         let mut remaining_amount = amount.clone();
@@ -258,7 +274,13 @@ pub trait UtilsModule:
 
         // In case of rounding dust due to math
         // Most of the time this will add the remaining amount to the first provider
-        self._distribute_remaining_amount(&mut result, &mut remaining_amount, is_delegate);
+        self._distribute_remaining_amount(
+            &mut result,
+            &mut remaining_amount,
+            is_delegate,
+            min_egld,
+            storage_cache,
+        );
 
         require!(!result.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
 
@@ -270,6 +292,8 @@ pub trait UtilsModule:
         result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
         remaining_amount: &mut BigUint,
         is_delegate: bool,
+        min_egld: &BigUint,
+        storage_cache: &mut StorageCache<Self>,
     ) {
         // In case of rounding dust due to math
         // Most of the time this will add the remaining amount to the first provider
@@ -286,9 +310,7 @@ pub trait UtilsModule:
                     if !is_delegate {
                         let left_over_amount = &available_space - &amount_to_add;
                         // If the left over amount is less than the required minimum or not zero, skip provider
-                        if left_over_amount < BigUint::from(MIN_EGLD_TO_DELEGATE)
-                            && left_over_amount > BigUint::zero()
-                        {
+                        if left_over_amount < *min_egld && left_over_amount > BigUint::zero() {
                             continue;
                         }
                     }
@@ -310,10 +332,24 @@ pub trait UtilsModule:
                     }
                 }
             }
-            require!(
-                *remaining_amount == BigUint::zero(),
-                ERROR_FAILED_TO_DISTRIBUTE
-            );
+
+            if *remaining_amount >= *min_egld {
+                // We can arrive here when for example we undelegate 20k EGLD and the entire 20k is not fitting in the first batch of providers
+                // In this case we need to add the remaining amount to the pending EGLD back and the next transaction will pick it up over a new batch of providers
+                // Both for delegate and undelegate
+                if is_delegate {
+                    storage_cache.pending_egld += remaining_amount.clone();
+                    return;
+                } else {
+                    storage_cache.pending_egld_for_unstake += remaining_amount.clone();
+                    return;
+                }
+            } else {
+                require!(
+                    *remaining_amount == BigUint::zero(),
+                    ERROR_FAILED_TO_DISTRIBUTE
+                );
+            }
         }
     }
 
