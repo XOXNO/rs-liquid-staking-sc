@@ -80,13 +80,8 @@ pub trait UtilsModule:
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         self.get_delegation_contract(
             amount_to_undelegate,
-            |contract_data, amount_per_provider| {
-                // PROTECTED: This is a protection to not allow undelegation if the provider has less than MIN_EGLD_TO_DELEGATE remaining
-                &contract_data.total_staked_from_ls_contract >= amount_per_provider
-                    && (&contract_data.total_staked_from_ls_contract - amount_per_provider
-                        >= BigUint::from(MIN_EGLD_TO_DELEGATE)
-                        || &contract_data.total_staked_from_ls_contract - amount_per_provider
-                            == BigUint::zero())
+            |contract_data, _| {
+                &contract_data.total_staked_from_ls_contract >= &BigUint::from(MIN_EGLD_TO_DELEGATE)
             },
             |selected_addresses,
              amount_to_undelegate,
