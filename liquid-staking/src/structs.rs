@@ -74,3 +74,42 @@ pub enum State {
     Inactive,
     Active,
 }
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
+pub struct ScoringConfig {
+    // Node limits
+    pub min_nodes: u64,
+    pub max_nodes: u64,
+
+    // APY limits
+    pub min_apy: u64,
+    pub max_apy: u64,
+
+    // Scoring weights
+    pub stake_weight: u64,
+    pub apy_weight: u64,
+    pub nodes_weight: u64,
+
+    // Scoring constants
+    pub max_score_per_category: u64,
+    pub exponential_base: u64,
+    pub apy_growth_multiplier: u64,
+}
+
+impl Default for ScoringConfig {
+    fn default() -> Self {
+        ScoringConfig {
+            min_nodes: 1,
+            max_nodes: 100,
+            min_apy: 5,
+            max_apy: 10,
+            stake_weight: 50,
+            apy_weight: 30,
+            nodes_weight: 20,
+            max_score_per_category: 50,
+            exponential_base: 2,
+            apy_growth_multiplier: 2,
+        }
+    }
+}

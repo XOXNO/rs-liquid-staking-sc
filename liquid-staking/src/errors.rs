@@ -38,3 +38,7 @@ pub static ERROR_MAX_CHANGED_DELEGATION_ADDRESSES: &[u8] = b"Max delegation addr
 pub static ERROR_MIN_EGLD_TO_DELEGATE: &[u8] = b"Minimum EGLD to delegate must be greater than 1 EGLD";
 pub static ERROR_MIGRATION_SC_NOT_SET: &[u8] = b"Migration SC not set";
 pub static ERROR_MIGRATION_NOT_ALLOWED: &[u8] = b"Migration not allowed";
+
+pub static ERROR_NOT_MANAGER: &[u8] = b"Caller is not authorized as a manager";
+
+pub static ERROR_SCORING_CONFIG_NOT_SET: &[u8] = b"Scoring configuration not set";

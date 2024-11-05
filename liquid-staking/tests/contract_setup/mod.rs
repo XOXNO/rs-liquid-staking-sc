@@ -1,3 +1,4 @@
+use delegation::DelegationModule;
 use manage::DELEGATION_MANAGER;
 use multiversx_sc::{
     storage::mappers::StorageTokenWrapper,
@@ -11,6 +12,7 @@ use multiversx_sc_scenario::{
 
 use liquid_staking::config::ConfigModule;
 use liquid_staking::*;
+use structs::ScoringConfig;
 
 extern crate accumulator;
 extern crate delegation_manager_mock;
@@ -108,6 +110,12 @@ where
         b_mock
             .execute_tx(&owner_address, &sc_wrapper, &rust_zero, |sc| {
                 sc.set_state_active();
+            })
+            .assert_ok();
+
+        b_mock
+            .execute_tx(&owner_address, &sc_wrapper, &rust_zero, |sc| {
+                sc.set_scoring_config(ScoringConfig::default());
             })
             .assert_ok();
 

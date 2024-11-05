@@ -5,7 +5,7 @@ use crate::{
         ERROR_ONLY_DELEGATION_ADMIN,
     },
     proxy_delegation,
-    structs::DelegationContractInfo,
+    structs::{DelegationContractInfo, ScoringConfig},
     ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE, MIN_EGLD_TO_DELEGATE,
     MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
 };
@@ -135,5 +135,15 @@ pub trait DelegationModule:
             contract_data.apy = apy;
             contract_data.eligible = is_eligible;
         });
+    }
+
+    #[endpoint(setScoringConfig)]
+    fn set_scoring_config(&self, config: ScoringConfig) {
+        self.is_manager(&self.blockchain().get_caller(), true);
+        require!(
+            config.stake_weight + config.apy_weight + config.nodes_weight == 100,
+            "Weights must sum to 100"
+        );
+        self.scoring_config().set(config);
     }
 }
