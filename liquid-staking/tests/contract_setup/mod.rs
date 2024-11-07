@@ -62,6 +62,7 @@ where
             sc_builder,
             LIQUID_STAKING_WASM_PATH,
         );
+
         let accumulator_wrapper = b_mock.create_sc_account(
             &rust_zero,
             Some(&owner_address),

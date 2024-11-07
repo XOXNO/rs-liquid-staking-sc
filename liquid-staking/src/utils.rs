@@ -313,7 +313,7 @@ pub trait UtilsModule:
 
                     let _ = result.set(
                         index,
-                        &DelegatorSelection::new(
+                        DelegatorSelection::new(
                             delegator_selection.delegation_address,
                             new_amount,
                             delegator_selection.space_left,
@@ -497,7 +497,7 @@ pub trait UtilsModule:
                 config,
             );
             total_score += &score;
-            let _ = selected_addresses.set(index, &info);
+            let _ = selected_addresses.set(index, info);
         }
 
         total_score

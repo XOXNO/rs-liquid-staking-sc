@@ -43,6 +43,7 @@ pub trait LiquidStaking<ContractReader>:
     + utils::UtilsModule
     + storage::StorageModule
     + manage::ManageModule
+    + migrate::MigrateModule
     + views::ViewsModule
     + utils_delegation::DelegateUtilsModule
     + utils_un_delegation::UnDelegateUtilsModule

@@ -16,4 +16,4 @@ add-unlabelled = false
 add-labels = ["liquid-staking-external-view"]
 
 [[proxy]]
-path = "src/liquid_staking_proxy.rs"
+path = "src/proxy_liquid_staking.rs"

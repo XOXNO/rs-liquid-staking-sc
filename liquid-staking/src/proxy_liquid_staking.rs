@@ -259,16 +259,29 @@ where
             .original_result()
     }
 
-    pub fn clean_unbond_epochs<
-        Arg0: ProxyArg<u64>,
+    pub fn set_managers<
+        Arg0: ProxyArg<MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>>,
     >(
         self,
-        nonce: Arg0,
+        managers: Arg0,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("cleanUnbondEpochs")
-            .argument(&nonce)
+            .raw_call("setManagers")
+            .argument(&managers)
+            .original_result()
+    }
+
+    pub fn remove_manager<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        manager: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("removeManager")
+            .argument(&manager)
             .original_result()
     }
 
@@ -447,15 +460,6 @@ where
             .original_result()
     }
 
-    pub fn delegation_claim_status(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ClaimStatus> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationClaimStatus")
-            .original_result()
-    }
-
     pub fn delegation_contract_data<
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
     >(
@@ -469,21 +473,47 @@ where
             .original_result()
     }
 
-    pub fn delegate_pending(
+    pub fn managers(
         self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getManagers")
+            .original_result()
+    }
+
+    pub fn scoring_config(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ScoringConfig> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getScoringConfig")
+            .original_result()
+    }
+
+    pub fn delegate_pending<
+        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
+    >(
+        self,
+        amount: Arg0,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("delegatePending")
+            .argument(&amount)
             .original_result()
     }
 
-    pub fn un_delegate_pending(
+    pub fn un_delegate_pending<
+        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
+    >(
         self,
+        amount: Arg0,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("unDelegatePending")
+            .argument(&amount)
             .original_result()
     }
 
@@ -515,6 +545,57 @@ where
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("delegateRewards")
+            .original_result()
+    }
+
+    pub fn migrate<
+        Arg0: ProxyArg<BigUint<Env::Api>>,
+    >(
+        self,
+        virtual_egld_amount: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("migrate")
+            .argument(&virtual_egld_amount)
+            .original_result()
+    }
+
+    pub fn migrate_pending(
+        self,
+    ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
+        self.wrapped_tx
+            .raw_call("migratePending")
+            .original_result()
+    }
+
+    pub fn add_rewards(
+        self,
+    ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
+        self.wrapped_tx
+            .raw_call("addRewards")
+            .original_result()
+    }
+
+    pub fn add_migration_sc_address<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("addMigrationScAddress")
+            .argument(&address)
+            .original_result()
+    }
+
+    pub fn migration_sc_address(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ManagedAddress<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getMigrationScAddress")
             .original_result()
     }
 
@@ -562,15 +643,6 @@ where
             .original_result()
     }
 
-    pub fn get_delegation_status(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ClaimStatusType> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationStatus")
-            .original_result()
-    }
-
     pub fn get_delegation_contract_staked_amount<
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
     >(
@@ -612,9 +684,8 @@ where
         delegation_contract_cap: Arg3,
         nr_nodes: Arg4,
         apy: Arg5,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+    ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
         self.wrapped_tx
-            .payment(NotPayable)
             .raw_call("whitelistDelegationContract")
             .argument(&contract_address)
             .argument(&admin_address)
@@ -668,6 +739,19 @@ where
             .argument(&is_eligible)
             .original_result()
     }
+
+    pub fn set_scoring_config<
+        Arg0: ProxyArg<ScoringConfig>,
+    >(
+        self,
+        config: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("setScoringConfig")
+            .argument(&config)
+            .original_result()
+    }
 }
 
 #[type_abi]
@@ -698,24 +782,6 @@ where
 }
 
 #[type_abi]
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
-pub struct ClaimStatus {
-    pub status: ClaimStatusType,
-    pub last_claim_epoch: u64,
-    pub current_node: u32,
-}
-
-#[type_abi]
-#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, Clone)]
-pub enum ClaimStatusType {
-    None,
-    Pending,
-    Finished,
-    Redelegated,
-    Insufficent,
-}
-
-#[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
 pub struct DelegationContractInfo<Api>
 where
@@ -729,4 +795,19 @@ where
     pub total_staked_from_ls_contract: BigUint<Api>,
     pub total_unstaked_from_ls_contract: BigUint<Api>,
     pub eligible: bool,
+}
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
+pub struct ScoringConfig {
+    pub min_nodes: u64,
+    pub max_nodes: u64,
+    pub min_apy: u64,
+    pub max_apy: u64,
+    pub stake_weight: u64,
+    pub apy_weight: u64,
+    pub nodes_weight: u64,
+    pub max_score_per_category: u64,
+    pub exponential_base: u64,
+    pub apy_growth_multiplier: u64,
 }

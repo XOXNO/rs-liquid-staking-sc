@@ -1,7 +1,7 @@
 #![no_std]
 
 multiversx_sc::imports!();
-pub mod delegation_proxy;
+pub mod proxy_delegation;
 #[multiversx_sc::derive::contract]
 pub trait DelegationManagerMock {
     #[init]
@@ -15,7 +15,7 @@ pub trait DelegationManagerMock {
             let back_transfers = self
                 .tx()
                 .to(&address)
-                .typed(delegation_proxy::DelegationMockProxy)
+                .typed(proxy_delegation::DelegationMockProxy)
                 .claim_rewards()
                 .returns(ReturnsBackTransfers)
                 .sync_call();

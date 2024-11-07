@@ -16,7 +16,7 @@ add-unlabelled = false
 add-labels = ["delegation-manager-mock-external-view"]
 
 [[proxy]]
-path = "src/delegation_manager_proxy.rs"
+path = "src/proxy_delegation_manager.rs"
 
 [[proxy]]
-path = "../liquid-staking/src/delegation_manager_proxy.rs"
+path = "../liquid-staking/src/proxy_delegation_manager.rs"

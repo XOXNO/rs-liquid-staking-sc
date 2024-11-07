@@ -4,7 +4,7 @@ multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 #[multiversx_sc::module]
-pub trait ManageModule:
+pub trait MigrateModule:
     crate::config::ConfigModule
     + crate::events::EventsModule
     + crate::callback::CallbackModule
@@ -68,24 +68,9 @@ pub trait ManageModule:
     }
 
     #[payable("EGLD")]
-    #[endpoint(migrateRewards)]
-    fn migrate_rewards(&self) {
+    #[endpoint(addRewards)]
+    fn add_rewards(&self) {
         let mut storage_cache = StorageCache::new(self);
-        let migration_sc_address = self.migration_sc_address().get();
-
-        // Check that the migration SC address is set
-        require!(!migration_sc_address.is_zero(), ERROR_MIGRATION_SC_NOT_SET);
-
-        let caller = self.blockchain().get_caller();
-
-        // Check that the caller is the migration SC
-        require!(caller == migration_sc_address, ERROR_MIGRATION_NOT_ALLOWED);
-
-        // Double check that the caller is a smart contract
-        require!(
-            self.blockchain().is_smart_contract(&caller),
-            ERROR_MIGRATION_NOT_ALLOWED
-        );
 
         let amount = self.call_value().egld_value();
 

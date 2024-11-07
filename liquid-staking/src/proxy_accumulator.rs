@@ -47,7 +47,7 @@ where
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
         Arg1: ProxyArg<BigUint<Env::Api>>,
         Arg2: ProxyArg<BigUint<Env::Api>>,
-        Arg3: ProxyArg<TokenIdentifier<Env::Api>>,
+        Arg3: ProxyArg<EgldOrEsdtTokenIdentifier<Env::Api>>,
         Arg4: ProxyArg<TokenIdentifier<Env::Api>>,
         Arg5: ProxyArg<ManagedAddress<Env::Api>>,
     >(
@@ -85,7 +85,7 @@ where
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
         Arg1: ProxyArg<BigUint<Env::Api>>,
         Arg2: ProxyArg<BigUint<Env::Api>>,
-        Arg3: ProxyArg<TokenIdentifier<Env::Api>>,
+        Arg3: ProxyArg<EgldOrEsdtTokenIdentifier<Env::Api>>,
         Arg4: ProxyArg<TokenIdentifier<Env::Api>>,
         Arg5: ProxyArg<ManagedAddress<Env::Api>>,
     >(
@@ -163,26 +163,26 @@ where
 
     pub fn distribute_royalties<
         Arg0: ProxyArg<EgldOrEsdtTokenIdentifier<Env::Api>>,
-        Arg1: ProxyArg<ManagedAddress<Env::Api>>,
-        Arg2: ProxyArg<u64>,
-        Arg3: ProxyArg<ManagedVec<Env::Api, AggregatorStep<Env::Api>>>,
-        Arg4: ProxyArg<ManagedVec<Env::Api, TokenAmount<Env::Api>>>,
+        Arg1: ProxyArg<u64>,
+        Arg2: ProxyArg<ManagedVec<Env::Api, AggregatorStep<Env::Api>>>,
+        Arg3: ProxyArg<ManagedVec<Env::Api, TokenAmount<Env::Api>>>,
+        Arg4: ProxyArg<MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>>,
     >(
         self,
         token: Arg0,
-        creator: Arg1,
-        gas: Arg2,
-        steps: Arg3,
-        limits: Arg4,
+        gas: Arg1,
+        steps: Arg2,
+        limits: Arg3,
+        creators: Arg4,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("distributeRoyalties")
             .argument(&token)
-            .argument(&creator)
             .argument(&gas)
             .argument(&steps)
             .argument(&limits)
+            .argument(&creators)
             .original_result()
     }
 
@@ -206,7 +206,7 @@ where
 
     pub fn reward_token(
         self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, TokenIdentifier<Env::Api>> {
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, EgldOrEsdtTokenIdentifier<Env::Api>> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("getRewardToken")
@@ -317,6 +317,37 @@ where
             .raw_call("getAggregatorSC")
             .original_result()
     }
+
+    pub fn get_creator_royalties<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        creator: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, EgldOrEsdtTokenPayment<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("queryCreatorRoyalties")
+            .argument(&creator)
+            .original_result()
+    }
+
+    pub fn get_all_creator_royalties(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, CreatorRoyalties<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("queryAllCreatorRoyalties")
+            .original_result()
+    }
+
+    pub fn get_real_yield_pending(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, EgldOrEsdtTokenPayment<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("queryRealYieldPending")
+            .original_result()
+    }
 }
 
 #[type_abi]
@@ -341,4 +372,14 @@ where
 {
     pub token: TokenIdentifier<Api>,
     pub amount: BigUint<Api>,
+}
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, Clone, ManagedVecItem)]
+pub struct CreatorRoyalties<Api>
+where
+    Api: ManagedTypeApi,
+{
+    pub creator: ManagedAddress<Api>,
+    pub tokens: ManagedVec<Api, EsdtTokenPayment<Api>>,
 }
