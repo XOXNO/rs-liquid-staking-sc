@@ -9,6 +9,7 @@ FEES=400
 MAX_SELECTED_PROVIDERS=20
 MAX_DELEGATION_ADDRESSES=100
 UNBOND_PERIOD=1
+MIGRATION_SC_ADDRESS="erd1qqqqqqqqqqqqqpgqfq0yn2v5ejl42wqx5a8g0fsgq4j8pujpah0stdg9y7"
 
 deploy() {
     mxpy --verbose contract deploy --bytecode=${PROJECT}  --metadata-payable-by-sc --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} ${UNBOND_PERIOD} --recall-nonce \
@@ -210,5 +211,15 @@ setManagers() {
         --gas-limit=12000000 \
         --function="setManagers" \
         --arguments ${MANAGER_ADDRESS} ${MANAGER_ADDRESS2} ${MANAGER_ADDRESS3} \
+        --send || return
+}
+
+addMigrationScAddress() {
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=D \
+        --gas-limit=12000000 \
+        --function="addMigrationScAddress" \
+        --arguments ${MIGRATION_SC_ADDRESS} \
         --send || return
 }
