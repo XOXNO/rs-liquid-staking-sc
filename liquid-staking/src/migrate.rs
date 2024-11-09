@@ -65,6 +65,8 @@ pub trait MigrateModule:
         let amount = self.call_value().egld_value();
 
         storage_cache.pending_egld += amount.clone_value();
+
+        self.emit_general_liquidity_event(&storage_cache);
     }
 
     #[payable("EGLD")]
@@ -75,6 +77,8 @@ pub trait MigrateModule:
         let amount = self.call_value().egld_value();
 
         storage_cache.rewards_reserve += amount.clone_value();
+
+        self.emit_general_liquidity_event(&storage_cache);
     }
 
     #[only_owner]
