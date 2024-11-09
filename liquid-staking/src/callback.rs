@@ -152,7 +152,7 @@ pub trait CallbackModule:
                 let ls_amount = self.pool_add_liquidity(&staked_tokens, &mut storage_cache);
                 let user_payment = self.mint_ls_token(ls_amount);
 
-                self.emit_add_liquidity_event(&storage_cache, staked_tokens);
+                self.emit_add_liquidity_event(&storage_cache, staked_tokens, Some(caller.clone()));
                 self.tx().to(caller).esdt(user_payment).transfer();
             }
             ManagedAsyncCallResult::Err(_) => {

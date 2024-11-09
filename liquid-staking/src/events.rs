@@ -26,9 +26,17 @@ pub trait EventsModule:
     + crate::storage::StorageModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    fn emit_add_liquidity_event(&self, storage_cache: &StorageCache<Self>, egld_amount: &BigUint) {
+    fn emit_add_liquidity_event(
+        &self,
+        storage_cache: &StorageCache<Self>,
+        egld_amount: &BigUint,
+        external_caller: Option<ManagedAddress>,
+    ) {
         let epoch = self.blockchain().get_block_epoch();
-        let caller = self.blockchain().get_caller();
+        let caller = match external_caller {
+            Some(external_caller) => external_caller,
+            None => self.blockchain().get_caller(),
+        };
         self.add_liquidity_event(
             &egld_amount,
             &ChangeLiquidityEvent {

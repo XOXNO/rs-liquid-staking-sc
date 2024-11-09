@@ -122,7 +122,7 @@ pub trait DelegateUtilsModule:
             let user_payment = self.mint_ls_token(ls_amount);
 
             // Emit the add liquidity event
-            self.emit_add_liquidity_event(&storage_cache, egld_to_add_liquidity);
+            self.emit_add_liquidity_event(&storage_cache, egld_to_add_liquidity, None);
             // Send the final amount to the user, including the xEGLD from pending redemption if any and the fresh minted xEGLD if any
             self.tx().to(&caller).esdt(user_payment).transfer();
         }

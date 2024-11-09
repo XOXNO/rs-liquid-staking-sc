@@ -15,7 +15,7 @@ pub trait MigrateModule:
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[endpoint(migrate)]
-    fn migrate(&self, virtual_egld_amount: &BigUint) {
+    fn migrate(&self, virtual_egld_amount: &BigUint, original_caller: ManagedAddress) {
         let mut storage_cache = StorageCache::new(self);
         let migration_sc_address = self.migration_sc_address().get();
 
@@ -37,7 +37,7 @@ pub trait MigrateModule:
         let user_payment = self.mint_ls_token(ls_amount);
 
         // Emit the add liquidity event
-        self.emit_add_liquidity_event(&storage_cache, virtual_egld_amount);
+        self.emit_add_liquidity_event(&storage_cache, virtual_egld_amount, Some(original_caller));
         // Send the final amount to the user
         self.tx().to(&caller).esdt(user_payment).transfer();
     }
