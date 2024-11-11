@@ -137,6 +137,7 @@ pub trait ManageModule:
         storage_cache.pending_egld_for_unstake -= amount_to_unstake;
 
         for data in &delegation_contract {
+            self.move_un_delegation_contract_to_back(&data.delegation_address);
             self.tx()
                 .to(&data.delegation_address)
                 .typed(proxy_delegation::DelegationMockProxy)

@@ -9,6 +9,10 @@ pub trait StorageModule {
     #[storage_mapper("delegationAddressesMap")]
     fn delegation_addresses_list(&self) -> SetMapper<ManagedAddress>;
 
+    #[view(getUnDelegationAddressesList)]
+    #[storage_mapper("unDelegationAddressesMap")]
+    fn un_delegation_addresses_list(&self) -> SetMapper<ManagedAddress>;
+
     #[view(getDelegationContractInfo)]
     #[storage_mapper("delegationContractInfo")]
     fn delegation_contract_data(

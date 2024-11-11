@@ -66,6 +66,7 @@ pub trait UtilsModule:
                 )
             },
             storage_cache,
+            true,
         )
     }
 
@@ -104,6 +105,7 @@ pub trait UtilsModule:
                 )
             },
             storage_cache,
+            false,
         )
     }
 
@@ -113,6 +115,7 @@ pub trait UtilsModule:
         filter_fn: F,
         distribute_fn: D,
         storage_cache: &mut StorageCache<Self>,
+        is_delegate: bool,
     ) -> ManagedVec<DelegatorSelection<Self::Api>>
     where
         F: Fn(&DelegationContractInfo<Self::Api>, &BigUint, &BigUint) -> bool,
@@ -126,7 +129,12 @@ pub trait UtilsModule:
             &mut StorageCache<Self>,
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
-        let map_list = self.delegation_addresses_list();
+        let map_list = if is_delegate {
+            self.delegation_addresses_list()
+        } else {
+            self.un_delegation_addresses_list()
+        };
+
         require!(!map_list.is_empty(), ERROR_NO_DELEGATION_CONTRACTS);
 
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
@@ -555,8 +563,18 @@ pub trait UtilsModule:
         delegation_addresses_mapper.insert(contract_address);
     }
 
+    fn add_un_delegation_address_in_list(&self, contract_address: ManagedAddress) {
+        let mut un_delegation_addresses_mapper = self.un_delegation_addresses_list();
+
+        un_delegation_addresses_mapper.insert(contract_address);
+    }
+
     fn remove_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
         self.delegation_addresses_list().remove(contract_address);
+    }
+
+    fn remove_un_delegation_address_from_list(&self, contract_address: &ManagedAddress) {
+        self.un_delegation_addresses_list().remove(contract_address);
     }
 
     fn move_delegation_contract_to_back(&self, delegation_contract: &ManagedAddress) {
@@ -564,6 +582,13 @@ pub trait UtilsModule:
 
         self.delegation_addresses_list()
             .insert(delegation_contract.clone());
+    }
+
+    fn move_un_delegation_contract_to_back(&self, un_delegation_contract: &ManagedAddress) {
+        self.remove_un_delegation_address_from_list(un_delegation_contract);
+
+        self.un_delegation_addresses_list()
+            .insert(un_delegation_contract.clone());
     }
 
     fn require_min_rounds_passed(&self) {

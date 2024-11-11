@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           57
+// Endpoints:                           58
 // Async Callback:                       1
 // Promise callbacks:                    6
-// Total number of exported functions:  66
+// Total number of exported functions:  67
 
 #![no_std]
 
@@ -55,6 +55,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         maxSelectedProviders => max_selected_providers
         unbondPeriod => unbond_period
         getDelegationAddressesList => delegation_addresses_list
+        getUnDelegationAddressesList => un_delegation_addresses_list
         getDelegationContractInfo => delegation_contract_data
         getManagers => managers
         getScoringConfig => scoring_config

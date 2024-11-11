@@ -6,8 +6,8 @@ use crate::{
     },
     proxy_delegation,
     structs::{DelegationContractInfo, ScoringConfig},
-    ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE, MIN_EGLD_TO_DELEGATE,
-    MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
+    ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MAX_UN_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE,
+    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
 };
 
 multiversx_sc::imports!();
@@ -37,6 +37,11 @@ pub trait DelegationModule:
         require!(
             self.delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
             ERROR_MAX_DELEGATION_ADDRESSES
+        );
+
+        require!(
+            self.un_delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
+            ERROR_MAX_UN_DELEGATION_ADDRESSES
         );
 
         self.is_manager(&self.blockchain().get_caller(), true);

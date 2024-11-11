@@ -147,7 +147,8 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract += staked_tokens;
                     });
 
-                self.add_delegation_address_in_list(contract_address);
+                self.add_delegation_address_in_list(contract_address.clone());
+                self.add_un_delegation_address_in_list(contract_address);
 
                 let ls_amount = self.pool_add_liquidity(&staked_tokens, &mut storage_cache);
                 let user_payment = self.mint_ls_token(ls_amount);
