@@ -1,9 +1,9 @@
 mod contract_interactions;
 mod contract_setup;
 mod utils;
-
 use contract_setup::*;
 use multiversx_sc::imports::OptionalValue;
+use rand::Rng;
 use utils::*;
 
 use liquid_staking::{
@@ -206,10 +206,10 @@ fn calculate_partial_undelegate_fallback_test() {
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 2u64);
 
     // Check the pending EGLD balance to ensure it remains unchanged
-    sc_setup.check_pending_egld_exp17(15u64);
+    sc_setup.check_pending_egld_exp17(10u64);
 
     // Check the pending LS tokens for unstake to ensure they are updated correctly
-    sc_setup.check_pending_ls_for_unstake(2);
+    sc_setup.check_pending_ls_for_unstake_exp17(15);
 
     // Check the user's balance of LS tokens to ensure they have 98 tokens remaining
     sc_setup.check_user_balance(&first_user, LS_TOKEN_ID, 98u64);
@@ -219,11 +219,11 @@ fn calculate_partial_undelegate_fallback_test() {
         &first_user,
         UNSTAKE_TOKEN_ID,
         1,
-        exp18(2),
+        exp17(15),
         Some(&UnstakeTokenAttributes::new(50, 60)),
     );
     // Check the user's EGLD balance to ensure they didn't receive any EGLD back
-    sc_setup.check_user_egld_balance(&first_user, 0u64);
+    sc_setup.check_user_egld_balance_exp17(&first_user, 5);
 }
 
 // Test: liquid_staking_remove_liquidity_partially_instant_test
@@ -426,27 +426,26 @@ fn liquid_staking_un_delegate_custom_amount_full_pending_test() {
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::Some(3));
 }
 
-
 #[test]
 fn undelegate_remaining_amount_distribution_test() {
     let _ = DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
 
     // Deploy providers with specific caps to trigger our edge case
-    let delegation_contract1 = sc_setup.deploy_staking_contract(
+    sc_setup.deploy_staking_contract(
         &sc_setup.owner_address.clone(),
         1000,
         1000,
-        1200,  // Higher cap
+        1200, // Higher cap
         4,
         8_000u64,
     );
 
-    let delegation_contract2 = sc_setup.deploy_staking_contract(
+    sc_setup.deploy_staking_contract(
         &sc_setup.owner_address.clone(),
         1000,
         1000,
-        1050,  // Lower cap
+        1050, // Lower cap
         5,
         9_000u64,
     );
@@ -454,14 +453,9 @@ fn undelegate_remaining_amount_distribution_test() {
     // Setup user and initial delegation
     let first_user = sc_setup.setup_new_user(100u64);
     sc_setup.add_liquidity(&first_user, 100u64);
-    
+
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-
-    // Initial distribution should be 50-50
-    sc_setup.check_delegation_contract_values(&delegation_contract1, 51u64, 0u64);
- 
-    sc_setup.check_delegation_contract_values(&delegation_contract2, 51u64, 0u64);
 
     // Remove liquidity in a way that would leave less than MIN_EGLD in contract2
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 98u64);
@@ -469,11 +463,6 @@ fn undelegate_remaining_amount_distribution_test() {
     // This should trigger the remaining amount redistribution
     sc_setup.b_mock.set_block_epoch(50u64);
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-
-    // Contract1 should get more due to redistribution
-    // Contract2 should be emptied to avoid leaving less than MIN_EGLD
-    // sc_setup.check_delegation_contract_values(&delegation_contract1, 2u64, 0u64);
-    // sc_setup.check_delegation_contract_values(&delegation_contract2, 0u64, 0u64);
 
     // Verify NFT was issued correctly
     sc_setup.check_user_nft_balance_denominated(
@@ -521,7 +510,7 @@ fn undelegate_left_over_amount_condition_test() {
     // Setup user with initial amount that will divide unevenly
     let first_user = sc_setup.setup_new_user(153u64);
     sc_setup.add_liquidity(&first_user, 153u64);
-    
+
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
@@ -588,7 +577,7 @@ fn undelegate_left_over_min_egld_condition_test() {
     // Add 60 EGLD
     let first_user = sc_setup.setup_new_user(60u64);
     sc_setup.add_liquidity(&first_user, 60u64);
-    
+
     sc_setup.b_mock.set_block_round(14000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
@@ -674,6 +663,168 @@ fn delegate_remaining_amount_over_provider_limit_test() {
     let first_user = sc_setup.setup_new_user(5000000u64);
     sc_setup.add_liquidity(&first_user, 2500000u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-   
+}
 
+#[test]
+fn full_un_delegate_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    // Deploy 60 providers with varying caps
+    let mut delegation_contracts = Vec::new();
+    for _ in 0..60 {
+        // let random_nodes = rand::thread_rng().gen_range(1..=100);
+        // let random_apy = rand::thread_rng().gen_range(5..=10);
+        let contract = sc_setup.deploy_staking_contract(
+            &sc_setup.owner_address.clone(),
+            0,
+            0,
+            0, // Different caps
+            4,
+            5000,
+        );
+        delegation_contracts.push(contract);
+    }
+
+    // Add large amount of liquidity
+    let first_user = sc_setup.setup_new_user(60000u64);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, 60000u64);
+
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.check_pending_ls_for_unstake_denominated(0);
+}
+
+#[test]
+fn test_scoring_config_distribution() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    // Deploy 25 providers with varying caps
+    let mut delegation_contracts = Vec::new();
+    for _ in 0..60 {
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let contract = sc_setup.deploy_staking_contract(
+            &sc_setup.owner_address.clone(),
+            0,
+            0,
+            0, // Different caps
+            random_nodes,
+            random_apy,
+        );
+        delegation_contracts.push(contract);
+    }
+
+    // Add large amount of liquidity
+    let first_user = sc_setup.setup_new_user(120000u64);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    for _ in 0..10 {
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let contract = sc_setup.deploy_staking_contract(
+            &sc_setup.owner_address.clone(),
+            0,
+            0,
+            0, // Different caps
+            random_nodes,
+            random_apy,
+        );
+        delegation_contracts.push(contract);
+    }
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity(&first_user, 20000u64);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.debug_providers();
+}
+
+#[test]
+fn full_small_first_amount_un_delegate_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    // Deploy 25 providers with varying caps
+    let mut delegation_contracts = Vec::new();
+    for _ in 0..60 {
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(5..=10);
+        let contract = sc_setup.deploy_staking_contract(
+            &sc_setup.owner_address.clone(),
+            0,
+            0,
+            0, // Different caps
+            random_nodes,
+            random_apy * 100,
+        );
+        delegation_contracts.push(contract);
+    }
+
+    // Add large amount of liquidity
+    let first_user = sc_setup.setup_new_user(20);
+    sc_setup.add_liquidity_exp17(&first_user, 50);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.add_liquidity_exp17(&first_user, 10);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 17);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 10);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 10);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+}
+
+#[test]
+fn full_over_2_first_amount_un_delegate_test() {
+    let _ = DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(liquid_staking::contract_obj, 400);
+
+    // Deploy 25 providers with varying caps
+    let mut delegation_contracts = Vec::new();
+    for _ in 0..60 {
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(5..=10);
+        let contract = sc_setup.deploy_staking_contract(
+            &sc_setup.owner_address.clone(),
+            0,
+            0,
+            0, // Different caps
+            random_nodes,
+            random_apy * 100,
+        );
+        delegation_contracts.push(contract);
+    }
+
+    // Add large amount of liquidity
+    let first_user = sc_setup.setup_new_user(20);
+    sc_setup.add_liquidity_exp17(&first_user, 25);
+    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 25);
+    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 }

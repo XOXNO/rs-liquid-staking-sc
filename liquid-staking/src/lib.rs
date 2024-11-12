@@ -14,15 +14,14 @@ pub mod config;
 pub mod delegation;
 pub mod errors;
 pub mod manage;
-pub mod proxy_accumulator;
-pub mod proxy_delegation;
-pub mod proxy_delegation_manager;
+pub mod proxy;
 pub mod storage;
 pub mod structs;
 pub mod utils;
 pub mod utils_delegation;
 pub mod utils_un_delegation;
 pub mod views;
+pub mod score;
 
 pub mod migrate;
 
@@ -43,6 +42,7 @@ pub trait LiquidStaking<ContractReader>:
     + utils::UtilsModule
     + storage::StorageModule
     + manage::ManageModule
+    + score::ScoreModule
     + migrate::MigrateModule
     + views::ViewsModule
     + utils_delegation::DelegateUtilsModule
@@ -97,7 +97,8 @@ pub trait LiquidStaking<ContractReader>:
 
         self.validate_delegate_conditions(&mut storage_cache, &payment);
 
-        let (pending, extra) = self.get_delegate_amount(&mut storage_cache, &payment);
+        let (pending, extra) =
+            self.get_action_amount(&storage_cache.pending_egld_for_unstake, &payment);
 
         self.process_delegation(&mut storage_cache, &pending, &extra);
     }
@@ -106,21 +107,18 @@ pub trait LiquidStaking<ContractReader>:
     #[endpoint(unDelegate)]
     fn un_delegate(&self) {
         let mut storage_cache = StorageCache::new(self);
-        let payment = self.call_value().single_esdt();
-        self.validate_undelegate_conditions(&mut storage_cache, &payment);
 
-        let caller = self.blockchain().get_caller();
+        let payment = self.call_value().single_esdt();
+
+        self.validate_undelegate_conditions(&mut storage_cache, &payment);
 
         let unstaked_egld = self.pool_remove_liquidity(&payment.amount, &mut storage_cache);
         self.burn_ls_token(&payment.amount);
 
-        let (instant, undelegate) = self.get_undelegate_amount(&mut storage_cache, &unstaked_egld);
+        let (instant, undelegate) =
+            self.get_action_amount(&storage_cache.pending_egld, &unstaked_egld);
 
-        self.process_instant_redemption(&mut storage_cache, &caller, &instant);
-
-        self.undelegate_amount(&mut storage_cache, &undelegate, &caller);
-
-        self.emit_remove_liquidity_event(&storage_cache, &unstaked_egld);
+        self.process_un_delegation(&mut storage_cache, &instant, &undelegate);
     }
 
     #[payable("*")]
@@ -162,7 +160,7 @@ pub trait LiquidStaking<ContractReader>:
                 if storage_cache.total_withdrawn_egld > BigUint::zero() {
                     // In this case the required amount of the MetaESDT is higher than the available amount
                     // This case can happen only when the amount from the providers didn't arrive yet in the protocol
-                    // In this case we partially give to the user the available amount and return the un claimed MetaESDT to the user
+                    // In this case we partially give to the user the available amount and return the remaining MetaESDT to the user
                     self.burn_unstake_tokens(
                         payment.token_nonce,
                         &storage_cache.total_withdrawn_egld,
@@ -191,9 +189,7 @@ pub trait LiquidStaking<ContractReader>:
             }
         }
 
-        if to_send > BigUint::zero() {
-            self.tx().to(&caller).egld(&to_send).transfer();
-            self.emit_general_liquidity_event(&storage_cache);
-        }
+        self.tx().to(&caller).egld(&to_send).transfer();
+        self.emit_general_liquidity_event(&storage_cache);
     }
 }

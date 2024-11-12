@@ -19,7 +19,7 @@ add-labels = ["delegation-mock-external-view"]
 path = "src/proxy_delegation.rs"
 
 [[proxy]]
-path = "../liquid-staking/src/proxy_delegation.rs"
+path = "../liquid-staking/src/proxy/proxy_delegation.rs"
 
 [[proxy]]
 path = "../delegation-manager-mock/src/proxy_delegation.rs"

@@ -102,14 +102,14 @@ impl Default for ScoringConfig {
         ScoringConfig {
             min_nodes: 1,
             max_nodes: 100,
-            min_apy: 5,
-            max_apy: 10,
-            stake_weight: 50,
-            apy_weight: 30,
-            nodes_weight: 20,
-            max_score_per_category: 50,
-            exponential_base: 2,
-            apy_growth_multiplier: 2,
+            min_apy: 500,
+            max_apy: 1000,
+            stake_weight: 40,
+            apy_weight: 50,
+            nodes_weight: 10,
+            max_score_per_category: 1000,
+            exponential_base: 3,
+            apy_growth_multiplier: 4,
         }
     }
 }

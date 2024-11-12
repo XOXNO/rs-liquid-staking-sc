@@ -18,6 +18,7 @@ pub trait UtilsModule:
     crate::storage::StorageModule
     + crate::config::ConfigModule
     + crate::events::EventsModule
+    + crate::score::ScoreModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -30,7 +31,7 @@ pub trait UtilsModule:
         is_manager
     }
 
-    fn get_delegation_contract_for_delegate(
+    fn get_contracts_for_delegate(
         &self,
         amount_to_delegate: &BigUint,
         storage_cache: &mut StorageCache<Self>,
@@ -39,28 +40,20 @@ pub trait UtilsModule:
             amount_to_delegate,
             |contract_data, amount_per_provider, all_providers_limit_per_provider| {
                 contract_data.eligible
-                    && (contract_data.delegation_contract_cap == BigUint::zero()
+                    && ((contract_data.delegation_contract_cap == BigUint::zero()
                         || &contract_data.delegation_contract_cap - &contract_data.total_staked
                             >= *amount_per_provider)
-                    || (&contract_data.delegation_contract_cap - &contract_data.total_staked
-                        >= *all_providers_limit_per_provider)
-                    || (&contract_data.delegation_contract_cap - &contract_data.total_staked
-                        >= BigUint::from(MIN_EGLD_TO_DELEGATE))
+                        || (&contract_data.delegation_contract_cap - &contract_data.total_staked
+                            >= *all_providers_limit_per_provider)
+                        || (&contract_data.delegation_contract_cap - &contract_data.total_staked
+                            >= BigUint::from(MIN_EGLD_TO_DELEGATE)))
             },
-            |selected_addresses,
-             amount_to_delegate,
-             min_egld,
-             total_stake,
-             total_nodes,
-             total_apy,
-             storage_cache| {
+            |selected_addresses, amount_to_delegate, min_egld, total_stake, storage_cache| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_delegate,
                     min_egld,
                     total_stake,
-                    total_nodes,
-                    total_apy,
                     true,
                     storage_cache,
                 )
@@ -70,7 +63,7 @@ pub trait UtilsModule:
         )
     }
 
-    fn get_delegation_contract_for_undelegate(
+    fn get_contracts_for_undelegate(
         &self,
         amount_to_undelegate: &BigUint,
         storage_cache: &mut StorageCache<Self>,
@@ -78,28 +71,34 @@ pub trait UtilsModule:
         self.get_delegation_contract(
             amount_to_undelegate,
             |contract_data, amount_per_provider, all_providers_limit_per_provider| {
-                &contract_data.total_staked_from_ls_contract >= amount_per_provider
-                    // Allow some flexibility in case the amount is not exactly the same as the one requested but can still be unstaked from the contract
-                    // In case of remaining amount, the next transaction will pick it up
-                    || (&(&contract_data.total_staked_from_ls_contract / &BigUint::from(2u64))
-                        >= amount_per_provider)
-                        || (&contract_data.total_staked_from_ls_contract
-                        >= all_providers_limit_per_provider)
+                let total_staked = &contract_data.total_staked_from_ls_contract;
+
+                if amount_per_provider < &BigUint::from(MIN_EGLD_TO_DELEGATE * 2) {
+                    // For small amounts (≤ 2 EGLD), require provider to have enough
+                    // to handle it completely to avoid dust
+                    total_staked >= amount_per_provider
+                        && (total_staked - amount_per_provider
+                            >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                            || total_staked - amount_per_provider == BigUint::zero())
+                } else {
+                    // For larger amounts, check if provider:
+                    // 1. Can handle the full amount OR
+                    // 2. Can handle the minimum amount without leaving dust
+                    let can_handle_full = total_staked >= amount_per_provider;
+                    let can_handle_min = total_staked >= all_providers_limit_per_provider
+                        && (total_staked - all_providers_limit_per_provider
+                            >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                            || total_staked - all_providers_limit_per_provider == BigUint::zero());
+
+                    can_handle_full || can_handle_min
+                }
             },
-            |selected_addresses,
-             amount_to_undelegate,
-             min_egld,
-             total_stake,
-             total_nodes,
-             total_apy,
-             storage_cache| {
+            |selected_addresses, amount_to_undelegate, min_egld, total_stake, storage_cache| {
                 self.distribute_amount(
                     selected_addresses,
                     amount_to_undelegate,
                     min_egld,
                     total_stake,
-                    total_nodes,
-                    total_apy,
                     false,
                     storage_cache,
                 )
@@ -124,8 +123,6 @@ pub trait UtilsModule:
             &BigUint,
             &BigUint,
             &BigUint,
-            u64,
-            u64,
             &mut StorageCache<Self>,
         ) -> ManagedVec<DelegatorSelection<Self::Api>>,
     {
@@ -140,12 +137,11 @@ pub trait UtilsModule:
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
         let max_providers = self.calculate_max_providers(amount, &min_egld, map_list.len());
         let amount_per_provider = amount / &BigUint::from(max_providers as u64);
-        let all_providers_limit_per_provider = amount / &BigUint::from(map_list.len() as u64);
+        let all_providers_limit_per_provider =
+            (amount / &BigUint::from(map_list.len() as u64)).max(min_egld.clone());
 
         let mut selected_addresses = ManagedVec::new();
         let mut total_stake = BigUint::zero();
-        let mut total_nodes = 0;
-        let mut total_apy = 0;
 
         for delegation_address in map_list.iter() {
             let contract_data = self.delegation_contract_data(&delegation_address).get();
@@ -156,8 +152,6 @@ pub trait UtilsModule:
                 &all_providers_limit_per_provider,
             ) {
                 total_stake += &contract_data.total_staked_from_ls_contract;
-                total_nodes += contract_data.nr_nodes;
-                total_apy += contract_data.apy;
 
                 selected_addresses.push(DelegationContractSelectionInfo {
                     address: delegation_address.clone(),
@@ -186,8 +180,6 @@ pub trait UtilsModule:
             amount,
             &min_egld,
             &total_stake,
-            total_nodes,
-            total_apy,
             storage_cache,
         )
     }
@@ -198,8 +190,6 @@ pub trait UtilsModule:
         amount: &BigUint,
         min_egld: &BigUint,
         total_stake: &BigUint,
-        total_nodes: u64,
-        total_apy: u64,
         is_delegate: bool,
         storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
@@ -211,9 +201,6 @@ pub trait UtilsModule:
             selected_addresses,
             is_delegate,
             total_stake,
-            total_apy,
-            total_nodes,
-            min_egld,
             &config,
         );
 
@@ -239,8 +226,10 @@ pub trait UtilsModule:
                 }
             } else {
                 // Ensure that in case of undelegation, the amount is not greater than the total staked from the LS contract
+
                 amount_to_delegate =
                     amount_to_delegate.min(contract_info.total_staked_from_ls_contract.clone());
+
                 let left_over_amount =
                     &contract_info.total_staked_from_ls_contract - &amount_to_delegate;
                 // If the left over amount is less than the required minimum or not zero, skip provider
@@ -257,7 +246,6 @@ pub trait UtilsModule:
             }
 
             remaining_amount -= &amount_to_delegate;
-
             result.push(DelegatorSelection::new(
                 contract_info.address,
                 amount_to_delegate,
@@ -356,161 +344,6 @@ pub trait UtilsModule:
         }
     }
 
-    fn calculate_and_update_score(
-        &self,
-        info: &mut DelegationContractSelectionInfo<Self::Api>,
-        is_delegate: bool,
-        total_stake: &BigUint,
-        total_apy: u64,
-        total_nodes: u64,
-        min_egld: &BigUint,
-        config: &ScoringConfig,
-    ) -> BigUint {
-        let node_score = self.calculate_node_score(info.nr_nodes, total_nodes, is_delegate, config);
-        let apy_score = self.calculate_apy_score(info.apy, total_apy, is_delegate, config);
-        let stake_score = self.calculate_stake_score(
-            &info.total_staked_from_ls_contract,
-            total_stake,
-            is_delegate,
-        );
-
-        let final_score = self.combine_scores(node_score, apy_score, stake_score, min_egld, config);
-        info.score = final_score.clone();
-        final_score
-    }
-
-    fn calculate_node_score(
-        &self,
-        nr_nodes: u64,
-        total_nodes: u64,
-        is_delegate: bool,
-        config: &ScoringConfig,
-    ) -> BigUint {
-        let absolute_score = self.calculate_absolute_score(
-            config,
-            nr_nodes,
-            config.min_nodes,
-            config.max_nodes,
-            true, // always quadratic for better distribution
-            is_delegate, // inverse for delegate (lower nodes → higher score)
-                  // not inverse for undelegate (higher nodes → higher score)
-        );
-
-        let relative_score = self.calculate_relative_score(
-            config,
-            nr_nodes,
-            total_nodes,
-            true, // always quadratic for better distribution
-            is_delegate, // inverse for delegate (lower nodes → higher score)
-                  // not inverse for undelegate (higher nodes → higher score)
-        );
-
-        absolute_score + relative_score
-    }
-
-    fn calculate_apy_score(
-        &self,
-        apy: u64,
-        total_apy: u64,
-        is_delegate: bool,
-        config: &ScoringConfig,
-    ) -> BigUint {
-        let absolute_score = self.calculate_absolute_score(
-            config,
-            apy,
-            config.min_apy,
-            config.max_apy,
-            true, // always exponential for better distribution
-            !is_delegate, // inverse for undelegate (lower APY → higher score)
-                  // not inverse for delegate (higher APY → higher score)
-        );
-
-        let relative_score = self.calculate_relative_score(
-            config,
-            apy,
-            total_apy,
-            true, // always quadratic for better distribution
-            !is_delegate, // inverse for undelegate (lower APY → higher score)
-                  // not inverse for delegate (higher APY → higher score)
-        );
-
-        absolute_score + relative_score
-    }
-
-    fn calculate_stake_score(
-        &self,
-        staked: &BigUint,
-        total_stake: &BigUint,
-        is_delegate: bool,
-    ) -> BigUint {
-        let bps = BigUint::from(BPS);
-
-        if total_stake == &BigUint::zero() {
-            return BigUint::zero();
-        }
-
-        let stake_percentage = staked.mul(&bps) / total_stake;
-
-        if is_delegate {
-            if stake_percentage >= bps {
-                BigUint::zero()
-            } else {
-                // Exponential reward for lower stake percentages
-                let remaining_capacity = &bps - &stake_percentage;
-                (remaining_capacity.pow(2)) / bps
-            }
-        } else {
-            // Exponential reward for higher stake percentages when undelegate
-            (stake_percentage.pow(2)) / bps
-        }
-    }
-
-    fn combine_scores(
-        &self,
-        node_score: BigUint,
-        apy_score: BigUint,
-        stake_score: BigUint,
-        min_egld: &BigUint,
-        config: &ScoringConfig,
-    ) -> BigUint {
-        let weighted_score = node_score
-            .mul(config.nodes_weight)
-            .add(&apy_score.mul(config.apy_weight))
-            .add(&stake_score.mul(config.stake_weight));
-
-        weighted_score.div(100u64).mul(min_egld)
-    }
-
-    fn update_selected_addresses_scores(
-        &self,
-        selected_addresses: &mut ManagedVec<DelegationContractSelectionInfo<Self::Api>>,
-        is_delegate: bool,
-        total_stake: &BigUint,
-        total_apy: u64,
-        total_nodes: u64,
-        min_egld: &BigUint,
-        config: &ScoringConfig,
-    ) -> BigUint {
-        let mut total_score = BigUint::zero();
-
-        for index in 0..selected_addresses.len() {
-            let mut info = selected_addresses.get(index);
-            let score = self.calculate_and_update_score(
-                &mut info,
-                is_delegate,
-                total_stake,
-                total_apy,
-                total_nodes,
-                min_egld,
-                config,
-            );
-            total_score += &score;
-            let _ = selected_addresses.set(index, info);
-        }
-
-        total_score
-    }
-
     fn calculate_max_providers(
         &self,
         amount_to_delegate: &BigUint<Self::Api>,
@@ -534,27 +367,19 @@ pub trait UtilsModule:
         max_providers.to_u64().unwrap() as usize
     }
 
-    fn calculate_instant_amount(
-        &self,
-        sent_amount: &BigUint,
-        pending_amount: &BigUint,
-        min_amount: &BigUint,
-    ) -> BigUint {
-        if pending_amount <= min_amount || sent_amount <= min_amount {
-            return BigUint::zero();
-        }
-
-        let max_instant = sent_amount - min_amount;
-
-        if max_instant <= pending_amount - min_amount {
-            max_instant
-        } else {
-            pending_amount - min_amount
-        }
-    }
-
     fn calculate_share(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {
         total_amount * cut_percentage / BPS
+    }
+
+    fn require_min_rounds_passed(&self) {
+        // TODO: Implement once new hooks are available in the VM with the future mainnet upgrade
+        return;
+    }
+
+    fn get_scoring_config(&self) -> ScoringConfig {
+        let map = self.scoring_config();
+        require!(!map.is_empty(), ERROR_SCORING_CONFIG_NOT_SET);
+        map.get()
     }
 
     fn add_delegation_address_in_list(&self, contract_address: ManagedAddress) {
@@ -591,95 +416,87 @@ pub trait UtilsModule:
             .insert(un_delegation_contract.clone());
     }
 
-    fn require_min_rounds_passed(&self) {
-        // TODO: Implement once new hooks are available in the VM with the future mainnet upgrade
-        return;
-    }
-
-    fn calculate_absolute_score(
+    // Swap amount between pending and payment for both delegation and undelegation
+    fn calculate_instant_amount(
         &self,
-        config: &ScoringConfig,
-        value: u64,
-        min_value: u64,
-        max_value: u64,
-        exponential: bool,
-        inverse: bool,
+        sent_amount: &BigUint,
+        pending_amount: &BigUint,
+        min_amount: &BigUint,
     ) -> BigUint {
-        if value <= min_value {
-            return if inverse {
-                BigUint::from(config.max_score_per_category)
-            } else {
-                BigUint::zero()
-            };
-        }
-        if value >= max_value {
-            return if inverse {
-                BigUint::zero()
-            } else {
-                BigUint::from(config.max_score_per_category)
-            };
+        if pending_amount <= min_amount || sent_amount <= min_amount {
+            return BigUint::zero();
         }
 
-        let position = value.saturating_sub(min_value);
-        let range = max_value.saturating_sub(min_value);
+        let max_instant = sent_amount - min_amount;
 
-        if exponential {
-            let position = if inverse {
-                range.saturating_sub(position)
-            } else {
-                position
-            };
-            let factor = BigUint::from(config.exponential_base)
-                .pow((position * config.apy_growth_multiplier / range) as u32);
-            (BigUint::from(config.max_score_per_category) * factor)
-                / BigUint::from(config.exponential_base).pow(2u32)
+        if max_instant <= pending_amount - min_amount {
+            max_instant
         } else {
-            if inverse {
-                BigUint::from(position)
-                    .mul(BigUint::from(config.max_score_per_category))
-                    .div(range)
-            } else {
-                BigUint::from(range.saturating_sub(position))
-                    .mul(BigUint::from(config.max_score_per_category))
-                    .div(range)
-            }
+            pending_amount - min_amount
         }
     }
 
-    fn calculate_relative_score(
+    fn get_action_amount(
         &self,
-        config: &ScoringConfig,
-        value: u64,
-        total: u64,
-        quadratic: bool,
-        inverse: bool,
-    ) -> BigUint {
-        if total == 0 {
-            return if inverse {
-                BigUint::zero()
-            } else {
-                BigUint::from(config.max_score_per_category)
-            };
-        }
+        pending_amount: &BigUint,
+        payment_amount: &BigUint,
+    ) -> (BigUint, BigUint) {
+        let min_egld_amount = BigUint::from(MIN_EGLD_TO_DELEGATE);
 
-        let ratio = BigUint::from(value * BPS) / total;
-        let base_ratio = if inverse {
-            &BigUint::from(BPS) - &ratio
+        if self.can_perform_instant_action(pending_amount, payment_amount, &min_egld_amount) {
+            // Case 1: Full instant swap
+            (payment_amount.clone(), BigUint::zero())
+        } else if self.can_perform_fully_redeem_pending_amount(
+            pending_amount,
+            payment_amount,
+            &min_egld_amount,
+        ) {
+            let egld_to_add_liquidity = payment_amount - pending_amount;
+            (pending_amount.clone(), egld_to_add_liquidity)
         } else {
-            ratio
-        };
-
-        if quadratic {
-            (BigUint::from(config.max_score_per_category) * base_ratio.pow(2))
-                / BigUint::from(BPS).pow(2)
-        } else {
-            BigUint::from(config.max_score_per_category) * base_ratio / BPS
+            self.calculate_partial_redeem_amount(pending_amount, payment_amount, &min_egld_amount)
         }
     }
 
-    fn get_scoring_config(&self) -> ScoringConfig {
-        let map = self.scoring_config();
-        require!(!map.is_empty(), ERROR_SCORING_CONFIG_NOT_SET);
-        map.get()
+    fn can_perform_instant_action(
+        &self,
+        pending_amount: &BigUint,
+        payment_amount: &BigUint,
+        min_egld_amount: &BigUint,
+    ) -> bool {
+        pending_amount == payment_amount
+            || (pending_amount >= payment_amount
+                && (pending_amount - payment_amount) >= *min_egld_amount)
     }
+
+    fn can_perform_fully_redeem_pending_amount(
+        &self,
+        pending_amount: &BigUint,
+        payment_amount: &BigUint,
+        min_egld_amount: &BigUint,
+    ) -> bool {
+        payment_amount > pending_amount && (payment_amount - pending_amount) >= *min_egld_amount
+    }
+
+    fn calculate_partial_redeem_amount(
+        &self,
+        pending_amount: &BigUint,
+        payment_amount: &BigUint,
+        min_egld_amount: &BigUint,
+    ) -> (BigUint, BigUint) {
+        let possible_instant_amount =
+            self.calculate_instant_amount(payment_amount, pending_amount, min_egld_amount);
+
+        if possible_instant_amount > BigUint::zero()
+            && pending_amount >= &possible_instant_amount
+            && (pending_amount - &possible_instant_amount) >= *min_egld_amount
+        {
+            let left_over_amount = payment_amount - &possible_instant_amount;
+            (possible_instant_amount, left_over_amount)
+        } else {
+            // Fallback: full amount action
+            (BigUint::zero(), payment_amount.clone())
+        }
+    }
+    // Swap amount between pending and payment for both delegation and undelegation
 }

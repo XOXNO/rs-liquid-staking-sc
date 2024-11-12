@@ -13,71 +13,23 @@ pub trait UnDelegateUtilsModule:
     + crate::config::ConfigModule
     + crate::utils::UtilsModule
     + crate::events::EventsModule
+    + crate::score::ScoreModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
-    fn get_undelegate_amount(
+    fn process_un_delegation(
         &self,
         storage_cache: &mut StorageCache<Self>,
-        unstaked_egld: &BigUint,
-    ) -> (BigUint, BigUint) {
-        let min_egld_amount = &BigUint::from(MIN_EGLD_TO_DELEGATE);
-        if self.can_fully_instant_redeem(storage_cache, unstaked_egld, min_egld_amount) {
-            // Case 1: Full instant redemption
-            (unstaked_egld.clone(), BigUint::zero())
-        } else if self.can_fully_pending_redeem(storage_cache, unstaked_egld, min_egld_amount) {
-            // Case 2: Full pending redemption + undelegation
-            let difference = unstaked_egld - &storage_cache.pending_egld;
-            (storage_cache.pending_egld.clone(), difference)
-        } else {
-            // Case 3: Partial pending redemption + undelegation
-            self.calculate_partial_undelegate(storage_cache, unstaked_egld, min_egld_amount)
-        }
-    }
+        egld_from_pending_used: &BigUint,
+        egld_to_remove_liquidity: &BigUint,
+    ) {
+        let caller = self.blockchain().get_caller();
 
-    fn can_fully_instant_redeem(
-        &self,
-        storage_cache: &mut StorageCache<Self>,
-        unstaked_egld: &BigUint,
-        min_egld_amount: &BigUint,
-    ) -> bool {
-        unstaked_egld == &storage_cache.pending_egld
-            || (&storage_cache.pending_egld >= unstaked_egld
-                && (&storage_cache.pending_egld - unstaked_egld) >= *min_egld_amount)
-    }
+        self.process_instant_redemption(storage_cache, &caller, &egld_from_pending_used);
 
-    fn can_fully_pending_redeem(
-        &self,
-        storage_cache: &mut StorageCache<Self>,
-        total_egld: &BigUint,
-        min_egld_amount: &BigUint,
-    ) -> bool {
-        storage_cache.pending_egld > BigUint::zero()
-            && total_egld > &storage_cache.pending_egld
-            && &(total_egld - &storage_cache.pending_egld) >= min_egld_amount
-    }
+        self.undelegate_amount(storage_cache, &egld_to_remove_liquidity, &caller);
 
-    fn calculate_partial_undelegate(
-        &self,
-        storage_cache: &mut StorageCache<Self>,
-        unstaked_egld: &BigUint,
-        min_egld_amount: &BigUint,
-    ) -> (BigUint, BigUint) {
-        let possible_instant_amount = self.calculate_instant_amount(
-            unstaked_egld,
-            &storage_cache.pending_egld,
-            min_egld_amount,
-        );
-        if possible_instant_amount >= *min_egld_amount
-            && unstaked_egld >= &possible_instant_amount
-            && (unstaked_egld - &possible_instant_amount) >= *min_egld_amount
-        {
-            let undelegate_amount = unstaked_egld - &possible_instant_amount;
-            (possible_instant_amount, undelegate_amount)
-        } else {
-            // Fallback: full undelegation
-            (BigUint::zero(), unstaked_egld.clone())
-        }
+        self.emit_remove_liquidity_event(storage_cache, &egld_to_remove_liquidity);
     }
 
     fn process_instant_redemption(

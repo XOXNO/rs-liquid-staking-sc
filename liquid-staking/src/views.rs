@@ -30,34 +30,34 @@ pub trait ViewsModule:
 
     #[view(getExchangeRate)]
     fn get_exchange_rate(&self) -> BigUint {
-        let storage_cache = StorageCache::new(self);
+        let ls_token_supply = self.ls_token_supply().get();
+        let virtual_egld_reserve = self.virtual_egld_reserve().get();
         // 1 EGLD = 10^18 atomic units
         const INITIAL_EXCHANGE_RATE: u64 = 1_000_000_000_000_000_000;
 
         // When no liquidity, 1 LS token = 1 EGLD
-        if storage_cache.ls_token_supply == BigUint::zero() {
+        if ls_token_supply == BigUint::zero() {
             return BigUint::from(INITIAL_EXCHANGE_RATE);
         }
 
         // Exchange Rate = (Total EGLD in protocol / Total LS Supply) * PRECISION
         // This gives us how many atomic units of EGLD you get for 1 LS token
         // Example: If rate = 1.1 * 10^18, it means 1 LS token = 1.1 EGLD
-        &storage_cache.virtual_egld_reserve * &BigUint::from(INITIAL_EXCHANGE_RATE)
-            / &storage_cache.ls_token_supply
+        &virtual_egld_reserve * &BigUint::from(INITIAL_EXCHANGE_RATE) / &ls_token_supply
     }
 
     #[view(getDelegationContractStakedAmount)]
-    fn get_delegation_contract_staked_amount(&self, delegation_address: ManagedAddress) -> BigUint {
-        let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
+    fn get_delegation_contract_staked_amount(&self, delegation_address: &ManagedAddress) -> BigUint {
+        let delegation_contract_data = self.delegation_contract_data(delegation_address).get();
         delegation_contract_data.total_staked_from_ls_contract
     }
 
     #[view(getDelegationContractUnstakedAmount)]
     fn get_delegation_contract_unstaked_amount(
         &self,
-        delegation_address: ManagedAddress,
+        delegation_address: &ManagedAddress,
     ) -> BigUint {
-        let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
+        let delegation_contract_data = self.delegation_contract_data(delegation_address).get();
         delegation_contract_data.total_unstaked_from_ls_contract
     }
 }

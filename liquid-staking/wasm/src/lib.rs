@@ -36,6 +36,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         setUnbondPeriod => set_unbond_period
         setManagers => set_managers
         removeManager => remove_manager
+        getDelegationAddressesList => delegation_addresses_list
+        getUnDelegationAddressesList => un_delegation_addresses_list
+        getDelegationContractInfo => delegation_contract_data
+        getManagers => managers
+        getScoringConfig => scoring_config
         fees => fees
         getAccumulatorContract => accumulator_contract
         roundsPerEpoch => rounds_per_epoch
@@ -54,11 +59,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         maxDelegationAddresses => max_delegation_addresses
         maxSelectedProviders => max_selected_providers
         unbondPeriod => unbond_period
-        getDelegationAddressesList => delegation_addresses_list
-        getUnDelegationAddressesList => un_delegation_addresses_list
-        getDelegationContractInfo => delegation_contract_data
-        getManagers => managers
-        getScoringConfig => scoring_config
         delegatePending => delegate_pending
         unDelegatePending => un_delegate_pending
         withdrawPending => withdraw_pending

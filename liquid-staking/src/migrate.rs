@@ -11,6 +11,7 @@ pub trait MigrateModule:
     + crate::delegation::DelegationModule
     + crate::storage::StorageModule
     + crate::utils::UtilsModule
+    + crate::score::ScoreModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {

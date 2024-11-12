@@ -12,6 +12,7 @@ use multiversx_sc_scenario::{
 
 use liquid_staking::config::ConfigModule;
 use liquid_staking::*;
+use storage::StorageModule;
 use structs::ScoringConfig;
 
 extern crate accumulator;

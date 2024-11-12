@@ -423,7 +423,7 @@ fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
     // Try to add 1.5 EGLD when there is not enough left pending xEGLD
     // Should execute the partial pending xEGLD and the rest undelegate
     sc_setup.add_liquidity_exp17(&first_user, 15u64);
-
+    
     // Check the pending EGLD in the contract
     sc_setup.check_pending_egld_exp17(10u64);
 

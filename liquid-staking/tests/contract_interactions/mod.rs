@@ -430,10 +430,32 @@ where
         self.b_mock
             .check_egld_balance(address, &exp18(token_balance));
     }
-
+    pub fn check_user_egld_balance_exp17(&self, address: &Address, token_balance: u64) {
+        self.b_mock
+            .check_egld_balance(address, &exp17(token_balance));
+    }
     pub fn check_user_egld_balance_denominated(&self, address: &Address, token_balance: u128) {
         self.b_mock
             .check_egld_balance(address, &num_bigint::BigUint::from(token_balance));
+    }
+
+    pub fn debug_providers(&mut self) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                let providers = sc.delegation_addresses_list();
+                for provider in providers.iter() {
+                    let delegation_contract_data = sc.delegation_contract_data(&provider).get();
+                    println!("provider: {:?}", provider);
+                    println!("delegation_contract_data: {:?}", delegation_contract_data);
+                    let staked_amount = delegation_contract_data.total_staked_from_ls_contract;
+                    println!("staked_amount: {:?}",staked_amount);
+                    let unstaked_amount = delegation_contract_data.total_unstaked_from_ls_contract;
+                    if unstaked_amount > 0 {
+                        println!("unstaked_amount: {:?}", unstaked_amount);
+                    }
+                }
+            })
+            .assert_ok();
     }
 
     pub fn check_contract_storage(
@@ -496,7 +518,16 @@ where
             })
             .assert_ok();
     }
-
+    pub fn check_pending_ls_for_unstake_exp17(&mut self, pending_ls_for_unstake: u64) {
+        self.b_mock
+            .execute_query(&self.sc_wrapper, |sc| {
+                assert_eq!(
+                    sc.pending_egld_for_unstake().get(),
+                    to_managed_biguint(exp17(pending_ls_for_unstake))
+                );
+            })
+            .assert_ok();
+    }
     pub fn check_pending_ls_for_unstake_denominated(&mut self, pending_ls_for_unstake: u128) {
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {

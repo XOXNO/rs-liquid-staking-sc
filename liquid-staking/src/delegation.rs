@@ -4,7 +4,7 @@ use crate::{
         ERROR_ALREADY_WHITELISTED, ERROR_DELEGATION_CAP, ERROR_NOT_WHITELISTED,
         ERROR_ONLY_DELEGATION_ADMIN,
     },
-    proxy_delegation,
+    proxy::proxy_delegation,
     structs::{DelegationContractInfo, ScoringConfig},
     ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MAX_UN_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE,
     MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
@@ -20,6 +20,7 @@ pub trait DelegationModule:
     + crate::utils::UtilsModule
     + crate::events::EventsModule
     + crate::callback::CallbackModule
+    + crate::score::ScoreModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {

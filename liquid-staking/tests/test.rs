@@ -207,10 +207,10 @@ fn liquid_staking_multiple_operations() {
 
     sc_setup.check_user_egld_balance_denominated(
         sc_setup.sc_wrapper.address_ref(),
-        3846575342465753422u128,
+        3846575342465753423,
     );
 
-    sc_setup.check_contract_rewards_storage_denominated(3846575342465753422u128);
+    sc_setup.check_contract_rewards_storage_denominated(3846575342465753423);
 }
 
 #[test]

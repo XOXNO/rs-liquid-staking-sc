@@ -285,6 +285,55 @@ where
             .original_result()
     }
 
+    pub fn delegation_addresses_list(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getDelegationAddressesList")
+            .original_result()
+    }
+
+    pub fn un_delegation_addresses_list(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getUnDelegationAddressesList")
+            .original_result()
+    }
+
+    pub fn delegation_contract_data<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        contract_address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, DelegationContractInfo<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getDelegationContractInfo")
+            .argument(&contract_address)
+            .original_result()
+    }
+
+    pub fn managers(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getManagers")
+            .original_result()
+    }
+
+    pub fn scoring_config(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ScoringConfig> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getScoringConfig")
+            .original_result()
+    }
+
     pub fn fees(
         self,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
@@ -448,46 +497,6 @@ where
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("unbondPeriod")
-            .original_result()
-    }
-
-    pub fn delegation_addresses_list(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationAddressesList")
-            .original_result()
-    }
-
-    pub fn delegation_contract_data<
-        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
-    >(
-        self,
-        contract_address: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, DelegationContractInfo<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationContractInfo")
-            .argument(&contract_address)
-            .original_result()
-    }
-
-    pub fn managers(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getManagers")
-            .original_result()
-    }
-
-    pub fn scoring_config(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ScoringConfig> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getScoringConfig")
             .original_result()
     }
 
@@ -758,13 +767,6 @@ where
 }
 
 #[type_abi]
-#[derive(TopEncode, TopDecode, PartialEq, Eq, Copy, Clone, Debug)]
-pub enum State {
-    Inactive,
-    Active,
-}
-
-#[type_abi]
 #[derive(TopEncode)]
 pub struct ChangeLiquidityEvent<Api>
 where
@@ -813,4 +815,11 @@ pub struct ScoringConfig {
     pub max_score_per_category: u64,
     pub exponential_base: u64,
     pub apy_growth_multiplier: u64,
+}
+
+#[type_abi]
+#[derive(TopEncode, TopDecode, PartialEq, Eq, Copy, Clone, Debug)]
+pub enum State {
+    Inactive,
+    Active,
 }
