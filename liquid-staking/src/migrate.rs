@@ -1,17 +1,15 @@
+multiversx_sc::imports!();
 use crate::{StorageCache, ERROR_MIGRATION_NOT_ALLOWED, ERROR_MIGRATION_SC_NOT_SET};
 
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
 
 #[multiversx_sc::module]
 pub trait MigrateModule:
     crate::config::ConfigModule
     + crate::events::EventsModule
-    + crate::callback::CallbackModule
-    + crate::delegation::DelegationModule
     + crate::storage::StorageModule
-    + crate::utils::UtilsModule
+    + crate::utils::generic::UtilsModule
     + crate::score::ScoreModule
+    + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -83,7 +81,7 @@ pub trait MigrateModule:
     }
 
     #[only_owner]
-    #[endpoint(addMigrationScAddress)]
+    #[endpoint(setMigrationScAddress)]
     fn add_migration_sc_address(&self, address: &ManagedAddress) {
         // Double check that the caller is a smart contract
         require!(

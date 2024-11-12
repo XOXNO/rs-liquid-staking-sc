@@ -1,7 +1,7 @@
 ADDRESS=erd1qqqqqqqqqqqqqpgqc2d2z4atpxpk7xgucfkc7nrrp5ynscjrah0scsqc35
 PROXY=https://devnet-gateway.xoxno.com
 PROJECT="./output-docker/liquid-staking/liquid-staking.wasm"
-# PROJECT="./liquid-staking/output/liquid-staking.wasm"
+
 TOTAL_ROUNDS=2400
 MIN_ROUNDS=400
 ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgqyxfc4r5fmw2ljcgwxj2nuzv72y9ryvyhah0sgn5vv2

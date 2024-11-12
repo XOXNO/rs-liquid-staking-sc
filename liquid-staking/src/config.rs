@@ -1,12 +1,9 @@
-use crate::{
-    structs::State, ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_SELECTED_PROVIDERS,
-    ERROR_NOT_ACTIVE,
-};
-
 multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
-
-pub const MAX_PERCENTAGE: u64 = 100_000;
+use crate::{
+    structs::{ScoringConfig, State},
+    ERROR_MAX_CHANGED_DELEGATION_ADDRESSES, ERROR_MAX_SELECTED_PROVIDERS, ERROR_NOT_MANAGER,
+    ERROR_WEIGHTS_MUST_SUM_TO_100,
+};
 
 #[multiversx_sc::module]
 pub trait ConfigModule: crate::storage::StorageModule {
@@ -80,8 +77,8 @@ pub trait ConfigModule: crate::storage::StorageModule {
     }
 
     #[only_owner]
-    #[endpoint(setMaxDelegationAddresses)]
-    fn set_max_delegation_addresses(&self, number: usize) {
+    #[endpoint(setMaxAddresses)]
+    fn set_max_addresses(&self, number: usize) {
         require!(number >= 1, ERROR_MAX_SELECTED_PROVIDERS);
         self.max_delegation_addresses().set(number);
     }
@@ -104,7 +101,7 @@ pub trait ConfigModule: crate::storage::StorageModule {
     }
 
     #[only_owner]
-    #[endpoint(setManagers)]
+    #[endpoint(addManagers)]
     fn set_managers(&self, managers: MultiValueEncoded<ManagedAddress>) {
         self.managers().extend(managers);
     }
@@ -115,8 +112,22 @@ pub trait ConfigModule: crate::storage::StorageModule {
         self.managers().swap_remove(&manager);
     }
 
-    #[inline]
-    fn is_state_active(&self, state: State) {
-        require!(State::Active == state, ERROR_NOT_ACTIVE);
+    #[endpoint(setScoringConfig)]
+    fn set_scoring_config(&self, config: ScoringConfig) {
+        self.is_manager(&self.blockchain().get_caller(), true);
+        require!(
+            config.stake_weight + config.apy_weight + config.nodes_weight == 100,
+            ERROR_WEIGHTS_MUST_SUM_TO_100
+        );
+        self.scoring_config().set(config);
+    }
+
+    fn is_manager(&self, address: &ManagedAddress, required: bool) -> bool {
+        let owner = self.blockchain().get_owner_address();
+        let is_manager = self.managers().contains(address) || address == &owner;
+        if required && !is_manager {
+            sc_panic!(ERROR_NOT_MANAGER);
+        }
+        is_manager
     }
 }

@@ -1,5 +1,5 @@
+use constants::DELEGATION_MANAGER;
 use delegation::DelegationModule;
-use manage::DELEGATION_MANAGER;
 use multiversx_sc::{
     storage::mappers::StorageTokenWrapper,
     types::{Address, EsdtLocalRole},

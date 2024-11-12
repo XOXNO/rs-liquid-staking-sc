@@ -1,10 +1,8 @@
+multiversx_sc::imports!();
 use crate::{
     structs::{DelegationContractSelectionInfo, ScoringConfig},
-    utils::BPS,
+    BPS,
 };
-
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
 
 #[multiversx_sc::module]
 pub trait ScoreModule {
@@ -82,6 +80,7 @@ pub trait ScoreModule {
             // Multiply by max_score_per_category to get final range
             scaled_score * BigUint::from(config.max_score_per_category) / BigUint::from(BPS)
         } else {
+            // It can happen only when all selected addresses have 0 staked, very rare to happen almost impossible, due to WL requirements of 1 EGLD
             // Apply exponential scaling
             let scaled_score =
                 BigUint::from(config.max_score_per_category).pow(config.exponential_base as u32);

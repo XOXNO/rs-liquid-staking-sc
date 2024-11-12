@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           58
+// Endpoints:                           57
 // Async Callback:                       1
 // Promise callbacks:                    6
-// Total number of exported functions:  67
+// Total number of exported functions:  66
 
 #![no_std]
 
@@ -24,6 +24,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         delegate => delegate
         unDelegate => un_delegate
         withdraw => withdraw
+        getLsValueForPosition => get_ls_value_for_position
+        getEgldPositionValue => get_egld_position_value
+        getExchangeRate => get_exchange_rate
+        getDelegationContractStakedAmount => get_delegation_contract_staked_amount
+        getDelegationContractUnstakedAmount => get_delegation_contract_unstaked_amount
         registerLsToken => register_ls_token
         registerUnstakeToken => register_unstake_token
         setStateActive => set_state_active
@@ -31,11 +36,17 @@ multiversx_sc_wasm_adapter::endpoints! {
         setAccumulatorContract => set_accumulator_contract
         setFees => set_fees
         setMinimumRounds => set_minimum_rounds
-        setMaxDelegationAddresses => set_max_delegation_addresses
+        setMaxAddresses => set_max_addresses
         setMaxSelectedProviders => set_max_selected_providers
         setUnbondPeriod => set_unbond_period
-        setManagers => set_managers
+        addManagers => set_managers
         removeManager => remove_manager
+        setScoringConfig => set_scoring_config
+        delegatePending => delegate_pending
+        unDelegatePending => un_delegate_pending
+        withdrawPending => withdraw_pending
+        claimRewards => claim_rewards
+        delegateRewards => delegate_rewards
         getDelegationAddressesList => delegation_addresses_list
         getUnDelegationAddressesList => un_delegation_addresses_list
         getDelegationContractInfo => delegation_contract_data
@@ -59,26 +70,14 @@ multiversx_sc_wasm_adapter::endpoints! {
         maxDelegationAddresses => max_delegation_addresses
         maxSelectedProviders => max_selected_providers
         unbondPeriod => unbond_period
-        delegatePending => delegate_pending
-        unDelegatePending => un_delegate_pending
-        withdrawPending => withdraw_pending
-        claimRewards => claim_rewards
-        delegateRewards => delegate_rewards
         migrate => migrate
         migratePending => migrate_pending
         addRewards => add_rewards
-        addMigrationScAddress => add_migration_sc_address
+        setMigrationScAddress => add_migration_sc_address
         getMigrationScAddress => migration_sc_address
-        canExecutePendingTasks => can_execute_pending_tasks
-        getLsValueForPosition => get_ls_value_for_position
-        getEgldPositionValue => get_egld_position_value
-        getExchangeRate => get_exchange_rate
-        getDelegationContractStakedAmount => get_delegation_contract_staked_amount
-        getDelegationContractUnstakedAmount => get_delegation_contract_unstaked_amount
         whitelistDelegationContract => whitelist_delegation_contract
         changeDelegationContractAdmin => change_delegation_contract_admin
         changeDelegationContractParams => change_delegation_contract_params
-        setScoringConfig => set_scoring_config
         remove_liquidity_callback => remove_liquidity_callback
         add_liquidity_callback => add_liquidity_callback
         withdraw_tokens_callback => withdraw_tokens_callback

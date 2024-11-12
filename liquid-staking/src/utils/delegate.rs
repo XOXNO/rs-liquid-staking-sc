@@ -1,18 +1,17 @@
+multiversx_sc::imports!();
 use crate::{
     StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_PENDING_EGLD,
     ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, MIN_EGLD_TO_DELEGATE,
 };
 
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
-
 #[multiversx_sc::module]
 pub trait DelegateUtilsModule:
     crate::storage::StorageModule
     + crate::config::ConfigModule
-    + crate::utils::UtilsModule
+    + crate::utils::generic::UtilsModule
     + crate::events::EventsModule
     + crate::score::ScoreModule
+    + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -51,7 +50,11 @@ pub trait DelegateUtilsModule:
             // Send the final amount to the user, including the xEGLD from pending redemption if any and the fresh minted xEGLD if any
             self.tx().to(&caller).esdt(user_payment).transfer();
             // Emit the add liquidity event
-            self.emit_add_liquidity_event(&storage_cache, egld_to_add_liquidity, Some(caller));
+            self.emit_add_liquidity_event(
+                &storage_cache,
+                &(egld_to_add_liquidity + egld_from_pending_used),
+                Some(caller),
+            );
         }
     }
 

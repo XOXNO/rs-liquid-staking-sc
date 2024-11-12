@@ -700,7 +700,7 @@ fn full_un_delegate_test() {
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-
+    
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
@@ -806,16 +806,14 @@ fn full_over_2_first_amount_un_delegate_test() {
 
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
-    for _ in 0..60 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(5..=10);
+    for i in 0..60 {
         let contract = sc_setup.deploy_staking_contract(
             &sc_setup.owner_address.clone(),
             0,
             0,
             0, // Different caps
-            random_nodes,
-            random_apy * 100,
+            i + 2,
+            (i + 1) * 100,
         );
         delegation_contracts.push(contract);
     }

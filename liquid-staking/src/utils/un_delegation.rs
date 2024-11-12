@@ -1,19 +1,18 @@
+multiversx_sc::imports!();
 use crate::{
     structs::UnstakeTokenAttributes, StorageCache, ERROR_BAD_PAYMENT_AMOUNT,
     ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_PENDING_EGLD,
     ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, ERROR_LS_TOKEN_NOT_ISSUED, MIN_EGLD_TO_DELEGATE,
 };
 
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
-
 #[multiversx_sc::module]
 pub trait UnDelegateUtilsModule:
     crate::storage::StorageModule
     + crate::config::ConfigModule
-    + crate::utils::UtilsModule
+    + crate::utils::generic::UtilsModule
     + crate::events::EventsModule
     + crate::score::ScoreModule
+    + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -29,7 +28,10 @@ pub trait UnDelegateUtilsModule:
 
         self.undelegate_amount(storage_cache, &egld_to_remove_liquidity, &caller);
 
-        self.emit_remove_liquidity_event(storage_cache, &egld_to_remove_liquidity);
+        self.emit_remove_liquidity_event(
+            storage_cache,
+            &(egld_to_remove_liquidity + egld_from_pending_used),
+        );
     }
 
     fn process_instant_redemption(

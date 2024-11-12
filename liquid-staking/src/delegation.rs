@@ -1,3 +1,4 @@
+multiversx_sc::imports!();
 use crate::{
     callback::{CallbackModule, CallbackProxy},
     errors::{
@@ -5,22 +6,21 @@ use crate::{
         ERROR_ONLY_DELEGATION_ADMIN,
     },
     proxy::proxy_delegation,
-    structs::{DelegationContractInfo, ScoringConfig},
-    ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MAX_UN_DELEGATION_ADDRESSES, ERROR_MIN_EGLD_TO_DELEGATE,
-    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_WHITELIST_CALLBACK,
+    structs::DelegationContractInfo,
+    utils, ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MAX_UN_DELEGATION_ADDRESSES,
+    ERROR_MIN_EGLD_TO_DELEGATE, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
+    MIN_GAS_FOR_WHITELIST_CALLBACK,
 };
-
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
 
 #[multiversx_sc::module]
 pub trait DelegationModule:
     crate::config::ConfigModule
     + crate::storage::StorageModule
-    + crate::utils::UtilsModule
     + crate::events::EventsModule
     + crate::callback::CallbackModule
+    + utils::generic::UtilsModule
     + crate::score::ScoreModule
+    + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -141,15 +141,5 @@ pub trait DelegationModule:
             contract_data.apy = apy;
             contract_data.eligible = is_eligible;
         });
-    }
-
-    #[endpoint(setScoringConfig)]
-    fn set_scoring_config(&self, config: ScoringConfig) {
-        self.is_manager(&self.blockchain().get_caller(), true);
-        require!(
-            config.stake_weight + config.apy_weight + config.nodes_weight == 100,
-            "Weights must sum to 100"
-        );
-        self.scoring_config().set(config);
     }
 }

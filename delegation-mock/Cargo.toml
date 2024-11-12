@@ -1,7 +1,6 @@
 [package]
 name = "delegation-mock"
 version = "0.0.0"
-authors = ["Sorin Petreasca <sorin.petreasca@multiversx.com>"]
 edition = "2021"
 publish = false
 

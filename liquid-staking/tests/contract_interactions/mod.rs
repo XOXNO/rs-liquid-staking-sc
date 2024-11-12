@@ -91,6 +91,7 @@ where
         delegation_contract_cap: u64,
         nr_nodes: u64,
         apy: u64,
+        is_eligible: bool,
     ) {
         let rust_zero = rust_biguint!(0u64);
         let total_staked_biguint = exp18(total_staked);
@@ -104,7 +105,7 @@ where
                     to_managed_biguint(delegation_contract_cap_biguint),
                     nr_nodes,
                     apy,
-                    true,
+                    is_eligible,
                 );
             })
             .assert_ok();

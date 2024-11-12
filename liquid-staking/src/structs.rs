@@ -1,5 +1,5 @@
-multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
+multiversx_sc::imports!();
 
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]

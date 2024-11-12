@@ -43,3 +43,5 @@ pub static ERROR_MIGRATION_NOT_ALLOWED: &[u8] = b"Migration not allowed";
 pub static ERROR_NOT_MANAGER: &[u8] = b"Caller is not authorized as a manager";
 
 pub static ERROR_SCORING_CONFIG_NOT_SET: &[u8] = b"Scoring configuration not set";
+
+pub static ERROR_WEIGHTS_MUST_SUM_TO_100: &[u8] = b"Weights must sum to 100";

@@ -1,19 +1,12 @@
-use multiversx_sc::hex_literal::hex;
-
+multiversx_sc::imports!();
 use crate::{
     callback::{CallbackModule, CallbackProxy},
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     proxy::{proxy_accumulator, proxy_delegation, proxy_delegation_manager},
-    StorageCache, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
+    StorageCache, DELEGATION_MANAGER, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
     ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
     MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS, MIN_GAS_FOR_CALLBACK,
 };
-
-pub const DELEGATION_MANAGER: [u8; 32] =
-    hex!("000000000000000000010000000000000000000000000000000000000004ffff");
-
-multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
 
 #[multiversx_sc::module]
 pub trait ManageModule:
@@ -23,10 +16,19 @@ pub trait ManageModule:
     + crate::delegation::DelegationModule
     + crate::storage::StorageModule
     + crate::score::ScoreModule
-    + crate::utils::UtilsModule
+    + crate::selection::SelectionModule
+    + crate::utils::generic::UtilsModule
+    + crate::utils::delegate::DelegateUtilsModule
+    + crate::utils::un_delegation::UnDelegateUtilsModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
+    /// Delegates pending EGLD from the liquid staking contract to a list of providers,
+    /// ensuring fair distribution by allocating set amounts to multiple providers in batches.
+    ///
+    /// Arguments:
+    /// - `amount`: Optional. The specific amount to delegate; if not provided, uses the
+    ///             entire pending EGLD accumulated in the contract.
     #[endpoint(delegatePending)]
     fn delegate_pending(&self, amount: OptionalValue<BigUint>) {
         let mut storage_cache = StorageCache::new(self);
@@ -74,6 +76,13 @@ pub trait ManageModule:
 
         for data in &contracts {
             self.move_delegation_contract_to_back(&data.delegation_address);
+            // Important before delegating the amount to the new contracts, update the total staked from ls contract
+            // Reverse the amount when the callback fails
+            // Required to avoid concurrency issues when the same contract is delegated to multiple times in different transactions simultaneously, might reach the cap and throw an error if not updated
+            self.delegation_contract_data(&data.delegation_address)
+                .update(|contract_data| {
+                    contract_data.total_staked_from_ls_contract += &data.amount;
+                });
             self.tx()
                 .to(&data.delegation_address)
                 .typed(proxy_delegation::DelegationMockProxy)
@@ -90,6 +99,13 @@ pub trait ManageModule:
         self.emit_general_liquidity_event(&storage_cache);
     }
 
+    /// Un-delegates pending EGLD from multiple providers, reducing impact on individual
+    /// providers by un-delegating in small batches. This supports a balanced distribution
+    /// without penalizing any provider heavily.
+    ///
+    /// Arguments:
+    /// - `amount`: Optional. Specific amount to un-delegate; if omitted, the function
+    ///             un-delegates from pending EGLD accumulated in the contract.
     #[endpoint(unDelegatePending)]
     fn un_delegate_pending(&self, amount: OptionalValue<BigUint>) {
         let mut storage_cache = StorageCache::new(self);
@@ -137,6 +153,14 @@ pub trait ManageModule:
 
         for data in &contracts {
             self.move_un_delegation_contract_to_back(&data.delegation_address);
+            // Important before un delegating the amount from the new contracts, update the total staked from ls contract + total unstaked from ls contract
+            // Reverse the amount when the callback fails
+            // Required to avoid concurrency issues when the same contract is un delegated from multiple times in different transactions simultaneously, might try to over unstake something that was already unstaked
+            self.delegation_contract_data(&data.delegation_address)
+                .update(|contract_data| {
+                    contract_data.total_staked_from_ls_contract -= &data.amount;
+                    contract_data.total_unstaked_from_ls_contract += &data.amount;
+                });
             self.tx()
                 .to(&data.delegation_address)
                 .typed(proxy_delegation::DelegationMockProxy)
@@ -153,6 +177,12 @@ pub trait ManageModule:
         self.emit_general_liquidity_event(&storage_cache);
     }
 
+    /// Withdraws pending funds from a specified delegation contract, an essential function
+    /// to maintain liquidity for instant withdrawals when users leave the staking pool.
+    ///
+    /// Arguments:
+    /// - `contract`: Address of the delegation contract from which pending funds will
+    ///               be withdrawn.
     #[endpoint(withdrawPending)]
     fn withdraw_pending(&self, contract: ManagedAddress) {
         let storage_cache = StorageCache::new(self);
@@ -176,6 +206,10 @@ pub trait ManageModule:
             .register_promise();
     }
 
+    /// Claims accumulated staking rewards from the providers, optimizing the process
+    /// by delegating these rewards directly back into the contract to generate compounding
+    /// returns for xEGLD holders. This endpoint prevents repeated withdrawals and staking,
+    /// improving gas efficiency and yield.
     #[endpoint(claimRewards)]
     fn claim_rewards(&self) {
         let storage_cache = StorageCache::new(self);
@@ -206,6 +240,9 @@ pub trait ManageModule:
             .register_promise();
     }
 
+    /// Delegates accumulated rewards back into the liquid staking contract, contributing
+    /// to the overall pool and distributing yield to xEGLD holders by minting new xEGLD.
+    /// Ensures compounding of rewards without needing external reinvestment.
     #[endpoint(delegateRewards)]
     fn delegate_rewards(&self) {
         let mut storage_cache = StorageCache::new(self);
@@ -246,6 +283,11 @@ pub trait ManageModule:
         storage_cache.rewards_reserve = BigUint::zero();
 
         for data in &contracts {
+            self.delegation_contract_data(&data.delegation_address)
+                .update(|contract_data| {
+                    contract_data.total_staked_from_ls_contract += &data.amount;
+                });
+
             self.tx()
                 .to(&data.delegation_address)
                 .typed(proxy_delegation::DelegationMockProxy)

@@ -8,9 +8,8 @@
 
 # VSCode specific files
 .vscode/*
-elrond.workspace.json
-**/output-docker/** 
-# Elrond IDE
+output-docker/** 
+
 **/node_modules
 **/output/**
 **/testnet/**

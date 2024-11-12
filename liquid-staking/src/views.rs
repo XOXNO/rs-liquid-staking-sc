@@ -1,7 +1,5 @@
-use crate::StorageCache;
-
 multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
+use crate::StorageCache;
 
 #[multiversx_sc::module]
 
@@ -10,12 +8,6 @@ pub trait ViewsModule:
     + crate::config::ConfigModule
     + crate::liquidity_pool::LiquidityPoolModule
 {
-    #[view(canExecutePendingTasks)]
-    fn can_execute_pending_tasks(&self) -> bool {
-        // TODO: Implement once new hooks are available in the VM
-        true
-    }
-
     #[view(getLsValueForPosition)]
     fn get_ls_value_for_position(&self, ls_token_amount: BigUint) -> BigUint {
         let storage_cache = StorageCache::new(self);
@@ -47,7 +39,10 @@ pub trait ViewsModule:
     }
 
     #[view(getDelegationContractStakedAmount)]
-    fn get_delegation_contract_staked_amount(&self, delegation_address: &ManagedAddress) -> BigUint {
+    fn get_delegation_contract_staked_amount(
+        &self,
+        delegation_address: &ManagedAddress,
+    ) -> BigUint {
         let delegation_contract_data = self.delegation_contract_data(delegation_address).get();
         delegation_contract_data.total_staked_from_ls_contract
     }

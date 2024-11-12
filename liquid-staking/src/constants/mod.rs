@@ -1,0 +1,16 @@
+use multiversx_sc::hex_literal::hex;
+
+pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
+pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_500_000;
+pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
+pub const MIN_GAS_FOR_WHITELIST_CALLBACK: u64 = 20_000_000;
+pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
+
+pub const MAX_PERCENTAGE: u64 = 100_000;
+
+pub const DECIMALS: usize = 18;
+
+pub const BPS: u64 = 10_000; // 100%
+
+pub const DELEGATION_MANAGER: [u8; 32] =
+    hex!("000000000000000000010000000000000000000000000000000000000004ffff");

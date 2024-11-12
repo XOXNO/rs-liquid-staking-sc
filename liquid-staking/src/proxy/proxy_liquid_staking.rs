@@ -43,6 +43,17 @@ where
     From: TxFrom<Env>,
     Gas: TxGas<Env>,
 {
+    /// Initializes the Liquid Staking contract with essential parameters, setting up 
+    /// the structure for fair delegation distribution across multiple providers. 
+    ///  
+    /// Arguments: 
+    /// - `accumulator_contract`: Address of the accumulator contract used for tracking the total EGLD stake. 
+    /// - `fees`: Fee structure applicable on staking activities. 
+    /// - `rounds_per_epoch`: Defines the staking epoch's duration in rounds. 
+    /// - `minimum_rounds`: Minimum required rounds for staking cycle. 
+    /// - `max_selected_providers`: Maximum number of staking providers chosen daily. 
+    /// - `max_delegation_addresses`: Sets a cap on the number of delegation addresses. 
+    /// - `unbond_period`: Duration, in epochs, required for unbonding of stakes. 
     pub fn init<
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
         Arg1: ProxyArg<BigUint<Env::Api>>,
@@ -103,6 +114,12 @@ where
     To: TxTo<Env>,
     Gas: TxGas<Env>,
 {
+    /// Delegates EGLD to the staking pool by minting xEGLD tokens for the user, 
+    /// while pending delegation funds accumulate for batch processing. 
+    ///  
+    /// Note: No immediate delegation occurs; instead, funds are held and distributed 
+    /// at set intervals across providers for efficient decentralization. 
+    /// Transaction value is used as the staked amount. 
     pub fn delegate(
         self,
     ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
@@ -111,6 +128,9 @@ where
             .original_result()
     }
 
+    /// Initiates the un-delegation process, enabling users to withdraw their stake. 
+    /// Depending on the available pending EGLD in the contract, users can receive 
+    /// an instant return without fees or enter a 10-day unbonding period. 
     pub fn un_delegate(
         self,
     ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
@@ -119,11 +139,75 @@ where
             .original_result()
     }
 
+    /// Withdraws funds once the un-delegation process is complete. If the unbonding period 
+    /// has passed, users can claim their EGLD. This endpoint ensures all conditions for 
+    /// unbonding are met before allowing withdrawals. 
     pub fn withdraw(
         self,
     ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
         self.wrapped_tx
             .raw_call("withdraw")
+            .original_result()
+    }
+
+    pub fn get_ls_value_for_position<
+        Arg0: ProxyArg<BigUint<Env::Api>>,
+    >(
+        self,
+        ls_token_amount: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getLsValueForPosition")
+            .argument(&ls_token_amount)
+            .original_result()
+    }
+
+    pub fn get_egld_position_value<
+        Arg0: ProxyArg<BigUint<Env::Api>>,
+    >(
+        self,
+        egld_amount: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getEgldPositionValue")
+            .argument(&egld_amount)
+            .original_result()
+    }
+
+    pub fn get_exchange_rate(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getExchangeRate")
+            .original_result()
+    }
+
+    pub fn get_delegation_contract_staked_amount<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        delegation_address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getDelegationContractStakedAmount")
+            .argument(&delegation_address)
+            .original_result()
+    }
+
+    pub fn get_delegation_contract_unstaked_amount<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        delegation_address: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getDelegationContractUnstakedAmount")
+            .argument(&delegation_address)
             .original_result()
     }
 
@@ -220,7 +304,7 @@ where
             .original_result()
     }
 
-    pub fn set_max_delegation_addresses<
+    pub fn set_max_addresses<
         Arg0: ProxyArg<usize>,
     >(
         self,
@@ -228,7 +312,7 @@ where
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("setMaxDelegationAddresses")
+            .raw_call("setMaxAddresses")
             .argument(&number)
             .original_result()
     }
@@ -267,7 +351,7 @@ where
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("setManagers")
+            .raw_call("addManagers")
             .argument(&managers)
             .original_result()
     }
@@ -282,6 +366,102 @@ where
             .payment(NotPayable)
             .raw_call("removeManager")
             .argument(&manager)
+            .original_result()
+    }
+
+    pub fn set_scoring_config<
+        Arg0: ProxyArg<ScoringConfig>,
+    >(
+        self,
+        config: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("setScoringConfig")
+            .argument(&config)
+            .original_result()
+    }
+
+    /// Delegates pending EGLD from the liquid staking contract to a list of providers, 
+    /// ensuring fair distribution by allocating set amounts to multiple providers in batches. 
+    ///  
+    /// Arguments: 
+    /// - `amount`: Optional. The specific amount to delegate; if not provided, uses the 
+    ///             entire pending EGLD accumulated in the contract. 
+    pub fn delegate_pending<
+        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
+    >(
+        self,
+        amount: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("delegatePending")
+            .argument(&amount)
+            .original_result()
+    }
+
+    /// Un-delegates pending EGLD from multiple providers, reducing impact on individual 
+    /// providers by un-delegating in small batches. This supports a balanced distribution 
+    /// without penalizing any provider heavily. 
+    ///  
+    /// Arguments: 
+    /// - `amount`: Optional. Specific amount to un-delegate; if omitted, the function 
+    ///             un-delegates from pending EGLD accumulated in the contract. 
+    pub fn un_delegate_pending<
+        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
+    >(
+        self,
+        amount: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("unDelegatePending")
+            .argument(&amount)
+            .original_result()
+    }
+
+    /// Withdraws pending funds from a specified delegation contract, an essential function 
+    /// to maintain liquidity for instant withdrawals when users leave the staking pool. 
+    ///  
+    /// Arguments: 
+    /// - `contract`: Address of the delegation contract from which pending funds will 
+    ///               be withdrawn. 
+    pub fn withdraw_pending<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        contract: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("withdrawPending")
+            .argument(&contract)
+            .original_result()
+    }
+
+    /// Claims accumulated staking rewards from the providers, optimizing the process 
+    /// by delegating these rewards directly back into the contract to generate compounding 
+    /// returns for xEGLD holders. This endpoint prevents repeated withdrawals and staking, 
+    /// improving gas efficiency and yield. 
+    pub fn claim_rewards(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("claimRewards")
+            .original_result()
+    }
+
+    /// Delegates accumulated rewards back into the liquid staking contract, contributing 
+    /// to the overall pool and distributing yield to xEGLD holders by minting new xEGLD. 
+    /// Ensures compounding of rewards without needing external reinvestment. 
+    pub fn delegate_rewards(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("delegateRewards")
             .original_result()
     }
 
@@ -500,63 +680,6 @@ where
             .original_result()
     }
 
-    pub fn delegate_pending<
-        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
-    >(
-        self,
-        amount: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("delegatePending")
-            .argument(&amount)
-            .original_result()
-    }
-
-    pub fn un_delegate_pending<
-        Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
-    >(
-        self,
-        amount: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("unDelegatePending")
-            .argument(&amount)
-            .original_result()
-    }
-
-    pub fn withdraw_pending<
-        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
-    >(
-        self,
-        contract: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("withdrawPending")
-            .argument(&contract)
-            .original_result()
-    }
-
-    pub fn claim_rewards(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("claimRewards")
-            .original_result()
-    }
-
-    pub fn delegate_rewards(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("delegateRewards")
-            .original_result()
-    }
-
     pub fn migrate<
         Arg0: ProxyArg<BigUint<Env::Api>>,
         Arg1: ProxyArg<ManagedAddress<Env::Api>>,
@@ -597,7 +720,7 @@ where
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("addMigrationScAddress")
+            .raw_call("setMigrationScAddress")
             .argument(&address)
             .original_result()
     }
@@ -608,76 +731,6 @@ where
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("getMigrationScAddress")
-            .original_result()
-    }
-
-    pub fn can_execute_pending_tasks(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, bool> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("canExecutePendingTasks")
-            .original_result()
-    }
-
-    pub fn get_ls_value_for_position<
-        Arg0: ProxyArg<BigUint<Env::Api>>,
-    >(
-        self,
-        ls_token_amount: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getLsValueForPosition")
-            .argument(&ls_token_amount)
-            .original_result()
-    }
-
-    pub fn get_egld_position_value<
-        Arg0: ProxyArg<BigUint<Env::Api>>,
-    >(
-        self,
-        egld_amount: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getEgldPositionValue")
-            .argument(&egld_amount)
-            .original_result()
-    }
-
-    pub fn get_exchange_rate(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getExchangeRate")
-            .original_result()
-    }
-
-    pub fn get_delegation_contract_staked_amount<
-        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
-    >(
-        self,
-        delegation_address: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationContractStakedAmount")
-            .argument(&delegation_address)
-            .original_result()
-    }
-
-    pub fn get_delegation_contract_unstaked_amount<
-        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
-    >(
-        self,
-        delegation_address: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("getDelegationContractUnstakedAmount")
-            .argument(&delegation_address)
             .original_result()
     }
 
@@ -751,19 +804,21 @@ where
             .argument(&is_eligible)
             .original_result()
     }
+}
 
-    pub fn set_scoring_config<
-        Arg0: ProxyArg<ScoringConfig>,
-    >(
-        self,
-        config: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("setScoringConfig")
-            .argument(&config)
-            .original_result()
-    }
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
+pub struct ScoringConfig {
+    pub min_nodes: u64,
+    pub max_nodes: u64,
+    pub min_apy: u64,
+    pub max_apy: u64,
+    pub stake_weight: u64,
+    pub apy_weight: u64,
+    pub nodes_weight: u64,
+    pub max_score_per_category: u64,
+    pub exponential_base: u64,
+    pub apy_growth_multiplier: u64,
 }
 
 #[type_abi]
@@ -800,21 +855,6 @@ where
     pub total_staked_from_ls_contract: BigUint<Api>,
     pub total_unstaked_from_ls_contract: BigUint<Api>,
     pub eligible: bool,
-}
-
-#[type_abi]
-#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
-pub struct ScoringConfig {
-    pub min_nodes: u64,
-    pub max_nodes: u64,
-    pub min_apy: u64,
-    pub max_apy: u64,
-    pub stake_weight: u64,
-    pub apy_weight: u64,
-    pub nodes_weight: u64,
-    pub max_score_per_category: u64,
-    pub exponential_base: u64,
-    pub apy_growth_multiplier: u64,
 }
 
 #[type_abi]

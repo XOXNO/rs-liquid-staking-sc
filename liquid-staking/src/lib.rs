@@ -1,59 +1,63 @@
 #![no_std]
 
-multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-
-pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
-pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_500_000;
-pub const MIN_GAS_FOR_CALLBACK: u64 = 6_000_000;
-pub const MIN_GAS_FOR_WHITELIST_CALLBACK: u64 = 20_000_000;
-pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
+multiversx_sc::imports!();
 
 pub mod callback;
 pub mod config;
+pub mod constants;
+pub mod contexts;
 pub mod delegation;
 pub mod errors;
+pub mod events;
+pub mod liquidity_pool;
 pub mod manage;
+pub mod migrate;
 pub mod proxy;
+pub mod score;
+pub mod selection;
 pub mod storage;
 pub mod structs;
 pub mod utils;
-pub mod utils_delegation;
-pub mod utils_un_delegation;
 pub mod views;
-pub mod score;
 
-pub mod migrate;
-
-mod contexts;
-mod events;
-mod liquidity_pool;
-
-use crate::errors::*;
-
+use constants::*;
 use contexts::base::*;
+use errors::*;
 use structs::{State, UnstakeTokenAttributes};
 
 #[multiversx_sc::contract]
 pub trait LiquidStaking<ContractReader>:
-    liquidity_pool::LiquidityPoolModule
+    score::ScoreModule
+    + views::ViewsModule
     + config::ConfigModule
     + events::EventsModule
-    + utils::UtilsModule
-    + storage::StorageModule
     + manage::ManageModule
-    + score::ScoreModule
+    + storage::StorageModule
     + migrate::MigrateModule
-    + views::ViewsModule
-    + utils_delegation::DelegateUtilsModule
-    + utils_un_delegation::UnDelegateUtilsModule
-    + delegation::DelegationModule
     + callback::CallbackModule
+    + selection::SelectionModule
+    + utils::generic::UtilsModule
+    + delegation::DelegationModule
+    + liquidity_pool::LiquidityPoolModule
+    + utils::delegate::DelegateUtilsModule
+    + utils::un_delegation::UnDelegateUtilsModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[upgrade]
     fn upgrade(&self) {}
 
+    /// Initializes the Liquid Staking contract with essential parameters, setting up
+    /// the structure for fair delegation distribution across multiple providers.
+    ///
+    /// Arguments:
+    /// - `accumulator_contract`: Address of the accumulator contract used for tracking the total EGLD stake.
+    /// - `fees`: Fee structure applicable on staking activities.
+    /// - `rounds_per_epoch`: Defines the staking epoch's duration in rounds.
+    /// - `minimum_rounds`: Minimum required rounds for staking cycle.
+    /// - `max_selected_providers`: Maximum number of staking providers chosen daily.
+    /// - `max_delegation_addresses`: Sets a cap on the number of delegation addresses.
+    /// - `unbond_period`: Duration, in epochs, required for unbonding of stakes.
     #[init]
     fn init(
         &self,
@@ -88,6 +92,12 @@ pub trait LiquidStaking<ContractReader>:
         self.minimum_rounds().set(minimum_rounds);
     }
 
+    /// Delegates EGLD to the staking pool by minting xEGLD tokens for the user,
+    /// while pending delegation funds accumulate for batch processing.
+    ///
+    /// Note: No immediate delegation occurs; instead, funds are held and distributed
+    /// at set intervals across providers for efficient decentralization.
+    /// Transaction value is used as the staked amount.
     #[payable("EGLD")]
     #[endpoint(delegate)]
     fn delegate(&self) {
@@ -103,6 +113,9 @@ pub trait LiquidStaking<ContractReader>:
         self.process_delegation(&mut storage_cache, &pending, &extra);
     }
 
+    /// Initiates the un-delegation process, enabling users to withdraw their stake.
+    /// Depending on the available pending EGLD in the contract, users can receive
+    /// an instant return without fees or enter a 10-day unbonding period.
     #[payable("*")]
     #[endpoint(unDelegate)]
     fn un_delegate(&self) {
@@ -121,6 +134,9 @@ pub trait LiquidStaking<ContractReader>:
         self.process_un_delegation(&mut storage_cache, &instant, &undelegate);
     }
 
+    /// Withdraws funds once the un-delegation process is complete. If the unbonding period
+    /// has passed, users can claim their EGLD. This endpoint ensures all conditions for
+    /// unbonding are met before allowing withdrawals.
     #[payable("*")]
     #[endpoint(withdraw)]
     fn withdraw(&self) {

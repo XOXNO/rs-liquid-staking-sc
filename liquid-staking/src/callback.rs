@@ -1,15 +1,14 @@
-use crate::StorageCache;
-
 multiversx_sc::imports!();
-multiversx_sc::derive_imports!();
+use crate::{utils, StorageCache};
 
 #[multiversx_sc::module]
 pub trait CallbackModule:
     crate::config::ConfigModule
     + crate::events::EventsModule
     + crate::storage::StorageModule
-    + crate::utils::UtilsModule
     + crate::score::ScoreModule
+    + utils::generic::UtilsModule
+    + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
@@ -23,15 +22,15 @@ pub trait CallbackModule:
         let mut storage_cache = StorageCache::new(self);
         match result {
             ManagedAsyncCallResult::Ok(()) => {
-                self.delegation_contract_data(&delegation_contract)
-                    .update(|contract_data| {
-                        contract_data.total_staked_from_ls_contract -= egld_to_unstake;
-                        contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
-                    });
                 storage_cache.pending_egld_for_unbond += egld_to_unstake;
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld_for_unstake += egld_to_unstake;
+                self.delegation_contract_data(&delegation_contract)
+                    .update(|contract_data| {
+                        contract_data.total_staked_from_ls_contract += egld_to_unstake;
+                        contract_data.total_unstaked_from_ls_contract -= egld_to_unstake;
+                    });
             }
         }
         self.emit_general_liquidity_event(&storage_cache);
@@ -46,20 +45,16 @@ pub trait CallbackModule:
     ) {
         let mut storage_cache = StorageCache::new(self);
         match result {
-            ManagedAsyncCallResult::Ok(()) => {
-                self.delegation_contract_data(delegation_contract)
-                    .update(|contract_data| {
-                        contract_data.total_staked_from_ls_contract += staked_tokens;
-                    });
-            }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld += staked_tokens;
-                self.emit_general_liquidity_event(&storage_cache);
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
                         contract_data.eligible = false;
+                        contract_data.total_staked_from_ls_contract -= staked_tokens;
                     });
+                self.emit_general_liquidity_event(&storage_cache);
             }
+            _ => {}
         }
     }
 
@@ -91,7 +86,7 @@ pub trait CallbackModule:
                     self.emit_claim_rewards_event(&storage_cache, &total_rewards);
                 }
             }
-            ManagedAsyncCallResult::Err(_) => {}
+            _ => {}
         }
     }
 
@@ -105,11 +100,6 @@ pub trait CallbackModule:
         let mut storage_cache = StorageCache::new(self);
         match result {
             ManagedAsyncCallResult::Ok(()) => {
-                self.delegation_contract_data(&delegation_contract)
-                    .update(|contract_data| {
-                        contract_data.total_staked_from_ls_contract += staked_tokens;
-                    });
-
                 storage_cache.virtual_egld_reserve += staked_tokens;
                 self.emit_delegate_rewards_event(
                     &storage_cache,
@@ -125,6 +115,7 @@ pub trait CallbackModule:
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
                         contract_data.eligible = false;
+                        contract_data.total_staked_from_ls_contract -= staked_tokens;
                     });
 
                 self.emit_general_liquidity_event(&storage_cache);
