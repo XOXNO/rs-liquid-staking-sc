@@ -188,7 +188,6 @@ fn liquid_staking_multiple_operations() {
 
     sc_setup.add_liquidity(&third_user, 600u64);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-    sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     // sc_setup.check_delegation_contract_values(&delegation_contract1, 275u64, 0u64);
     // sc_setup.check_delegation_contract_values_denominated(

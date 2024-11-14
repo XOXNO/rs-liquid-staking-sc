@@ -3,7 +3,7 @@ use crate::{
     structs::{
         DelegationContractInfo, DelegationContractSelectionInfo, DelegatorSelection, ScoringConfig,
     },
-    StorageCache, DECIMALS, ERROR_BAD_DELEGATION_ADDRESS, ERROR_FAILED_TO_DISTRIBUTE,
+    StorageCache, DECIMALS, ERROR_BAD_DELEGATION_ADDRESS,
     ERROR_NO_DELEGATION_CONTRACTS, ERROR_SCORING_CONFIG_NOT_SET, MIN_EGLD_TO_DELEGATE,
 };
 
@@ -138,32 +138,45 @@ pub trait SelectionModule:
         let mut selected_providers = ManagedVec::new();
         let mut total_stake = BigUint::zero();
         let mut remaining = amount.clone();
-        let max_providers = self.max_selected_providers().get().to_u64().unwrap() as usize;
+        let hard_max_providers = self.max_selected_providers().get();
+        let max_providers = self.calculate_max_providers(amount, min_egld, map_list.len());
+
+        let amount_per_all_providers = amount / &hard_max_providers;
+
+        let average_amount_per_provider =
+            (amount / &BigUint::from(max_providers as u64) + amount_per_all_providers) / 2u64;
 
         for address in map_list.iter() {
-            // Check both max providers and remaining amount
-            if remaining == BigUint::zero() || selected_providers.len() >= max_providers {
+            let providers_len = selected_providers.len();
+            // Check hard max providers
+            if providers_len >= hard_max_providers.to_u64().unwrap() as usize {
+                break;
+            }
+
+            // Check max providers and remaining amount
+            if providers_len >= max_providers && remaining == BigUint::zero() {
                 break;
             }
 
             let contract_data = self.delegation_contract_data(&address).get();
             let staked = &contract_data.total_staked_from_ls_contract;
 
-            if staked >= &remaining || staked >= min_egld {
-                let amount_to_take = if staked > &(min_egld.clone() * 2u64) {
-                    staked - min_egld // Leave min_egld to avoid dust
-                } else {
-                    staked.clone() // Take all if small amount
-                };
+            let amount_to_take = if staked >= &average_amount_per_provider {
+                average_amount_per_provider.clone()
+            } else if staked > &(min_egld.clone() * 2u64) {
+                staked - min_egld // Leave min_egld to avoid dust
+            } else {
+                staked.clone() // Take all if small amount
+            };
 
-                if amount_to_take > BigUint::zero() {
-                    total_stake += staked;
-                    selected_providers.push(self.create_selection_info(&address, &contract_data));
+            if amount_to_take > BigUint::zero() {
+                total_stake += staked;
+                selected_providers.push(self.create_selection_info(&address, &contract_data));
 
-                    if staked >= &remaining {
-                        break;
-                    }
+                if remaining > amount_to_take {
                     remaining -= amount_to_take;
+                } else {
+                    remaining = BigUint::zero();
                 }
             }
         }
@@ -212,37 +225,37 @@ pub trait SelectionModule:
         );
 
         // Distribute based on scores
-        for info in selected_addresses.iter() {
-            if remaining_amount < *min_egld {
-                break;
-            }
-
+        for i in 0..selected_addresses.len() {
+            let info = selected_addresses.get(i);
             let amount_to_delegate = self.calculate_provider_amount(
                 &info,
                 amount,
                 &remaining_amount,
                 &total_score,
                 is_delegate,
+                min_egld,
             );
 
             if amount_to_delegate >= *min_egld {
+                remaining_amount -= &amount_to_delegate;
                 result.push(DelegatorSelection::new(
                     info.address.clone(),
                     amount_to_delegate.clone(),
                     if is_delegate {
-                        info.space_left.clone()
+                        if let Some(space_left) = info.space_left.clone() {
+                            Some(space_left - amount_to_delegate) // Decrease space left
+                        } else {
+                            None // Unlimited provider
+                        }
                     } else {
-                        Some(info.total_staked_from_ls_contract.clone())
+                        Some(info.total_staked_from_ls_contract.clone() - amount_to_delegate)
                     },
                 ));
-                remaining_amount -= amount_to_delegate;
             }
         }
-
         self.handle_remaining_amount(
             &mut result,
-            remaining_amount,
-            min_egld,
+            &mut remaining_amount,
             is_delegate,
             storage_cache,
         );
@@ -257,7 +270,10 @@ pub trait SelectionModule:
         remaining_amount: &BigUint,
         total_score: &BigUint,
         is_delegate: bool,
+        min_egld: &BigUint,
     ) -> BigUint {
+        // Calculate the initial proportion based on the provider's score
+
         let proportion = if total_score > &BigUint::zero() {
             (&info.score * total_amount) / total_score
         } else {
@@ -265,80 +281,99 @@ pub trait SelectionModule:
         };
 
         if is_delegate {
+            // For delegation, ensure we don't exceed the provider's space left
             match &info.space_left {
-                Some(space_left) => proportion.min(space_left.clone()),
-                None => proportion,
+                Some(space_left) => proportion
+                    .min(space_left.clone())
+                    .min(remaining_amount.clone()),
+                None => proportion.min(remaining_amount.clone()),
             }
         } else {
-            proportion.min(info.total_staked_from_ls_contract.clone())
+            // For undelegation
+            let available_amount = info.total_staked_from_ls_contract.clone();
+            let amount_we_can_take = proportion
+                .min(available_amount.clone())
+                .min(remaining_amount.clone())
+                .max(min_egld.clone());
+            // Check if taking this amount would leave dust
+            if &available_amount - &amount_we_can_take < *min_egld {
+                // If we can take the entire available amount without exceeding remaining_amount
+                if &available_amount <= remaining_amount {
+                    // Take the entire amount
+                    available_amount
+                } else {
+                    // We can't take the entire amount, so check if we can take an amount that doesn't leave dust
+                    if &available_amount - remaining_amount < *min_egld {
+                        // Taking remaining_amount would leave dust, so we skip this provider
+                        BigUint::zero()
+                    } else {
+                        // Take as much as possible without leaving dust
+                        remaining_amount.clone()
+                    }
+                }
+            } else {
+                // Taking amount_we_can_take doesn't leave dust, proceed
+                // In rare cases, the result will be under 1 EGLD but the provider will be skipped and the remaining amount will try to be re distributed
+                // Can happens when all providers are very low on delegations from LS contract
+                amount_we_can_take.min(remaining_amount.clone())
+            }
         }
     }
 
     fn handle_remaining_amount(
         &self,
-        result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
-        remaining_amount: BigUint,
-        min_egld: &BigUint,
+        providers: &mut ManagedVec<DelegatorSelection<Self::Api>>,
+        remaining_amount: &mut BigUint,
         is_delegate: bool,
         storage_cache: &mut StorageCache<Self>,
     ) {
-        if remaining_amount > BigUint::zero() {
-            if remaining_amount >= *min_egld {
-                if is_delegate {
-                    storage_cache.pending_egld += remaining_amount;
-                } else {
-                    storage_cache.pending_egld_for_unstake += remaining_amount;
+        if *remaining_amount == BigUint::zero() {
+            return;
+        }
+
+        for i in 0..providers.len() {
+            // For undelegation we always have a Some() for space_left
+            if !is_delegate {
+                let provider = providers.get(i);
+                let space_left = provider.space_left.clone().unwrap();
+                // Either take the remaining amount or the space left (which can be 0)
+                let can_use = space_left.min(remaining_amount.clone());
+                if can_use > BigUint::zero() {
+                    self.update_provider_amount(providers, i, &provider, &can_use);
+                    *remaining_amount -= can_use;
                 }
             } else {
-                let distributed =
-                    self.try_distribute_dust(result, &remaining_amount, min_egld, is_delegate);
-                require!(distributed, ERROR_FAILED_TO_DISTRIBUTE);
+                // For delegation we don't have a space left
+                let provider = providers.get(i);
+                // For not capped providers we can fill the remaining amount with no problem
+                if provider.space_left.is_none() {
+                    self.update_provider_amount(providers, i, &provider, &remaining_amount);
+                    *remaining_amount = BigUint::zero();
+                } else {
+                    // For capped providers we need to check if the remaining amount fits in the space left
+                    let space_left = provider.space_left.clone().unwrap();
+                    let can_use = space_left.min(remaining_amount.clone());
+                    if can_use > BigUint::zero() {
+                        self.update_provider_amount(providers, i, &provider, &can_use);
+                        *remaining_amount -= can_use;
+                    }
+                }
+            }
+
+            if *remaining_amount == BigUint::zero() {
+                break;
             }
         }
-    }
 
-    fn try_distribute_dust(
-        &self,
-        result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
-        remaining_amount: &BigUint,
-        min_egld: &BigUint,
-        is_delegate: bool,
-    ) -> bool {
-        for i in 0..result.len() {
-            let selection = result.get(i);
-
-            if self.can_add_remaining_to_provider(
-                &selection,
-                remaining_amount,
-                min_egld,
-                is_delegate,
-            ) {
-                self.update_provider_amount(result, i, &selection, remaining_amount);
-                return true;
+        // In case of super big undelegation, we need to add the remaining amount to pending in case is not fitting the top 20 providers selection batch
+        // The next batch will take the pending amount if is over 1 EGLD
+        // In very edge cases, the remaining amount can be under 1 EGLD when the providers are very low on delegations from LS contract
+        if *remaining_amount > BigUint::zero() {
+            if is_delegate {
+                storage_cache.pending_egld += remaining_amount.clone();
+            } else {
+                storage_cache.pending_egld_for_unstake += remaining_amount.clone();
             }
-        }
-        false
-    }
-
-    fn can_add_remaining_to_provider(
-        &self,
-        selection: &DelegatorSelection<Self::Api>,
-        remaining_amount: &BigUint,
-        min_egld: &BigUint,
-        is_delegate: bool,
-    ) -> bool {
-        let new_amount = selection.amount.clone() + remaining_amount;
-
-        if is_delegate {
-            selection.space_left.is_none()
-                || (selection.space_left.is_some()
-                    && new_amount <= selection.space_left.clone().unwrap())
-        } else {
-            // For undelegation, we can use the space_left field which contains total_staked_from_ls_contract
-            let current_staked = selection.space_left.clone().unwrap_or_default();
-            &new_amount <= &current_staked
-                && (&current_staked - &new_amount == BigUint::zero()
-                    || &current_staked - &new_amount >= *min_egld)
         }
     }
 
@@ -347,9 +382,9 @@ pub trait SelectionModule:
         result: &mut ManagedVec<DelegatorSelection<Self::Api>>,
         index: usize,
         selection: &DelegatorSelection<Self::Api>,
-        remaining_amount: &BigUint,
+        extra_fill_amount: &BigUint,
     ) {
-        let new_amount = selection.amount.clone() + remaining_amount;
+        let new_amount = selection.amount.clone() + extra_fill_amount;
         let _ = result.set(
             index,
             DelegatorSelection::new(

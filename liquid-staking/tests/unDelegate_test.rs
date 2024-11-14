@@ -673,15 +673,15 @@ fn full_un_delegate_test() {
     // Deploy 60 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        // let random_nodes = rand::thread_rng().gen_range(1..=100);
-        // let random_apy = rand::thread_rng().gen_range(5..=10);
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &sc_setup.owner_address.clone(),
             0,
             0,
             0, // Different caps
-            4,
-            5000,
+            random_nodes,
+            random_apy,
         );
         delegation_contracts.push(contract);
     }
@@ -701,8 +701,6 @@ fn full_un_delegate_test() {
 
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
     
-    sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
-
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
     sc_setup.check_pending_ls_for_unstake_denominated(0);
@@ -768,14 +766,14 @@ fn full_small_first_amount_un_delegate_test() {
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
         let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(5..=10);
+        let random_apy = rand::thread_rng().gen_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &sc_setup.owner_address.clone(),
             0,
             0,
             0, // Different caps
             random_nodes,
-            random_apy * 100,
+            random_apy,
         );
         delegation_contracts.push(contract);
     }
@@ -797,6 +795,7 @@ fn full_small_first_amount_un_delegate_test() {
 
     sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 10);
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+    sc_setup.check_pending_ls_for_unstake_denominated(0);
 }
 
 #[test]
@@ -806,23 +805,36 @@ fn full_over_2_first_amount_un_delegate_test() {
 
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
-    for i in 0..60 {
+    for _ in 0..60 {
+
+        let random_nodes = rand::thread_rng().gen_range(1..=100);
+        let random_apy = rand::thread_rng().gen_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &sc_setup.owner_address.clone(),
             0,
             0,
             0, // Different caps
-            i + 2,
-            (i + 1) * 100,
+            random_nodes,
+            random_apy,
         );
         delegation_contracts.push(contract);
     }
 
     // Add large amount of liquidity
     let first_user = sc_setup.setup_new_user(20);
-    sc_setup.add_liquidity_exp17(&first_user, 25);
+    sc_setup.add_liquidity_exp17(&first_user, 21);
     sc_setup.delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
 
-    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 25);
+    sc_setup.remove_liquidity_exp17(&first_user, LS_TOKEN_ID, 21);
     sc_setup.un_delegate_pending(&sc_setup.owner_address.clone(), OptionalValue::None);
+
+    sc_setup.check_user_nft_balance_denominated(
+        &first_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        exp17(21),
+        Some(&UnstakeTokenAttributes::new(0, 10)),
+    );
+
+    sc_setup.check_pending_ls_for_unstake_denominated(0);
 }
