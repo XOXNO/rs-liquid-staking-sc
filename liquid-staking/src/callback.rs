@@ -23,13 +23,18 @@ pub trait CallbackModule:
         match result {
             ManagedAsyncCallResult::Ok(()) => {
                 storage_cache.pending_egld_for_unbond += egld_to_unstake;
+                self.delegation_contract_data(&delegation_contract)
+                    .update(|contract_data| {
+                        contract_data.total_staked_from_ls_contract -= egld_to_unstake;
+                        contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
+                        contract_data.pending_unstaking_callback_amount -= egld_to_unstake;
+                    });
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld_for_unstake += egld_to_unstake;
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
-                        contract_data.total_staked_from_ls_contract += egld_to_unstake;
-                        contract_data.total_unstaked_from_ls_contract -= egld_to_unstake;
+                        contract_data.pending_unstaking_callback_amount -= egld_to_unstake;
                     });
             }
         }
@@ -45,16 +50,22 @@ pub trait CallbackModule:
     ) {
         let mut storage_cache = StorageCache::new(self);
         match result {
+            ManagedAsyncCallResult::Ok(()) => {
+                self.delegation_contract_data(&delegation_contract)
+                    .update(|contract_data| {
+                        contract_data.total_staked_from_ls_contract += staked_tokens;
+                        contract_data.pending_staking_callback_amount -= staked_tokens;
+                    });
+            }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld += staked_tokens;
                 self.delegation_contract_data(&delegation_contract)
                     .update(|contract_data| {
                         contract_data.eligible = false;
-                        contract_data.total_staked_from_ls_contract -= staked_tokens;
+                        contract_data.pending_staking_callback_amount -= staked_tokens;
                     });
                 self.emit_general_liquidity_event(&storage_cache);
             }
-            _ => {}
         }
     }
 
@@ -81,45 +92,19 @@ pub trait CallbackModule:
             ManagedAsyncCallResult::Ok(total_rewards) => {
                 if total_rewards > BigUint::zero() {
                     let mut storage_cache = StorageCache::new(self);
+                    let fees = self.calculate_share(&total_rewards, &self.fees().get());
 
-                    storage_cache.rewards_reserve += &total_rewards;
+                    let post_fees_amount = &total_rewards - &fees;
+
+                    storage_cache.fees_reserve += &fees;
+                    storage_cache.pending_egld += &post_fees_amount;
+                    storage_cache.virtual_egld_reserve += &post_fees_amount;
+
                     self.emit_claim_rewards_event(&storage_cache, &total_rewards);
+                    self.protocol_revenue_event(&fees, self.blockchain().get_block_epoch());
                 }
             }
             _ => {}
-        }
-    }
-
-    #[promises_callback]
-    fn delegate_rewards_callback(
-        &self,
-        delegation_contract: &ManagedAddress,
-        staked_tokens: &BigUint,
-        #[call_result] result: ManagedAsyncCallResult<()>,
-    ) {
-        let mut storage_cache = StorageCache::new(self);
-        match result {
-            ManagedAsyncCallResult::Ok(()) => {
-                storage_cache.virtual_egld_reserve += staked_tokens;
-                self.emit_delegate_rewards_event(
-                    &storage_cache,
-                    staked_tokens,
-                    delegation_contract,
-                );
-            }
-            ManagedAsyncCallResult::Err(_) => {
-                // Revert the deduction made in the parent function
-                storage_cache.rewards_reserve += staked_tokens;
-
-                self.move_delegation_contract_to_back(&delegation_contract);
-                self.delegation_contract_data(&delegation_contract)
-                    .update(|contract_data| {
-                        contract_data.eligible = false;
-                        contract_data.total_staked_from_ls_contract -= staked_tokens;
-                    });
-
-                self.emit_general_liquidity_event(&storage_cache);
-            }
         }
     }
 

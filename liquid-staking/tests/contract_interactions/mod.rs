@@ -248,24 +248,6 @@ where
             .assert_error(4, bytes_to_str(error));
     }
 
-    pub fn delegate_rewards(&mut self, caller: &Address) {
-        let rust_zero = rust_biguint!(0u64);
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_rewards();
-            })
-            .assert_ok();
-    }
-
-    pub fn delegate_rewards_error(&mut self, caller: &Address, error: &[u8]) {
-        let rust_zero = rust_biguint!(0u64);
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_rewards();
-            })
-            .assert_error(4, bytes_to_str(error));
-    }
-
     pub fn delegate_pending(&mut self, caller: &Address, amount: OptionalValue<u64>) {
         let rust_zero = rust_biguint!(0u64);
         self.b_mock
@@ -463,7 +445,7 @@ where
         &mut self,
         ls_token_supply: u64,
         virtual_egld_reserve: u64,
-        rewards_reserve: u64,
+        fees_reserve: u64,
         withdrawn_egld: u64,
         pending_egld: u64,
         pending_ls_for_unstake: u64,
@@ -479,8 +461,8 @@ where
                     to_managed_biguint(exp18(virtual_egld_reserve))
                 );
                 assert_eq!(
-                    sc.rewards_reserve().get(),
-                    to_managed_biguint(exp18(rewards_reserve))
+                    sc.fees_reserve().get(),
+                    to_managed_biguint(exp18(fees_reserve))
                 );
                 assert_eq!(
                     sc.total_withdrawn_egld().get(),
@@ -562,12 +544,12 @@ where
             .assert_ok();
     }
 
-    pub fn check_contract_rewards_storage_denominated(&mut self, rewards_reserve: u128) {
+    pub fn check_contract_fees_storage_denominated(&mut self, fees_reserve: u128) {
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {
                 assert_eq!(
-                    sc.rewards_reserve().get(),
-                    to_managed_biguint(num_bigint::BigUint::from(rewards_reserve))
+                    sc.fees_reserve().get(),
+                    to_managed_biguint(num_bigint::BigUint::from(fees_reserve))
                 );
             })
             .assert_ok();
@@ -611,15 +593,15 @@ where
         u128::from(ls_value)
     }
 
-    pub fn get_pending_rewards(&mut self) -> u128 {
-        let mut rewards_value_biguint = 0u64;
+    pub fn get_fees_reserve(&mut self) -> u128 {
+        let mut fees_value_biguint = 0u64;
         self.b_mock
             .execute_query(&self.sc_wrapper, |sc| {
-                rewards_value_biguint = sc.rewards_reserve().get().to_u64().unwrap();
+                fees_value_biguint = sc.fees_reserve().get().to_u64().unwrap();
             })
             .assert_ok();
 
-        u128::from(rewards_value_biguint)
+        u128::from(fees_value_biguint)
     }
 
     pub fn print_pending_egld(&mut self) {

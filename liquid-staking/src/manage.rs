@@ -3,9 +3,10 @@ use crate::{
     callback::{CallbackModule, CallbackProxy},
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     proxy::{proxy_accumulator, proxy_delegation, proxy_delegation_manager},
-    StorageCache, DELEGATION_MANAGER, ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_INSUFFICIENT_REWARDS,
-    ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
-    MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS, MIN_GAS_FOR_CALLBACK,
+    StorageCache, DELEGATION_MANAGER, ERROR_INSUFFICIENT_FEES_RESERVE,
+    ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_WHITELISTED,
+    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS,
+    MIN_GAS_FOR_CALLBACK,
 };
 
 #[multiversx_sc::module]
@@ -76,12 +77,12 @@ pub trait ManageModule:
 
         for data in &contracts {
             self.move_delegation_contract_to_back(&data.delegation_address);
-            // Important before delegating the amount to the new contracts, update the total staked from ls contract
-            // Reverse the amount when the callback fails
+            // Important before delegating the amount to the new contracts, update the pending staking callback amount
+            // Reverse the amount when the callback fails or succeeds
             // Required to avoid concurrency issues when the same contract is delegated to multiple times in different transactions simultaneously, might reach the cap and throw an error if not updated
             self.delegation_contract_data(&data.delegation_address)
                 .update(|contract_data| {
-                    contract_data.total_staked_from_ls_contract += &data.amount;
+                    contract_data.pending_staking_callback_amount += &data.amount;
                 });
             self.tx()
                 .to(&data.delegation_address)
@@ -153,13 +154,12 @@ pub trait ManageModule:
 
         for data in &contracts {
             self.move_un_delegation_contract_to_back(&data.delegation_address);
-            // Important before un delegating the amount from the new contracts, update the total staked from ls contract + total unstaked from ls contract
-            // Reverse the amount when the callback fails
+            // Important before un delegating the amount from the new contracts, update the pending unstaking callback amount
+            // Reverse the amount when the callback fails or succeeds
             // Required to avoid concurrency issues when the same contract is un delegated from multiple times in different transactions simultaneously, might try to over unstake something that was already unstaked
             self.delegation_contract_data(&data.delegation_address)
                 .update(|contract_data| {
-                    contract_data.total_staked_from_ls_contract -= &data.amount;
-                    contract_data.total_unstaked_from_ls_contract += &data.amount;
+                    contract_data.pending_unstaking_callback_amount += &data.amount;
                 });
             self.tx()
                 .to(&data.delegation_address)
@@ -240,68 +240,27 @@ pub trait ManageModule:
             .register_promise();
     }
 
-    /// Delegates accumulated rewards back into the liquid staking contract, contributing
-    /// to the overall pool and distributing yield to xEGLD holders by minting new xEGLD.
-    /// Ensures compounding of rewards without needing external reinvestment.
-    #[endpoint(delegateRewards)]
-    fn delegate_rewards(&self) {
+    #[endpoint(claimFees)]
+    fn claim_fees(&self) {
         let mut storage_cache = StorageCache::new(self);
 
-        self.is_manager(&self.blockchain().get_caller(), true);
-
-        self.is_state_active(storage_cache.contract_state);
-
-        let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
-
         require!(
-            storage_cache.rewards_reserve >= min_egld,
-            ERROR_INSUFFICIENT_REWARDS
+            storage_cache.fees_reserve > BigUint::zero(),
+            ERROR_INSUFFICIENT_FEES_RESERVE
         );
 
-        let fees = self.calculate_share(&storage_cache.rewards_reserve, &self.fees().get());
+        self.tx()
+            .to(&self.accumulator_contract().get())
+            .typed(proxy_accumulator::AccumulatorProxy)
+            .deposit()
+            .egld(&storage_cache.fees_reserve)
+            .sync_call();
 
-        let post_fees_reserve = &storage_cache.rewards_reserve - &fees;
+        storage_cache.fees_reserve = BigUint::zero();
 
-        if post_fees_reserve >= min_egld {
-            storage_cache.rewards_reserve = post_fees_reserve;
-
-            self.tx()
-                .to(&self.accumulator_contract().get())
-                .typed(proxy_accumulator::AccumulatorProxy)
-                .deposit()
-                .egld(&fees)
-                .transfer_execute();
-
-            self.protocol_revenue_event(&fees, self.blockchain().get_block_epoch());
-        }
-
-        let amount_to_delegate = storage_cache.rewards_reserve.clone();
-
-        let contracts = self.get_contracts_for_delegate(&amount_to_delegate, &mut storage_cache);
-
-        // Important before delegating the rewards to the new contracts, set the rewards reserve to 0
-        storage_cache.rewards_reserve = BigUint::zero();
-
-        for data in &contracts {
-            self.delegation_contract_data(&data.delegation_address)
-                .update(|contract_data| {
-                    contract_data.total_staked_from_ls_contract += &data.amount;
-                });
-
-            self.tx()
-                .to(&data.delegation_address)
-                .typed(proxy_delegation::DelegationMockProxy)
-                .delegate()
-                .egld(&data.amount)
-                .gas(MIN_GAS_FOR_ASYNC_CALL)
-                .callback(
-                    CallbackModule::callbacks(self)
-                        .delegate_rewards_callback(&data.delegation_address, &data.amount),
-                )
-                .gas_for_callback(MIN_GAS_FOR_CALLBACK)
-                .register_promise();
-        }
-
-        self.emit_general_liquidity_event(&storage_cache);
+        self.protocol_revenue_event(
+            &storage_cache.fees_reserve,
+            self.blockchain().get_block_epoch(),
+        );
     }
 }

@@ -18,15 +18,15 @@ version = "0.54.0"
 [dependencies.multiversx-sc-modules]
 version = "0.54.0"
 
-[dependencies.delegation-mock]
-path = "../delegation-mock"
-
-[dependencies.delegation-manager-mock]
-path = "../delegation-manager-mock"
-
 [dependencies.accumulator]
 git = "https://github.com/XOXNO/rs-accumulator"
 branch = "main"
+
+[dev-dependencies.delegation-mock]
+path = "../delegation-mock"
+
+[dev-dependencies.delegation-manager-mock]
+path = "../delegation-manager-mock"
 
 [dev-dependencies.multiversx-sc-scenario]
 version = "0.54.0"

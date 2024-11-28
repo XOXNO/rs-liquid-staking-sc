@@ -3,8 +3,8 @@ use crate::{
     structs::{
         DelegationContractInfo, DelegationContractSelectionInfo, DelegatorSelection, ScoringConfig,
     },
-    StorageCache, DECIMALS, ERROR_BAD_DELEGATION_ADDRESS,
-    ERROR_NO_DELEGATION_CONTRACTS, ERROR_SCORING_CONFIG_NOT_SET, MIN_EGLD_TO_DELEGATE,
+    StorageCache, DECIMALS, ERROR_BAD_DELEGATION_ADDRESS, ERROR_NO_DELEGATION_CONTRACTS,
+    ERROR_SCORING_CONFIG_NOT_SET, MIN_EGLD_TO_DELEGATE,
 };
 
 #[multiversx_sc::module]
@@ -74,9 +74,6 @@ pub trait SelectionModule:
         BigUint,
     ) {
         let max_providers = self.calculate_max_providers(amount, min_egld, map_list.len());
-        let amount_per_provider = amount / &BigUint::from(max_providers as u64);
-        let all_providers_limit =
-            (amount / &BigUint::from(map_list.len() as u64)).max(min_egld.clone());
 
         let mut selected_addresses = ManagedVec::new();
         let mut total_stake = BigUint::zero();
@@ -84,13 +81,8 @@ pub trait SelectionModule:
         for address in map_list.iter() {
             let contract_data = self.delegation_contract_data(&address).get();
 
-            if self.is_delegation_provider_eligible(
-                &contract_data,
-                &amount_per_provider,
-                &all_providers_limit,
-                min_egld,
-            ) {
-                total_stake += &contract_data.total_staked_from_ls_contract;
+            if self.is_delegation_provider_eligible(&contract_data, min_egld) {
+                total_stake += &contract_data.get_total_amount_with_pending_callbacks();
                 selected_addresses.push(self.create_selection_info(&address, &contract_data));
             }
 
@@ -159,7 +151,7 @@ pub trait SelectionModule:
             }
 
             let contract_data = self.delegation_contract_data(&address).get();
-            let staked = &contract_data.total_staked_from_ls_contract;
+            let staked = &contract_data.get_total_amount_with_pending_callbacks();
 
             let amount_to_take = if staked >= &average_amount_per_provider {
                 average_amount_per_provider.clone()
@@ -187,8 +179,6 @@ pub trait SelectionModule:
     fn is_delegation_provider_eligible(
         &self,
         contract_data: &DelegationContractInfo<Self::Api>,
-        amount_per_provider: &BigUint,
-        all_providers_limit: &BigUint,
         min_egld: &BigUint,
     ) -> bool {
         if !contract_data.eligible {
@@ -196,11 +186,9 @@ pub trait SelectionModule:
         }
 
         contract_data.delegation_contract_cap == BigUint::zero()
-            || &contract_data.delegation_contract_cap - &contract_data.total_staked
-                >= *amount_per_provider
-            || &contract_data.delegation_contract_cap - &contract_data.total_staked
-                >= *all_providers_limit
-            || &contract_data.delegation_contract_cap - &contract_data.total_staked >= *min_egld
+            || &contract_data.delegation_contract_cap
+                - &contract_data.get_total_amount_with_pending_callbacks()
+                >= *min_egld
     }
 
     fn distribute_amount(
@@ -337,8 +325,11 @@ pub trait SelectionModule:
                 let provider = providers.get(i);
                 let space_left = provider.space_left.clone().unwrap();
                 // Either take the remaining amount or the space left (which can be 0)
-                let can_use = space_left.min(remaining_amount.clone());
-                if can_use > BigUint::zero() {
+                let can_use = space_left.clone().min(remaining_amount.clone());
+                if can_use > BigUint::zero()
+                    && (&space_left - &can_use >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                        || &space_left == &can_use)
+                {
                     self.update_provider_amount(providers, i, &provider, &can_use);
                     *remaining_amount -= can_use;
                 }
@@ -411,7 +402,7 @@ pub trait SelectionModule:
             apy: contract_data.apy,
             score: BigUint::zero(),
             nr_nodes: contract_data.nr_nodes,
-            total_staked_from_ls_contract: contract_data.total_staked_from_ls_contract.clone(),
+            total_staked_from_ls_contract: contract_data.get_total_amount_with_pending_callbacks(),
         }
     }
 

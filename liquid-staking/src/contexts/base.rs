@@ -12,7 +12,7 @@ where
     pub ls_token_id: TokenIdentifier<C::Api>,
     pub ls_token_supply: BigUint<C::Api>,
     pub virtual_egld_reserve: BigUint<C::Api>,
-    pub rewards_reserve: BigUint<C::Api>,
+    pub fees_reserve: BigUint<C::Api>,
     pub total_withdrawn_egld: BigUint<C::Api>,
     pub pending_egld: BigUint<C::Api>,
     pub pending_egld_for_unstake: BigUint<C::Api>,
@@ -29,7 +29,7 @@ where
             ls_token_id: sc_ref.ls_token().get_token_id(),
             ls_token_supply: sc_ref.ls_token_supply().get(),
             virtual_egld_reserve: sc_ref.virtual_egld_reserve().get(),
-            rewards_reserve: sc_ref.rewards_reserve().get(),
+            fees_reserve: sc_ref.fees_reserve().get(),
             total_withdrawn_egld: sc_ref.total_withdrawn_egld().get(),
             pending_egld: sc_ref.pending_egld().get(),
             pending_egld_for_unstake: sc_ref.pending_egld_for_unstake().get(),
@@ -49,7 +49,7 @@ where
         self.sc_ref
             .virtual_egld_reserve()
             .set(&self.virtual_egld_reserve);
-        self.sc_ref.rewards_reserve().set(&self.rewards_reserve);
+        self.sc_ref.fees_reserve().set(&self.fees_reserve);
         self.sc_ref
             .total_withdrawn_egld()
             .set(&self.total_withdrawn_egld);

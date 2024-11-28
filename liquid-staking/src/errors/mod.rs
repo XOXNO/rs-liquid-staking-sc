@@ -4,7 +4,6 @@ pub static ERROR_LS_TOKEN_NOT_ISSUED: &[u8] = b"LS token not issued";
 pub static ERROR_CLAIM_START: &[u8] = b"Claim operation must be new or pending";
 pub static ERROR_OLD_CLAIM_START: &[u8] =
     b"Previous claimed rewards must be redelegated or lesser than 1 EGLD";
-pub static ERROR_INSUFFICIENT_REWARDS: &[u8] = b"Existing rewards must be greater than 1 EGLD";
 pub static ERROR_RECOMPUTE_RESERVES: &[u8] = b"Claim operation must be in the finished status";
 pub static ERROR_CLAIM_EPOCH: &[u8] = b"The rewards were already claimed for this epoch";
 pub static ERROR_UNSTAKE_PERIOD_NOT_PASSED: &[u8] = b"The unstake period has not passed";
@@ -48,3 +47,5 @@ pub static ERROR_NOT_MANAGER: &[u8] = b"Caller is not authorized as a manager";
 pub static ERROR_SCORING_CONFIG_NOT_SET: &[u8] = b"Scoring configuration not set";
 
 pub static ERROR_WEIGHTS_MUST_SUM_TO_100: &[u8] = b"Weights must sum to 100";
+
+pub static ERROR_INSUFFICIENT_FEES_RESERVE: &[u8] = b"Insufficient fees reserve";

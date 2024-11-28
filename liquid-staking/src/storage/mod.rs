@@ -60,9 +60,9 @@ pub trait StorageModule {
     #[storage_mapper("virtualEgldReserve")]
     fn virtual_egld_reserve(&self) -> SingleValueMapper<BigUint>;
 
-    #[view(getRewardsReserve)]
-    #[storage_mapper("rewardsReserve")]
-    fn rewards_reserve(&self) -> SingleValueMapper<BigUint>;
+    #[view(getFeesReserve)]
+    #[storage_mapper("feesReserve")]
+    fn fees_reserve(&self) -> SingleValueMapper<BigUint>;
 
     #[view(getTotalWithdrawnEgld)]
     #[storage_mapper("totalWithdrawnEgld")]

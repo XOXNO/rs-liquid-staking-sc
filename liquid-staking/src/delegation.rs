@@ -71,6 +71,8 @@ pub trait DelegationModule:
             apy,
             total_staked_from_ls_contract: BigUint::zero(),
             total_unstaked_from_ls_contract: BigUint::zero(),
+            pending_staking_callback_amount: BigUint::zero(),
+            pending_unstaking_callback_amount: BigUint::zero(),
             eligible: true,
         };
 

@@ -1,6 +1,6 @@
 ADDRESS=erd1qqqqqqqqqqqqqpgqc2d2z4atpxpk7xgucfkc7nrrp5ynscjrah0scsqc35
 PROXY=https://devnet-gateway.xoxno.com
-PROJECT="./output-docker/liquid-staking/liquid-staking.wasm"
+PROJECT="../output-docker/liquid-staking/liquid-staking.wasm"
 
 TOTAL_ROUNDS=2400
 MIN_ROUNDS=400
@@ -84,12 +84,12 @@ getLsValueForPosition() {
 
 verifyContract() {
     mxpy --verbose contract verify "${ADDRESS}"  \
-    --packaged-src=./output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://devnet-play-api.multiversx.com" \
-    --docker-image="multiversx/sdk-rust-contract-builder:v8.0.0" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
+    --packaged-src=../output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://devnet-play-api.multiversx.com" \
+    --docker-image="multiversx/sdk-rust-contract-builder:v8.0.1" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
 }
 
 buildDocker() {
-    mxpy contract reproducible-build --docker-image="multiversx/sdk-rust-contract-builder:v8.0.0"
+    mxpy contract reproducible-build --docker-image="multiversx/sdk-rust-contract-builder:v8.0.1"
 }
 
 ###PARAMS 

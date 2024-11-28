@@ -10,8 +10,17 @@ pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub nr_nodes: u64,
     pub apy: u64,
     pub total_staked_from_ls_contract: BigUint<M>,
+    pub pending_staking_callback_amount: BigUint<M>,
     pub total_unstaked_from_ls_contract: BigUint<M>,
+    pub pending_unstaking_callback_amount: BigUint<M>,
     pub eligible: bool,
+}
+
+impl<M: ManagedTypeApi> DelegationContractInfo<M> {
+    pub fn get_total_amount_with_pending_callbacks(&self) -> BigUint<M> {
+        &self.total_staked_from_ls_contract + &self.pending_staking_callback_amount
+            - &self.pending_unstaking_callback_amount
+    }
 }
 
 #[type_abi]

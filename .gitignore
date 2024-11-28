@@ -8,7 +8,7 @@
 
 # VSCode specific files
 .vscode/*
-output-docker/** 
+**/output-docker/** 
 
 **/node_modules
 **/output/**

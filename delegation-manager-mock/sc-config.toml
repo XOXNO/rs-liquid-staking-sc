@@ -4,17 +4,6 @@ main = "main"
 [contracts.main]
 name = "delegation-manager-mock"
 
-[contracts.full]
-name = "delegation-manager-mock-full"
-add-unlabelled = true
-add-labels = ["delegation-manager-mock-external-view"]
-
-[contracts.view]
-name = "delegation-mock-view"
-external-view = true
-add-unlabelled = false
-add-labels = ["delegation-manager-mock-external-view"]
-
 [[proxy]]
 path = "src/proxy_delegation_manager.rs"
 
