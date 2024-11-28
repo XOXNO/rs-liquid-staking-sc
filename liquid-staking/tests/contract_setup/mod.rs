@@ -1,9 +1,5 @@
 use constants::DELEGATION_MANAGER;
-use delegation::DelegationModule;
-use multiversx_sc::{
-    storage::mappers::StorageTokenWrapper,
-    types::{Address, EsdtLocalRole},
-};
+use multiversx_sc::types::{Address, EsdtLocalRole};
 
 use multiversx_sc_scenario::{
     imports::{BlockchainStateWrapper, ContractObjWrapper},
