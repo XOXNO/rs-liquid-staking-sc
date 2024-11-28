@@ -100,8 +100,7 @@ pub trait CallbackModule:
                     storage_cache.pending_egld += &post_fees_amount;
                     storage_cache.virtual_egld_reserve += &post_fees_amount;
 
-                    self.emit_claim_rewards_event(&storage_cache, &total_rewards);
-                    self.protocol_revenue_event(&fees, self.blockchain().get_block_epoch());
+                    self.emit_claim_rewards_event(&storage_cache, &total_rewards, &fees);
                 }
             }
             _ => {}

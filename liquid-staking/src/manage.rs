@@ -4,9 +4,8 @@ use crate::{
     errors::ERROR_NO_DELEGATION_CONTRACTS,
     proxy::{proxy_accumulator, proxy_delegation, proxy_delegation_manager},
     StorageCache, DELEGATION_MANAGER, ERROR_INSUFFICIENT_FEES_RESERVE,
-    ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_WHITELISTED,
-    MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS,
-    MIN_GAS_FOR_CALLBACK,
+    ERROR_INSUFFICIENT_PENDING_EGLD, ERROR_NOT_WHITELISTED, MIN_EGLD_TO_DELEGATE,
+    MIN_GAS_FOR_ASYNC_CALL, MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS, MIN_GAS_FOR_CALLBACK,
 };
 
 #[multiversx_sc::module]
@@ -257,10 +256,5 @@ pub trait ManageModule:
             .sync_call();
 
         storage_cache.fees_reserve = BigUint::zero();
-
-        self.protocol_revenue_event(
-            &storage_cache.fees_reserve,
-            self.blockchain().get_block_epoch(),
-        );
     }
 }
