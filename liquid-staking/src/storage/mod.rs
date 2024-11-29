@@ -1,4 +1,4 @@
-use crate::structs::{DelegationContractInfo, ScoringConfig, State};
+use crate::structs::{DelegationContractData, ScoringConfig, State};
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
@@ -14,11 +14,11 @@ pub trait StorageModule {
     fn un_delegation_addresses_list(&self) -> SetMapper<ManagedAddress>;
 
     #[view(getDelegationContractInfo)]
-    #[storage_mapper("delegationContractInfo")]
+    #[storage_mapper("delegationContract")]
     fn delegation_contract_data(
         &self,
         contract_address: &ManagedAddress,
-    ) -> SingleValueMapper<DelegationContractInfo<Self::Api>>;
+    ) -> SingleValueMapper<DelegationContractData<Self::Api>>;
 
     #[view(getManagers)]
     #[storage_mapper("managers")]

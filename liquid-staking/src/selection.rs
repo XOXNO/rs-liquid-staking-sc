@@ -1,7 +1,7 @@
 multiversx_sc::imports!();
 use crate::{
     structs::{
-        DelegationContractInfo, DelegationContractSelectionInfo, DelegatorSelection, ScoringConfig,
+        DelegationContractData, DelegationContractSelectionInfo, DelegatorSelection, ScoringConfig,
     },
     StorageCache, DECIMALS, ERROR_BAD_DELEGATION_ADDRESS, ERROR_NO_DELEGATION_CONTRACTS,
     ERROR_SCORING_CONFIG_NOT_SET, MIN_EGLD_TO_DELEGATE,
@@ -178,17 +178,20 @@ pub trait SelectionModule:
 
     fn is_delegation_provider_eligible(
         &self,
-        contract_data: &DelegationContractInfo<Self::Api>,
+        contract_data: &DelegationContractData<Self::Api>,
         min_egld: &BigUint,
     ) -> bool {
         if !contract_data.eligible {
             return false;
         }
 
-        contract_data.delegation_contract_cap == BigUint::zero()
-            || &contract_data.delegation_contract_cap
-                - &contract_data.get_total_amount_with_pending_callbacks()
-                >= *min_egld
+        if contract_data.delegation_contract_cap == BigUint::zero() {
+            return true;
+        }
+
+        &contract_data.delegation_contract_cap
+            - &contract_data.get_total_amount_with_pending_callbacks()
+            >= *min_egld
     }
 
     fn distribute_amount(
@@ -241,6 +244,7 @@ pub trait SelectionModule:
                 ));
             }
         }
+
         self.handle_remaining_amount(
             &mut result,
             &mut remaining_amount,
@@ -389,7 +393,7 @@ pub trait SelectionModule:
     fn create_selection_info(
         &self,
         address: &ManagedAddress,
-        contract_data: &DelegationContractInfo<Self::Api>,
+        contract_data: &DelegationContractData<Self::Api>,
     ) -> DelegationContractSelectionInfo<Self::Api> {
         DelegationContractSelectionInfo {
             address: address.clone(),

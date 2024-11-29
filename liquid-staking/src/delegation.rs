@@ -6,7 +6,7 @@ use crate::{
         ERROR_ONLY_DELEGATION_ADMIN,
     },
     proxy::proxy_delegation,
-    structs::DelegationContractInfo,
+    structs::DelegationContractData,
     utils, ERROR_MAX_DELEGATION_ADDRESSES, ERROR_MAX_UN_DELEGATION_ADDRESSES,
     ERROR_MIN_EGLD_TO_DELEGATE, MIN_EGLD_TO_DELEGATE, MIN_GAS_FOR_ASYNC_CALL,
     MIN_GAS_FOR_WHITELIST_CALLBACK,
@@ -63,7 +63,7 @@ pub trait DelegationModule:
             ERROR_MIN_EGLD_TO_DELEGATE
         );
 
-        let contract_data = DelegationContractInfo {
+        let contract_data = DelegationContractData {
             admin_address,
             total_staked,
             delegation_contract_cap,

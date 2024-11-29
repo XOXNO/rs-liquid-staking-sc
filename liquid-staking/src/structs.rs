@@ -3,7 +3,7 @@ multiversx_sc::imports!();
 
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
-pub struct DelegationContractInfo<M: ManagedTypeApi> {
+pub struct DelegationContractData<M: ManagedTypeApi> {
     pub admin_address: ManagedAddress<M>,
     pub total_staked: BigUint<M>,
     pub delegation_contract_cap: BigUint<M>,
@@ -13,10 +13,10 @@ pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub total_unstaked_from_ls_contract: BigUint<M>,
     pub eligible: bool,
     pub pending_staking_callback_amount: BigUint<M>,
-    pub pending_unstaking_callback_amount: BigUint<M>
+    pub pending_unstaking_callback_amount: BigUint<M>,
 }
 
-impl<M: ManagedTypeApi> DelegationContractInfo<M> {
+impl<M: ManagedTypeApi> DelegationContractData<M> {
     pub fn get_total_amount_with_pending_callbacks(&self) -> BigUint<M> {
         &self.total_staked_from_ls_contract + &self.pending_staking_callback_amount
             - &self.pending_unstaking_callback_amount
