@@ -10,10 +10,10 @@ pub struct DelegationContractInfo<M: ManagedTypeApi> {
     pub nr_nodes: u64,
     pub apy: u64,
     pub total_staked_from_ls_contract: BigUint<M>,
-    pub pending_staking_callback_amount: BigUint<M>,
     pub total_unstaked_from_ls_contract: BigUint<M>,
-    pub pending_unstaking_callback_amount: BigUint<M>,
     pub eligible: bool,
+    pub pending_staking_callback_amount: BigUint<M>,
+    pub pending_unstaking_callback_amount: BigUint<M>
 }
 
 impl<M: ManagedTypeApi> DelegationContractInfo<M> {
