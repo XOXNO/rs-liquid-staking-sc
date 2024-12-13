@@ -9,14 +9,14 @@ publish = false
 path = "src/delegation_manager.rs"
 
 [dependencies.multiversx-sc]
-version = "0.54.0"
+version = "0.54.6"
 
 [dependencies.itertools]
 version = "0.13.0"
 default-features = false
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.54.0"
+version = "0.54.6"
 
 [dependencies.delegation-mock]
 path = "../delegation-mock"

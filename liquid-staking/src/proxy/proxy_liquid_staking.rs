@@ -453,15 +453,12 @@ where
             .original_result()
     }
 
-    /// Delegates accumulated rewards back into the liquid staking contract, contributing 
-    /// to the overall pool and distributing yield to xEGLD holders by minting new xEGLD. 
-    /// Ensures compounding of rewards without needing external reinvestment. 
-    pub fn delegate_rewards(
+    pub fn claim_fees(
         self,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("delegateRewards")
+            .raw_call("claimFees")
             .original_result()
     }
 
@@ -488,7 +485,7 @@ where
     >(
         self,
         contract_address: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, DelegationContractInfo<Env::Api>> {
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, DelegationContractData<Env::Api>> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("getDelegationContractInfo")
@@ -586,12 +583,12 @@ where
             .original_result()
     }
 
-    pub fn rewards_reserve(
+    pub fn fees_reserve(
         self,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, BigUint<Env::Api>> {
         self.wrapped_tx
             .payment(NotPayable)
-            .raw_call("getRewardsReserve")
+            .raw_call("getFeesReserve")
             .original_result()
     }
 
@@ -831,7 +828,7 @@ where
     pub ls_token_id: TokenIdentifier<Api>,
     pub ls_token_supply: BigUint<Api>,
     pub virtual_egld_reserve: BigUint<Api>,
-    pub rewards_reserve: BigUint<Api>,
+    pub fees_reserve: BigUint<Api>,
     pub total_withdrawn_egld: BigUint<Api>,
     pub pending_egld: BigUint<Api>,
     pub pending_egld_for_unstake: BigUint<Api>,
@@ -843,7 +840,7 @@ where
 
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Eq, Debug)]
-pub struct DelegationContractInfo<Api>
+pub struct DelegationContractData<Api>
 where
     Api: ManagedTypeApi,
 {
@@ -855,6 +852,8 @@ where
     pub total_staked_from_ls_contract: BigUint<Api>,
     pub total_unstaked_from_ls_contract: BigUint<Api>,
     pub eligible: bool,
+    pub pending_staking_callback_amount: BigUint<Api>,
+    pub pending_unstaking_callback_amount: BigUint<Api>,
 }
 
 #[type_abi]
