@@ -186,8 +186,6 @@ pub trait ManageModule:
     fn withdraw_pending(&self, contract: ManagedAddress) {
         let storage_cache = StorageCache::new(self);
 
-        self.is_manager(&self.blockchain().get_caller(), true);
-
         self.is_state_active(storage_cache.contract_state);
 
         require!(
@@ -212,8 +210,6 @@ pub trait ManageModule:
     #[endpoint(claimRewards)]
     fn claim_rewards(&self) {
         let storage_cache = StorageCache::new(self);
-
-        self.is_manager(&self.blockchain().get_caller(), true);
 
         self.is_state_active(storage_cache.contract_state);
 

@@ -45,7 +45,8 @@ pub trait DelegationModule:
             ERROR_MAX_UN_DELEGATION_ADDRESSES
         );
 
-        self.is_manager(&self.blockchain().get_caller(), true);
+        let caller = self.blockchain().get_caller();
+        self.is_manager(&caller, true);
         let map_delegation_contract_data = self.delegation_contract_data(&contract_address);
         require!(
             map_delegation_contract_data.is_empty(),
@@ -78,7 +79,6 @@ pub trait DelegationModule:
 
         map_delegation_contract_data.set(contract_data);
 
-        let caller = self.blockchain().get_caller();
         self.tx()
             .to(&contract_address)
             .typed(proxy_delegation::DelegationMockProxy)
