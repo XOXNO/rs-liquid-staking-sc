@@ -71,12 +71,6 @@ pub trait ConfigModule: crate::storage::StorageModule {
     }
 
     #[only_owner]
-    #[endpoint(setMinimumRounds)]
-    fn set_minimum_rounds(&self, minimum_rounds: u64) {
-        self.minimum_rounds().set(minimum_rounds);
-    }
-
-    #[only_owner]
     #[endpoint(setMaxAddresses)]
     fn set_max_addresses(&self, number: usize) {
         require!(number >= 1, ERROR_MAX_SELECTED_PROVIDERS);

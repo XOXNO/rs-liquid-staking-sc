@@ -45,7 +45,9 @@ pub trait LiquidStaking<ContractReader>:
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[upgrade]
-    fn upgrade(&self) {}
+    fn upgrade(&self) {
+        self.state().set(State::Inactive);
+    }
 
     /// Initializes the Liquid Staking contract with essential parameters, setting up
     /// the structure for fair delegation distribution across multiple providers.
@@ -53,8 +55,6 @@ pub trait LiquidStaking<ContractReader>:
     /// Arguments:
     /// - `accumulator_contract`: Address of the accumulator contract used for tracking the total EGLD stake.
     /// - `fees`: Fee structure applicable on staking activities.
-    /// - `rounds_per_epoch`: Defines the staking epoch's duration in rounds.
-    /// - `minimum_rounds`: Minimum required rounds for staking cycle.
     /// - `max_selected_providers`: Maximum number of staking providers chosen daily.
     /// - `max_delegation_addresses`: Sets a cap on the number of delegation addresses.
     /// - `unbond_period`: Duration, in epochs, required for unbonding of stakes.
@@ -63,18 +63,13 @@ pub trait LiquidStaking<ContractReader>:
         &self,
         accumulator_contract: ManagedAddress,
         fees: BigUint,
-        rounds_per_epoch: u64,
-        minimum_rounds: u64,
         max_selected_providers: BigUint,
         max_delegation_addresses: usize,
         unbond_period: u64,
     ) {
         self.state().set(State::Inactive);
 
-        require!(
-            max_selected_providers >= BigUint::from(1u64),
-            ERROR_MAX_SELECTED_PROVIDERS
-        );
+        require!(max_selected_providers >= 1, ERROR_MAX_SELECTED_PROVIDERS);
 
         require!(
             max_delegation_addresses >= 1,
@@ -88,8 +83,6 @@ pub trait LiquidStaking<ContractReader>:
 
         self.accumulator_contract().set(accumulator_contract);
         self.fees().set(fees);
-        self.rounds_per_epoch().set(rounds_per_epoch);
-        self.minimum_rounds().set(minimum_rounds);
     }
 
     /// Delegates EGLD to the staking pool by minting xEGLD tokens for the user,

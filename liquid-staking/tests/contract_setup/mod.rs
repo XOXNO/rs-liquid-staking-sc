@@ -80,8 +80,6 @@ where
                 sc.init(
                     managed_address!(accumulator_wrapper.address_ref()),
                     managed_biguint!(fees),
-                    14400,
-                    1400,
                     managed_biguint!(25),
                     100,
                     10,

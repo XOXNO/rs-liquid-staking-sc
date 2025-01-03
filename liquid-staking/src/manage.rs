@@ -35,9 +35,8 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
+        // TODO: To be removed once Bernard gets released
         self.is_manager(&self.blockchain().get_caller(), true);
-
-        self.require_min_rounds_passed();
 
         require!(
             storage_cache.pending_egld >= BigUint::from(MIN_EGLD_TO_DELEGATE),
@@ -112,9 +111,8 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
+        // TODO: To be removed once Bernard gets released
         self.is_manager(&self.blockchain().get_caller(), true);
-
-        self.require_min_rounds_passed();
 
         require!(
             &storage_cache.pending_egld_for_unstake >= &BigUint::from(MIN_EGLD_TO_DELEGATE),

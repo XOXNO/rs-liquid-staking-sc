@@ -18,8 +18,12 @@ pub struct DelegationContractData<M: ManagedTypeApi> {
 
 impl<M: ManagedTypeApi> DelegationContractData<M> {
     pub fn get_total_amount_with_pending_callbacks(&self) -> BigUint<M> {
-        &self.total_staked_from_ls_contract + &self.pending_staking_callback_amount
-            - &self.pending_unstaking_callback_amount
+        let total = &self.total_staked_from_ls_contract + &self.pending_staking_callback_amount;
+        if total > self.pending_unstaking_callback_amount {
+            total - &self.pending_unstaking_callback_amount
+        } else {
+            BigUint::zero()
+        }
     }
 }
 

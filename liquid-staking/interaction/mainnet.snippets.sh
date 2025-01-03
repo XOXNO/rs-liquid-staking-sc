@@ -1,20 +1,18 @@
-ADDRESS=erd1qqqqqqqqqqqqqpgqc2d2z4atpxpk7xgucfkc7nrrp5ynscjrah0scsqc35
-PROXY=https://devnet-gateway.xoxno.com
+ADDRESS=erd1qqqqqqqqqqqqqpgq6uzdzy54wnesfnlaycxwymrn9texlnmyah0ssrfvk6
+PROXY=https://gateway.xoxno.com
 PROJECT="../output-docker/liquid-staking/liquid-staking.wasm"
 
-TOTAL_ROUNDS=2400
-MIN_ROUNDS=400
-ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgqyxfc4r5fmw2ljcgwxj2nuzv72y9ryvyhah0sgn5vv2
-FEES=400
+ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgq8538ku69p97lq4eug75y8d6g6yfwhd7c45qs4zvejt
+FEES=700
 MAX_SELECTED_PROVIDERS=20
 MAX_DELEGATION_ADDRESSES=100
-UNBOND_PERIOD=1
-MIGRATION_SC_ADDRESS="erd1qqqqqqqqqqqqqpgqfq0yn2v5ejl42wqx5a8g0fsgq4j8pujpah0stdg9y7"
+UNBOND_PERIOD=10
+MIGRATION_SC_ADDRESS="erd1qqqqqqqqqqqqqpgqc0jp2q280xaccqszxwsh5cyl2hv35g79ah0sk4zu5n"
 
 deploy() {
-    mxpy --verbose contract deploy --bytecode=${PROJECT}  --metadata-payable-by-sc --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${TOTAL_ROUNDS} ${MIN_ROUNDS} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} ${UNBOND_PERIOD} --recall-nonce \
+    mxpy --verbose contract deploy --bytecode=${PROJECT}  --metadata-payable-by-sc --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} ${UNBOND_PERIOD} --recall-nonce \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
-    --gas-limit=150000000 --send --proxy=${PROXY} --chain=D || return
+    --gas-limit=150000000 --send --proxy=${PROXY} --chain=1 || return
 
     echo "New smart contract address: ${ADDRESS}"
 }
@@ -23,27 +21,37 @@ upgrade() {
     echo "Upgrade smart contract address: ${ADDRESS}"
     mxpy  contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode=${PROJECT} --recall-nonce \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
-    --gas-limit=600000000 --send --proxy=${PROXY} --chain="D" || return
+    --gas-limit=150000000 --send --proxy=${PROXY} --chain=1 || return
 }
 
 registerLsToken() {
     mxpy contract call ${ADDRESS} --recall-nonce --function="registerLsToken" \
-    --arguments str:XEGLD str:XEGLD 0x12 --value 50000000000000000 \
+    --arguments str:StakedEGLD str:XEGLD 0x12 --value 50000000000000000 \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
-    --gas-limit=150000000 --send --proxy=${PROXY} --chain=D || return
+    --gas-limit=150000000 --send --proxy=${PROXY} --chain=1 || return
 }
 
 registerUnstakeToken() {
     mxpy contract call ${ADDRESS} --recall-nonce --function="registerUnstakeToken" \
-    --arguments str:UEGLD str:UEGLD 0x12 --value 50000000000000000 \
+    --arguments str:UnbondingEGLD str:UEGLD 0x12 --value 50000000000000000 \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
-    --gas-limit=150000000 --send --proxy=${PROXY} --chain=D || return
+    --gas-limit=150000000 --send --proxy=${PROXY} --chain=1 || return
+}
+
+setMigrationScAddress() {
+    mxpy contract call ${ADDRESS} --recall-nonce \
+        --ledger --ledger-account-index=0 --ledger-address-index=0 \
+        --proxy=${PROXY} --chain=1 \
+        --gas-limit=12000000 \
+        --function="setMigrationScAddress" \
+        --arguments ${MIGRATION_SC_ADDRESS} \
+        --send || return
 }
 
 setStateActive() {
     mxpy contract call ${ADDRESS} --recall-nonce --function="setStateActive" \
     --ledger --ledger-account-index=0 --ledger-address-index=0 \
-    --gas-limit=15000000 --send --proxy=${PROXY} --chain=D || return
+    --gas-limit=15000000 --send --proxy=${PROXY} --chain=1 || return
 }
 
 getExchangeRate() {
@@ -66,7 +74,7 @@ getLsValueForPosition() {
 
 verifyContract() {
     mxpy --verbose contract verify "${ADDRESS}"  \
-    --packaged-src=../output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://devnet-play-api.multiversx.com" \
+    --packaged-src=../output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
     --docker-image="multiversx/sdk-rust-contract-builder:v8.0.1" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
 }
 
@@ -87,7 +95,7 @@ whitelistDelegationContract() {
         --function="whitelistDelegationContract" \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
         --gas-limit=10000000 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --arguments ${DELEGATION_ADDRESS} ${ADMIN_ADDRESS} ${TOTAL_STAKED} ${DELEGATION_CAP} ${NR_NODES} ${APY}\
         --send || return
 }
@@ -97,7 +105,7 @@ changeDelegationContractParams() {
         --function="changeDelegationContractParams" \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
         --gas-limit=10000000 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --arguments ${DELEGATION_ADDRESS} ${TOTAL_STAKED} ${DELEGATION_CAP} ${NR_NODES} ${APY} 0x01 \
         --send || return
 }
@@ -105,7 +113,7 @@ changeDelegationContractParams() {
 delegate() {
         mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=10000000 \
         --value=100000000000000000000 \
         --function="delegate" \
@@ -118,7 +126,7 @@ unDelegate() {
         token_amount=300000000000000000
         mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=10000000 \
         --function="ESDTTransfer" \
         --arguments $my_token $token_amount $method_name \
@@ -128,7 +136,7 @@ unDelegate() {
 delegatePending() {
         mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=250000000 \
         --function="delegatePending" \
         --send || return
@@ -137,7 +145,7 @@ delegatePending() {
 unDelegatePending() {
         mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=250000000 \
         --function="unDelegatePending" \
         --send || return
@@ -146,7 +154,7 @@ unDelegatePending() {
 updateMaxDelegationAddresses() {
     mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=10000000 \
         --function="updateMaxDelegationAddresses" \
         --arguments 100 \
@@ -156,7 +164,7 @@ updateMaxDelegationAddresses() {
 updateMaxSelectedProviders() {
     mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=10000000 \
         --function="updateMaxSelectedProviders" \
         --arguments ${MAX_SELECTED_PROVIDERS} \
@@ -166,32 +174,22 @@ updateMaxSelectedProviders() {
 setUnbondPeriod() {
     mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=10000000 \
         --function="setUnbondPeriod" \
         --arguments ${UNBOND_PERIOD} \
         --send || return
 }
 
-setManagers() {
+addManagers() {
     MANAGER_ADDRESS="erd1fmd662htrgt07xxd8me09newa9s0euzvpz3wp0c4pz78f83grt9qm6pn57"
     MANAGER_ADDRESS2="erd1vn9s8uj4e7r6skmqfw5py3hxnluw3ftv6dh47yt449vtvdnn9w2stmwm7l"
     MANAGER_ADDRESS3="erd1cfyadenn4k9wndha0ljhlsdrww9k0jqafqq626hu9zt79urzvzasalgycz"
     mxpy contract call ${ADDRESS} --recall-nonce \
         --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
+        --proxy=${PROXY} --chain=1 \
         --gas-limit=12000000 \
-        --function="setManagers" \
+        --function="addManagers" \
         --arguments ${MANAGER_ADDRESS} ${MANAGER_ADDRESS2} ${MANAGER_ADDRESS3} \
-        --send || return
-}
-
-addMigrationScAddress() {
-    mxpy contract call ${ADDRESS} --recall-nonce \
-        --ledger --ledger-account-index=0 --ledger-address-index=0 \
-        --proxy=${PROXY} --chain=D \
-        --gas-limit=12000000 \
-        --function="addMigrationScAddress" \
-        --arguments ${MIGRATION_SC_ADDRESS} \
         --send || return
 }

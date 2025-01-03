@@ -49,36 +49,28 @@ where
     /// Arguments: 
     /// - `accumulator_contract`: Address of the accumulator contract used for tracking the total EGLD stake. 
     /// - `fees`: Fee structure applicable on staking activities. 
-    /// - `rounds_per_epoch`: Defines the staking epoch's duration in rounds. 
-    /// - `minimum_rounds`: Minimum required rounds for staking cycle. 
     /// - `max_selected_providers`: Maximum number of staking providers chosen daily. 
     /// - `max_delegation_addresses`: Sets a cap on the number of delegation addresses. 
     /// - `unbond_period`: Duration, in epochs, required for unbonding of stakes. 
     pub fn init<
         Arg0: ProxyArg<ManagedAddress<Env::Api>>,
         Arg1: ProxyArg<BigUint<Env::Api>>,
-        Arg2: ProxyArg<u64>,
-        Arg3: ProxyArg<u64>,
-        Arg4: ProxyArg<BigUint<Env::Api>>,
-        Arg5: ProxyArg<usize>,
-        Arg6: ProxyArg<u64>,
+        Arg2: ProxyArg<BigUint<Env::Api>>,
+        Arg3: ProxyArg<usize>,
+        Arg4: ProxyArg<u64>,
     >(
         self,
         accumulator_contract: Arg0,
         fees: Arg1,
-        rounds_per_epoch: Arg2,
-        minimum_rounds: Arg3,
-        max_selected_providers: Arg4,
-        max_delegation_addresses: Arg5,
-        unbond_period: Arg6,
+        max_selected_providers: Arg2,
+        max_delegation_addresses: Arg3,
+        unbond_period: Arg4,
     ) -> TxTypedDeploy<Env, From, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_deploy()
             .argument(&accumulator_contract)
             .argument(&fees)
-            .argument(&rounds_per_epoch)
-            .argument(&minimum_rounds)
             .argument(&max_selected_providers)
             .argument(&max_delegation_addresses)
             .argument(&unbond_period)
@@ -288,19 +280,6 @@ where
             .payment(NotPayable)
             .raw_call("setFees")
             .argument(&fees)
-            .original_result()
-    }
-
-    pub fn set_minimum_rounds<
-        Arg0: ProxyArg<u64>,
-    >(
-        self,
-        minimum_rounds: Arg0,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("setMinimumRounds")
-            .argument(&minimum_rounds)
             .original_result()
     }
 
@@ -526,24 +505,6 @@ where
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("getAccumulatorContract")
-            .original_result()
-    }
-
-    pub fn rounds_per_epoch(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, u64> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("roundsPerEpoch")
-            .original_result()
-    }
-
-    pub fn minimum_rounds(
-        self,
-    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, u64> {
-        self.wrapped_tx
-            .payment(NotPayable)
-            .raw_call("minimumRounds")
             .original_result()
     }
 

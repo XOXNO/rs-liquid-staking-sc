@@ -32,11 +32,6 @@ pub trait UtilsModule:
         total_amount * cut_percentage / BPS
     }
 
-    fn require_min_rounds_passed(&self) {
-        // TODO: Implement once new hooks are available in the VM with the future mainnet upgrade
-        return;
-    }
-
     fn add_delegation_address_in_list(&self, contract_address: ManagedAddress) {
         let mut delegation_addresses_mapper = self.delegation_addresses_list();
 

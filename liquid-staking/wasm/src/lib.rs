@@ -6,10 +6,10 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                           57
+// Endpoints:                           54
 // Async Callback:                       1
 // Promise callbacks:                    5
-// Total number of exported functions:  65
+// Total number of exported functions:  62
 
 #![no_std]
 
@@ -35,7 +35,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         setStateInactive => set_state_inactive
         setAccumulatorContract => set_accumulator_contract
         setFees => set_fees
-        setMinimumRounds => set_minimum_rounds
         setMaxAddresses => set_max_addresses
         setMaxSelectedProviders => set_max_selected_providers
         setUnbondPeriod => set_unbond_period
@@ -54,8 +53,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         getScoringConfig => scoring_config
         fees => fees
         getAccumulatorContract => accumulator_contract
-        roundsPerEpoch => rounds_per_epoch
-        minimumRounds => minimum_rounds
         getState => state
         getLsTokenId => ls_token
         getLsSupply => ls_token_supply

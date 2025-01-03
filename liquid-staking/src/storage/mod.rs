@@ -36,14 +36,6 @@ pub trait StorageModule {
     #[storage_mapper("accumulatorContract")]
     fn accumulator_contract(&self) -> SingleValueMapper<ManagedAddress>;
 
-    #[view(roundsPerEpoch)]
-    #[storage_mapper("roundsPerEpoch")]
-    fn rounds_per_epoch(&self) -> SingleValueMapper<u64>;
-
-    #[view(minimumRounds)]
-    #[storage_mapper("minimumRounds")]
-    fn minimum_rounds(&self) -> SingleValueMapper<u64>;
-
     #[view(getState)]
     #[storage_mapper("state")]
     fn state(&self) -> SingleValueMapper<State>;
