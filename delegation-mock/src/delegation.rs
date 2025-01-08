@@ -17,7 +17,7 @@ pub trait DelegationMock {
     #[only_owner]
     #[endpoint(depositEGLD)]
     fn deposit_egld(&self) {
-        let payment_amount = self.call_value().egld_value().clone_value();
+        let payment_amount = self.call_value().egld().clone_value();
         self.egld_token_supply()
             .update(|value| *value += &payment_amount);
     }
@@ -25,7 +25,7 @@ pub trait DelegationMock {
     #[payable("EGLD")]
     #[endpoint(delegate)]
     fn delegate(&self) {
-        let payment_amount = self.call_value().egld_value().clone_value();
+        let payment_amount = self.call_value().egld().clone_value();
         self.address_deposit()
             .update(|value| *value += &payment_amount);
         self.egld_token_supply()
