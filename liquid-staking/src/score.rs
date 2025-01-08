@@ -116,7 +116,7 @@ pub trait ScoreModule {
         let mut total_score = BigUint::zero();
 
         for index in 0..selected_addresses.len() {
-            let mut info = selected_addresses.get(index);
+            let mut info = selected_addresses.get(index).clone();
             let score =
                 self.calculate_and_update_score(&mut info, is_delegate, total_stake, config);
             total_score += &score;

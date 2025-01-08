@@ -324,9 +324,9 @@ pub trait SelectionModule:
         }
 
         for i in 0..providers.len() {
+            let provider = providers.get(i).clone();
             // For undelegation we always have a Some() for space_left
             if !is_delegate {
-                let provider = providers.get(i);
                 let space_left = provider.space_left.clone().unwrap();
                 // Either take the remaining amount or the space left (which can be 0)
                 let can_use = space_left.clone().min(remaining_amount.clone());
@@ -338,8 +338,6 @@ pub trait SelectionModule:
                     *remaining_amount -= can_use;
                 }
             } else {
-                // For delegation we don't have a space left
-                let provider = providers.get(i);
                 // For not capped providers we can fill the remaining amount with no problem
                 if provider.space_left.is_none() {
                     self.update_provider_amount(providers, i, &provider, &remaining_amount);

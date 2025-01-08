@@ -71,7 +71,7 @@ pub trait CallbackModule:
 
     #[promises_callback]
     fn withdraw_tokens_callback(&self, delegation_contract: &ManagedAddress) {
-        let withdraw_amount = self.call_value().egld_value().clone_value();
+        let withdraw_amount = self.call_value().egld().clone_value();
         if withdraw_amount > BigUint::zero() {
             let mut storage_cache = StorageCache::new(self);
             let delegation_contract_mapper = self.delegation_contract_data(&delegation_contract);

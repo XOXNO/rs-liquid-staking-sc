@@ -61,7 +61,7 @@ pub trait MigrateModule:
             ERROR_MIGRATION_NOT_ALLOWED
         );
 
-        let amount = self.call_value().egld_value();
+        let amount = self.call_value().egld();
 
         storage_cache.pending_egld += amount.clone_value();
 
@@ -73,7 +73,7 @@ pub trait MigrateModule:
     fn add_rewards(&self) {
         let mut storage_cache = StorageCache::new(self);
 
-        let amount = self.call_value().egld_value();
+        let amount = self.call_value().egld();
 
         storage_cache.virtual_egld_reserve += amount.clone_value();
         storage_cache.pending_egld += amount.clone_value();

@@ -96,7 +96,7 @@ pub trait LiquidStaking<ContractReader>:
     fn delegate(&self) {
         let mut storage_cache = StorageCache::new(self);
 
-        let payment = self.call_value().egld_value().clone_value();
+        let payment = self.call_value().egld().clone_value();
 
         self.validate_delegate_conditions(&mut storage_cache, &payment);
 
@@ -143,7 +143,7 @@ pub trait LiquidStaking<ContractReader>:
 
         let mut to_send = BigUint::zero();
 
-        for payment in payments.iter() {
+        for payment in payments.clone().into_iter() {
             require!(
                 payment.token_identifier == unstake_token_id,
                 ERROR_BAD_PAYMENT_TOKEN

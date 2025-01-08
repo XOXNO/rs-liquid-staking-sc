@@ -16,7 +16,7 @@ pub trait ConfigModule: crate::storage::StorageModule {
         token_ticker: ManagedBuffer,
         num_decimals: usize,
     ) {
-        let payment_amount = self.call_value().egld_value().clone_value();
+        let payment_amount = self.call_value().egld().clone_value();
         self.ls_token().issue_and_set_all_roles(
             payment_amount,
             token_display_name,
@@ -35,7 +35,7 @@ pub trait ConfigModule: crate::storage::StorageModule {
         token_ticker: ManagedBuffer,
         num_decimals: usize,
     ) {
-        let payment_amount = self.call_value().egld_value().clone_value();
+        let payment_amount = self.call_value().egld().clone_value();
         self.unstake_token().issue_and_set_all_roles(
             EsdtTokenType::Meta,
             payment_amount,
