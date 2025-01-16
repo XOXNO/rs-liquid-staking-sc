@@ -43,9 +43,13 @@ pub static ERROR_MIGRATION_SC_NOT_SET: &[u8] = b"Migration SC not set";
 pub static ERROR_MIGRATION_NOT_ALLOWED: &[u8] = b"Migration not allowed";
 
 pub static ERROR_NOT_MANAGER: &[u8] = b"Caller is not authorized as a manager";
+pub static ERROR_NOT_LIQUIDITY_PROVIDER: &[u8] =
+    b"Caller is not authorized as a liquidity provider";
 
 pub static ERROR_SCORING_CONFIG_NOT_SET: &[u8] = b"Scoring configuration not set";
 
 pub static ERROR_WEIGHTS_MUST_SUM_TO_100: &[u8] = b"Weights must sum to 100";
 
 pub static ERROR_INSUFFICIENT_FEES_RESERVE: &[u8] = b"Insufficient fees reserve";
+
+pub static ERROR_PROVIDER_NOT_ELIGIBLE: &[u8] = b"The provider is not eligible";

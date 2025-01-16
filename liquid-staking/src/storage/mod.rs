@@ -24,6 +24,10 @@ pub trait StorageModule {
     #[storage_mapper("managers")]
     fn managers(&self) -> UnorderedSetMapper<ManagedAddress>;
 
+    #[view(getLiquidityProviders)]
+    #[storage_mapper("liquidityProviders")]
+    fn liquidity_providers(&self) -> UnorderedSetMapper<ManagedAddress>;
+
     #[view(getScoringConfig)]
     #[storage_mapper("scoringConfig")]
     fn scoring_config(&self) -> SingleValueMapper<ScoringConfig>;

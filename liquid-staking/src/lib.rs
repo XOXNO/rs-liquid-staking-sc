@@ -21,9 +21,11 @@ pub mod structs;
 pub mod utils;
 pub mod views;
 
+use callback::{CallbackModule, CallbackProxy};
 use constants::*;
 use contexts::base::*;
 use errors::*;
+use proxy::proxy_delegation;
 use structs::{State, UnstakeTokenAttributes};
 
 #[multiversx_sc::contract]
@@ -93,17 +95,56 @@ pub trait LiquidStaking<ContractReader>:
     /// Transaction value is used as the staked amount.
     #[payable("EGLD")]
     #[endpoint(delegate)]
-    fn delegate(&self) {
+    fn delegate(&self, to: OptionalValue<ManagedAddress>) {
         let mut storage_cache = StorageCache::new(self);
 
         let payment = self.call_value().egld().clone_value();
 
         self.validate_delegate_conditions(&mut storage_cache, &payment);
 
-        let (pending, extra) =
-            self.get_action_amount(&storage_cache.pending_egld_for_unstake, &payment);
+        let caller = self.blockchain().get_caller();
 
-        self.process_delegation(&mut storage_cache, &pending, &extra);
+        if let Some(provider) = to.into_option() {
+            let min_egld_amount = BigUint::from(MIN_EGLD_TO_DELEGATE);
+            let map_delegation_contract_data = self.delegation_contract_data(&provider);
+
+            require!(
+                !map_delegation_contract_data.is_empty(),
+                ERROR_BAD_DELEGATION_ADDRESS
+            );
+
+            let contract_data = map_delegation_contract_data.get();
+
+            require!(contract_data.eligible, ERROR_PROVIDER_NOT_ELIGIBLE);
+
+            require!(
+                self.liquidity_providers().contains(&caller),
+                ERROR_NOT_LIQUIDITY_PROVIDER
+            );
+
+            require!(&payment >= &min_egld_amount, ERROR_MIN_EGLD_TO_DELEGATE);
+
+            self.tx()
+                .to(&provider)
+                .typed(proxy_delegation::DelegationMockProxy)
+                .delegate()
+                .egld(&payment)
+                .gas(MIN_GAS_FOR_ASYNC_CALL)
+                .callback(
+                    CallbackModule::callbacks(self).instant_delegation_contract_callback(
+                        provider.clone(),
+                        &payment,
+                        &caller,
+                    ),
+                )
+                .gas_for_callback(MIN_GAS_FOR_WHITELIST_CALLBACK)
+                .register_promise();
+        } else {
+            let (pending, extra) =
+                self.get_action_amount(&storage_cache.pending_egld_for_unstake, &payment);
+
+            self.process_delegation(&mut storage_cache, &pending, &extra, &caller)
+        }
     }
 
     /// Initiates the un-delegation process, enabling users to withdraw their stake.

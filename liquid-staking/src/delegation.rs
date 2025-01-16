@@ -35,13 +35,14 @@ pub trait DelegationModule:
         nr_nodes: u64,
         apy: u64,
     ) {
+        let mapper = self.max_delegation_addresses();
         require!(
-            self.delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
+            self.delegation_addresses_list().len() <= mapper.get(),
             ERROR_MAX_DELEGATION_ADDRESSES
         );
 
         require!(
-            self.un_delegation_addresses_list().len() <= self.max_delegation_addresses().get(),
+            self.un_delegation_addresses_list().len() <= mapper.get(),
             ERROR_MAX_UN_DELEGATION_ADDRESSES
         );
 

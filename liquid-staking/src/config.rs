@@ -106,6 +106,18 @@ pub trait ConfigModule: crate::storage::StorageModule {
         self.managers().swap_remove(&manager);
     }
 
+    #[only_owner]
+    #[endpoint(addLiquidityProvider)]
+    fn add_liquidity_provider(&self, liquidity_provider: ManagedAddress) {
+        self.liquidity_providers().insert(liquidity_provider);
+    }
+
+    #[only_owner]
+    #[endpoint(removeLiquidityProviders)]
+    fn remove_liquidity_provider(&self, liquidity_provider: ManagedAddress) {
+        self.liquidity_providers().swap_remove(&liquidity_provider);
+    }
+
     #[endpoint(setScoringConfig)]
     fn set_scoring_config(&self, config: ScoringConfig) {
         self.is_manager(&self.blockchain().get_caller(), true);

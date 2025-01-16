@@ -1,21 +1,28 @@
 use crate::contract_setup::LiquidStakingContractSetup;
-use crate::utils::*;
-use liquid_staking::config::ConfigModule;
-use liquid_staking::manage::ManageModule;
-use liquid_staking::storage::StorageModule;
+use crate::{utils::*, DELEGATION_DEPLOY_CODE, OWNER_ADDRESS};
+use delegation_manager_mock::proxy_delegation::{self, DelegationMockProxy};
+use liquid_staking::proxy::proxy_liquid_staking;
 use liquid_staking::structs::UnstakeTokenAttributes;
-use liquid_staking::views::ViewsModule;
-use liquid_staking::LiquidStaking;
-use multiversx_sc::{imports::OptionalValue, types::Address};
-use multiversx_sc_scenario::{managed_address, num_bigint, rust_biguint, DebugApi};
+use multiversx_sc::types::{
+    BigUint, ReturnsNewManagedAddress, ReturnsResult, TestAddress, TestTokenIdentifier,
+};
+use multiversx_sc::{
+    imports::OptionalValue,
+    types::{Address, ManagedAddress},
+};
+use multiversx_sc_scenario::api::StaticApi;
+use multiversx_sc_scenario::{ExpectMessage, ScenarioTxRun};
 
-use delegation_mock::*;
-use liquid_staking::delegation::DelegationModule;
+impl LiquidStakingContractSetup {
+    pub fn setup_new_user(&mut self, user: TestAddress, egld_token_amount: u64) -> Address {
+        self.b_mock
+            .account(user)
+            .nonce(0)
+            .balance(&exp18(egld_token_amount));
 
-impl<LiquidStakingContractObjBuilder> LiquidStakingContractSetup<LiquidStakingContractObjBuilder>
-where
-    LiquidStakingContractObjBuilder: 'static + Copy + Fn() -> liquid_staking::ContractObj<DebugApi>,
-{
+        user.to_address()
+    }
+
     pub fn deploy_staking_contract(
         &mut self,
         owner_address: &Address,
@@ -25,7 +32,6 @@ where
         nr_nodes: u64,
         apy: u64,
     ) -> Address {
-        let rust_zero = rust_biguint!(0u64);
         let rust_one_egld = exp18(1);
         let egld_balance_biguint = &exp18(egld_balance);
         let total_staked_biguint = exp18(total_staked);
@@ -34,53 +40,42 @@ where
         self.b_mock
             .set_egld_balance(owner_address, &(egld_balance_biguint + &rust_one_egld));
 
-        let delegation_wrapper = self.b_mock.create_sc_account(
-            &rust_zero,
-            Some(owner_address),
-            delegation_mock::contract_obj,
-            "delegation-mock.wasm",
-        );
+        let delegation_contract = self
+            .b_mock
+            .tx()
+            .from(OWNER_ADDRESS)
+            .typed(DelegationMockProxy)
+            .init()
+            .code(DELEGATION_DEPLOY_CODE)
+            .returns(ReturnsNewManagedAddress)
+            .run();
 
         self.b_mock
-            .execute_tx(owner_address, &delegation_wrapper, &rust_zero, |sc| {
-                sc.init();
-            })
-            .assert_ok();
+            .tx()
+            .from(owner_address)
+            .to(&delegation_contract)
+            .typed(proxy_delegation::DelegationMockProxy)
+            .deposit_egld()
+            .egld(egld_balance_biguint)
+            .run();
 
         self.b_mock
-            .execute_tx(
+            .tx()
+            .from(owner_address)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .whitelist_delegation_contract(
+                &delegation_contract,
                 owner_address,
-                &delegation_wrapper,
-                egld_balance_biguint,
-                |sc| {
-                    sc.deposit_egld();
-                },
+                total_staked_biguint,
+                delegation_contract_cap_biguint,
+                nr_nodes,
+                apy,
             )
-            .assert_ok();
+            .egld(rust_one_egld)
+            .run();
 
-        self.b_mock
-            .execute_tx(owner_address, &self.sc_wrapper, &rust_one_egld, |sc| {
-                sc.whitelist_delegation_contract(
-                    managed_address!(delegation_wrapper.address_ref()),
-                    managed_address!(owner_address),
-                    to_managed_biguint(total_staked_biguint),
-                    to_managed_biguint(delegation_contract_cap_biguint),
-                    nr_nodes,
-                    apy,
-                );
-            })
-            .assert_ok();
-
-        delegation_wrapper.address_ref().clone()
-    }
-
-    pub fn set_inactive_state(&mut self, caller: &Address) {
-        let rust_zero = rust_biguint!(0u64);
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.set_state_inactive();
-            })
-            .assert_ok();
+        delegation_contract.to_address()
     }
 
     pub fn update_staking_contract_params(
@@ -93,352 +88,307 @@ where
         apy: u64,
         is_eligible: bool,
     ) {
-        let rust_zero = rust_biguint!(0u64);
         let total_staked_biguint = exp18(total_staked);
         let delegation_contract_cap_biguint = exp18(delegation_contract_cap);
 
         self.b_mock
-            .execute_tx(owner_address, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.change_delegation_contract_params(
-                    managed_address!(contract_address),
-                    to_managed_biguint(total_staked_biguint),
-                    to_managed_biguint(delegation_contract_cap_biguint),
-                    nr_nodes,
-                    apy,
-                    is_eligible,
-                );
-            })
-            .assert_ok();
+            .tx()
+            .from(owner_address)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .change_delegation_contract_params(
+                contract_address,
+                total_staked_biguint,
+                delegation_contract_cap_biguint,
+                nr_nodes,
+                apy,
+                is_eligible,
+            )
+            .run()
     }
 
-    pub fn add_liquidity(&mut self, caller: &Address, payment_amount: u64) {
+    pub fn set_inactive_state(&mut self, caller: &Address) {
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &exp18(payment_amount), |sc| {
-                sc.delegate();
-            })
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .set_state_inactive()
+            .run()
     }
 
-    pub fn add_liquidity_error(&mut self, caller: &Address, payment_amount: u64, error: &[u8]) {
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &exp18(payment_amount), |sc| {
-                sc.delegate();
-            })
-            .assert_error(4, bytes_to_str(error));
-    }
-
-    pub fn add_liquidity_exp17(&mut self, caller: &Address, payment_amount: u64) {
-        self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &exp17(payment_amount), |sc| {
-                sc.delegate();
-            })
-            .assert_ok();
-    }
-
-    pub fn add_liquidity_exp17_error(
+    pub fn add_liquidity(
         &mut self,
         caller: &Address,
-        payment_amount: u64,
-        error: &[u8],
+        payment_amount: BigUint<StaticApi>,
+        to: OptionalValue<ManagedAddress<StaticApi>>,
     ) {
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &exp17(payment_amount), |sc| {
-                sc.delegate();
-            })
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegate(to)
+            .egld(payment_amount)
+            .run();
+    }
+
+    pub fn add_liquidity_error(
+        &mut self,
+        caller: &Address,
+        payment_amount: BigUint<StaticApi>,
+        error: &[u8],
+        to: OptionalValue<ManagedAddress<StaticApi>>,
+    ) {
+        self.b_mock
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegate(to)
+            .egld(&payment_amount)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
+    }
+
+    pub fn add_liquidity_provider(&mut self, providers: Address) {
+        self.b_mock
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .add_liquidity_provider(providers)
+            .run();
+    }
+
+    pub fn remove_liquidity_provider(&mut self, provider: Address) {
+        self.b_mock
+            .tx()
+            .from(OWNER_ADDRESS)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .remove_liquidity_provider(provider)
+            .run();
     }
 
     pub fn remove_liquidity(
         &mut self,
         caller: &Address,
-        payment_token: &[u8],
-        payment_amount: u64,
+        payment_token: TestTokenIdentifier,
+        payment_amount: BigUint<StaticApi>,
     ) {
         self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                0,
-                &exp18(payment_amount),
-                |sc| {
-                    sc.un_delegate();
-                },
-            )
-            .assert_ok();
-    }
-
-    pub fn remove_liquidity_exp17(
-        &mut self,
-        caller: &Address,
-        payment_token: &[u8],
-        payment_amount: u64,
-    ) {
-        self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                0,
-                &exp17(payment_amount),
-                |sc| {
-                    sc.un_delegate();
-                },
-            )
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .un_delegate()
+            .single_esdt(&payment_token.to_token_identifier(), 0, &payment_amount)
+            .run();
     }
 
     pub fn remove_liquidity_error(
         &mut self,
         caller: &Address,
-        payment_token: &[u8],
-        payment_amount: u64,
+        payment_token: TestTokenIdentifier,
+        payment_amount: BigUint<StaticApi>,
         error: &[u8],
     ) {
         self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                0,
-                &exp18(payment_amount),
-                |sc| {
-                    sc.un_delegate();
-                },
-            )
-            .assert_error(4, bytes_to_str(error));
-    }
-
-    pub fn remove_liquidity_exp17_error(
-        &mut self,
-        caller: &Address,
-        payment_token: &[u8],
-        payment_amount: u64,
-        error: &[u8],
-    ) {
-        self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                0,
-                &exp17(payment_amount),
-                |sc| {
-                    sc.un_delegate();
-                },
-            )
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .un_delegate()
+            .single_esdt(&payment_token.to_token_identifier(), 0, &payment_amount)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
     pub fn claim_rewards(&mut self, caller: &Address) {
-        let rust_zero = rust_biguint!(0u64);
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.claim_rewards();
-            })
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .claim_rewards()
+            .run();
     }
 
     pub fn claim_rewards_error(&mut self, caller: &Address, error: &[u8]) {
-        let rust_zero = rust_biguint!(0u64);
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.claim_rewards();
-            })
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .claim_rewards()
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
-    pub fn delegate_pending(&mut self, caller: &Address, amount: OptionalValue<u64>) {
-        let rust_zero = rust_biguint!(0u64);
+    pub fn delegate_pending(
+        &mut self,
+        caller: &Address,
+        amount: OptionalValue<BigUint<StaticApi>>,
+    ) {
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_pending(match amount {
-                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
-                        to_managed_biguint(exp18(amount)),
-                    ),
-                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
-                });
-            })
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegate_pending(amount)
+            .run();
     }
 
     pub fn delegate_pending_error(
         &mut self,
         caller: &Address,
-        amount: OptionalValue<u64>,
+        amount: OptionalValue<BigUint<StaticApi>>,
         error: &[u8],
     ) {
-        let rust_zero = rust_biguint!(0u64);
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.delegate_pending(match amount {
-                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
-                        to_managed_biguint(exp17(amount)),
-                    ),
-                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
-                });
-            })
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegate_pending(amount)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
-    pub fn un_delegate_pending(&mut self, caller: &Address, amount: OptionalValue<u64>) {
-        let rust_zero = rust_biguint!(0u64);
+    pub fn un_delegate_pending(
+        &mut self,
+        caller: &Address,
+        amount: OptionalValue<BigUint<StaticApi>>,
+    ) {
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.un_delegate_pending(match amount {
-                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
-                        to_managed_biguint(exp18(amount)),
-                    ),
-                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
-                });
-            })
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .un_delegate_pending(amount)
+            .run();
     }
 
     pub fn un_delegate_pending_error(
         &mut self,
         caller: &Address,
-        amount: OptionalValue<u64>,
+        amount: OptionalValue<BigUint<StaticApi>>,
         error: &[u8],
     ) {
-        let rust_zero = rust_biguint!(0u64);
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.un_delegate_pending(match amount {
-                    OptionalValue::Some(amount) => multiversx_sc::imports::OptionalValue::Some(
-                        to_managed_biguint(exp17(amount)),
-                    ),
-                    OptionalValue::None => multiversx_sc::imports::OptionalValue::None,
-                });
-            })
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .un_delegate_pending(amount)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
     pub fn withdraw_pending(&mut self, caller: &Address, contracts: &Address) {
-        let rust_zero = rust_biguint!(0u64);
-
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.withdraw_pending(managed_address!(contracts));
-            })
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .withdraw_pending(contracts)
+            .run();
     }
 
     pub fn withdraw_pending_error(&mut self, caller: &Address, contracts: &Address, error: &[u8]) {
-        let rust_zero = rust_biguint!(0u64);
-
         self.b_mock
-            .execute_tx(caller, &self.sc_wrapper, &rust_zero, |sc| {
-                sc.withdraw_pending(managed_address!(contracts));
-            })
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .withdraw_pending(contracts)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
     pub fn withdraw(
         &mut self,
         caller: &Address,
-        payment_token: &[u8],
+        payment_token: TestTokenIdentifier,
         token_nonce: u64,
-        amount: num_bigint::BigUint,
+        amount: BigUint<StaticApi>,
     ) {
         self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                token_nonce,
-                &amount,
-                |sc| {
-                    sc.withdraw();
-                },
-            )
-            .assert_ok();
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .withdraw()
+            .single_esdt(&payment_token.to_token_identifier(), token_nonce, &amount)
+            .run();
     }
 
     pub fn withdraw_error(
         &mut self,
         caller: &Address,
-        payment_token: &[u8],
+        payment_token: TestTokenIdentifier,
         token_nonce: u64,
-        amount: num_bigint::BigUint,
+        amount: BigUint<StaticApi>,
         error: &[u8],
     ) {
         self.b_mock
-            .execute_esdt_transfer(
-                caller,
-                &self.sc_wrapper,
-                payment_token,
-                token_nonce,
-                &amount,
-                |sc| {
-                    sc.withdraw();
-                },
-            )
-            .assert_error(4, bytes_to_str(error));
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .withdraw()
+            .single_esdt(&payment_token.to_token_identifier(), token_nonce, &amount)
+            .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
+            .run();
     }
 
-    pub fn setup_new_user(&mut self, egld_token_amount: u64) -> Address {
-        let rust_zero = rust_biguint!(0);
-
-        let new_user = self.b_mock.create_user_account(&rust_zero);
-        self.b_mock
-            .set_egld_balance(&new_user, &exp18(egld_token_amount));
-        new_user
-    }
-
-    pub fn check_user_balance(&self, address: &Address, token_id: &[u8], token_balance: u64) {
-        self.b_mock
-            .check_esdt_balance(address, token_id, &exp18(token_balance));
-    }
-
-    pub fn check_user_balance_exp17(&self, address: &Address, token_id: &[u8], token_balance: u64) {
-        self.b_mock
-            .check_esdt_balance(address, token_id, &exp17(token_balance));
-    }
-
-    pub fn check_user_balance_denominated(
-        &self,
+    pub fn check_user_balance(
+        &mut self,
         address: &Address,
-        token_id: &[u8],
-        token_balance: u128,
+        token_id: TestTokenIdentifier,
+        token_balance: BigUint<StaticApi>,
     ) {
-        self.b_mock.check_esdt_balance(
-            address,
-            token_id,
-            &num_bigint::BigUint::from(token_balance),
-        );
+        self.b_mock
+            .check_account(address)
+            .esdt_balance(token_id, token_balance);
     }
 
-    pub fn check_user_egld_balance(&self, address: &Address, token_balance: u64) {
-        self.b_mock
-            .check_egld_balance(address, &exp18(token_balance));
-    }
-    pub fn check_user_egld_balance_exp17(&self, address: &Address, token_balance: u64) {
-        self.b_mock
-            .check_egld_balance(address, &exp17(token_balance));
-    }
-    pub fn check_user_egld_balance_denominated(&self, address: &Address, token_balance: u128) {
-        self.b_mock
-            .check_egld_balance(address, &num_bigint::BigUint::from(token_balance));
+    pub fn check_user_egld_balance(
+        &mut self,
+        address: &Address,
+        token_balance: BigUint<StaticApi>,
+    ) {
+        self.b_mock.check_account(address).balance(token_balance);
     }
 
     pub fn debug_providers(&mut self) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                let providers = sc.delegation_addresses_list();
-                for provider in providers.iter() {
-                    let delegation_contract_data = sc.delegation_contract_data(&provider).get();
-                    println!("provider: {:?}", provider);
-                    println!("delegation_contract_data: {:?}", delegation_contract_data);
-                    let staked_amount = delegation_contract_data.total_staked_from_ls_contract;
-                    println!("staked_amount: {:?}",staked_amount);
-                    let unstaked_amount = delegation_contract_data.total_unstaked_from_ls_contract;
-                    if unstaked_amount > 0 {
-                        println!("unstaked_amount: {:?}", unstaked_amount);
-                    }
-                }
-            })
-            .assert_ok();
+        let providers = self
+            .b_mock
+            .query()
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegation_addresses_list()
+            .returns(ReturnsResult)
+            .run();
+        for provider in providers {
+            let delegation_contract_data = self
+                .b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .delegation_contract_data(&provider)
+                .returns(ReturnsResult)
+                .run();
+            println!("provider: {:?}", provider);
+            println!("delegation_contract_data: {:?}", delegation_contract_data);
+            let staked_amount = delegation_contract_data.total_staked_from_ls_contract;
+            println!("staked_amount: {:?}", staked_amount);
+            let unstaked_amount = delegation_contract_data.total_unstaked_from_ls_contract;
+            if unstaked_amount > 0 {
+                println!("unstaked_amount: {:?}", unstaked_amount);
+            }
+        }
     }
 
     pub fn check_contract_storage(
@@ -450,170 +400,233 @@ where
         pending_egld: u64,
         pending_ls_for_unstake: u64,
     ) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.ls_token_supply().get(),
-                    to_managed_biguint(exp18(ls_token_supply))
-                );
-                assert_eq!(
-                    sc.virtual_egld_reserve().get(),
-                    to_managed_biguint(exp18(virtual_egld_reserve))
-                );
-                assert_eq!(
-                    sc.fees_reserve().get(),
-                    to_managed_biguint(exp18(fees_reserve))
-                );
-                assert_eq!(
-                    sc.total_withdrawn_egld().get(),
-                    to_managed_biguint(exp18(withdrawn_egld))
-                );
-                assert_eq!(
-                    sc.pending_egld().get(),
-                    to_managed_biguint(exp18(pending_egld))
-                );
-                assert_eq!(
-                    sc.pending_egld_for_unstake().get(),
-                    to_managed_biguint(exp18(pending_ls_for_unstake))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .ls_token_supply()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(ls_token_supply)
+        );
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .virtual_egld_reserve()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(virtual_egld_reserve)
+        );
+
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .fees_reserve()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(fees_reserve)
+        );
+
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .total_withdrawn_egld()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(withdrawn_egld)
+        );
+
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(pending_egld)
+        );
+
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld_for_unstake()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(pending_ls_for_unstake)
+        );
     }
 
     pub fn check_pending_egld_exp17(&mut self, pending_egld: u64) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.pending_egld().get(),
-                    to_managed_biguint(exp17(pending_egld))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld()
+                .returns(ReturnsResult)
+                .run(),
+            exp17(pending_egld)
+        );
     }
 
     pub fn check_pending_ls_for_unstake(&mut self, pending_ls_for_unstake: u64) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.pending_egld_for_unstake().get(),
-                    to_managed_biguint(exp18(pending_ls_for_unstake))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld_for_unstake()
+                .returns(ReturnsResult)
+                .run(),
+            exp18(pending_ls_for_unstake)
+        );
     }
+
     pub fn check_pending_ls_for_unstake_exp17(&mut self, pending_ls_for_unstake: u64) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.pending_egld_for_unstake().get(),
-                    to_managed_biguint(exp17(pending_ls_for_unstake))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld_for_unstake()
+                .returns(ReturnsResult)
+                .run(),
+            exp17(pending_ls_for_unstake)
+        );
     }
+
     pub fn check_pending_ls_for_unstake_denominated(&mut self, pending_ls_for_unstake: u128) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.pending_egld_for_unstake().get(),
-                    to_managed_biguint(num_bigint::BigUint::from(pending_ls_for_unstake))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .pending_egld_for_unstake()
+                .returns(ReturnsResult)
+                .run(),
+            exp(pending_ls_for_unstake)
+        );
     }
 
     pub fn check_total_withdrawn_egld_denominated(&mut self, total_withdrawn_egld: u128) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.total_withdrawn_egld().get(),
-                    to_managed_biguint(num_bigint::BigUint::from(total_withdrawn_egld))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .total_withdrawn_egld()
+                .returns(ReturnsResult)
+                .run(),
+            exp(total_withdrawn_egld)
+        );
     }
 
     pub fn check_total_withdrawn_egld_exp17(&mut self, total_withdrawn_egld: u64) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.total_withdrawn_egld().get(),
-                    to_managed_biguint(exp17(total_withdrawn_egld))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .total_withdrawn_egld()
+                .returns(ReturnsResult)
+                .run(),
+            exp17(total_withdrawn_egld)
+        );
     }
 
     pub fn check_contract_fees_storage_denominated(&mut self, fees_reserve: u128) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.fees_reserve().get(),
-                    to_managed_biguint(num_bigint::BigUint::from(fees_reserve))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .fees_reserve()
+                .returns(ReturnsResult)
+                .run(),
+            exp(fees_reserve)
+        );
     }
 
     pub fn check_delegation_contract_values(
         &mut self,
         delegation_contract: &Address,
-        total_staked: u64,
-        total_unstaked: u64,
+        total_staked: BigUint<StaticApi>,
+        total_unstaked: BigUint<StaticApi>,
     ) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.delegation_contract_data(&managed_address!(delegation_contract))
-                        .get()
-                        .total_staked_from_ls_contract,
-                    to_managed_biguint(exp18(total_staked))
-                );
-                assert_eq!(
-                    sc.delegation_contract_data(&managed_address!(delegation_contract))
-                        .get()
-                        .total_unstaked_from_ls_contract,
-                    to_managed_biguint(exp18(total_unstaked))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .delegation_contract_data(delegation_contract)
+                .returns(ReturnsResult)
+                .run()
+                .total_staked_from_ls_contract,
+            total_staked
+        );
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .delegation_contract_data(delegation_contract)
+                .returns(ReturnsResult)
+                .run()
+                .total_unstaked_from_ls_contract,
+            total_unstaked
+        );
     }
 
     pub fn get_ls_value_for_position(&mut self, token_amount: u64) -> u128 {
-        let mut ls_value = 0u64;
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                let ls_value_biguint =
-                    sc.get_ls_value_for_position(to_managed_biguint(exp18(token_amount)));
-                println!("ls_value {:?}", ls_value_biguint);
-                ls_value = ls_value_biguint.to_u64().unwrap();
-            })
-            .assert_ok();
+        let ls_value_biguint = self
+            .b_mock
+            .query()
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .get_ls_value_for_position(exp18(token_amount))
+            .returns(ReturnsResult)
+            .run();
+        println!("ls_value {:?}", ls_value_biguint);
 
-        u128::from(ls_value)
+        u128::from(ls_value_biguint.to_u64().unwrap())
     }
 
     pub fn get_fees_reserve(&mut self) -> u128 {
-        let mut fees_value_biguint = 0u64;
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                fees_value_biguint = sc.fees_reserve().get().to_u64().unwrap();
-            })
-            .assert_ok();
+        let fees_value_biguint = self
+            .b_mock
+            .query()
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .fees_reserve()
+            .returns(ReturnsResult)
+            .run();
 
-        u128::from(fees_value_biguint)
+        u128::from(fees_value_biguint.to_u64().unwrap())
     }
 
     pub fn print_pending_egld(&mut self) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                let pending_egld_value_biguint = sc.pending_egld().get().to_display();
-                println!(
-                    "pending_egld_value_biguint {:?}",
-                    pending_egld_value_biguint
-                );
-            })
-            .assert_ok();
+        let pending_egld_value_biguint = self
+            .b_mock
+            .query()
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .pending_egld()
+            .returns(ReturnsResult)
+            .run();
+        println!(
+            "pending_egld_value_biguint {:?}",
+            pending_egld_value_biguint.to_display()
+        );
     }
 
     pub fn check_delegation_contract_values_denominated(
@@ -621,16 +634,17 @@ where
         delegation_contract: &Address,
         total_staked: u128,
     ) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.delegation_contract_data(&managed_address!(delegation_contract))
-                        .get()
-                        .total_staked_from_ls_contract,
-                    to_managed_biguint(num_bigint::BigUint::from(total_staked))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .delegation_contract_data(delegation_contract)
+                .returns(ReturnsResult)
+                .run()
+                .total_staked_from_ls_contract,
+            exp(total_staked)
+        );
     }
 
     pub fn check_delegation_contract_unstaked_value_denominated(
@@ -638,32 +652,48 @@ where
         delegation_contract: &Address,
         total_un_staked: u128,
     ) {
-        self.b_mock
-            .execute_query(&self.sc_wrapper, |sc| {
-                assert_eq!(
-                    sc.delegation_contract_data(&managed_address!(delegation_contract))
-                        .get()
-                        .total_unstaked_from_ls_contract,
-                    to_managed_biguint(num_bigint::BigUint::from(total_un_staked))
-                );
-            })
-            .assert_ok();
+        assert_eq!(
+            self.b_mock
+                .query()
+                .to(&self.sc_wrapper)
+                .typed(proxy_liquid_staking::LiquidStakingProxy)
+                .delegation_contract_data(delegation_contract)
+                .returns(ReturnsResult)
+                .run()
+                .total_unstaked_from_ls_contract,
+            exp(total_un_staked)
+        );
     }
 
     pub fn check_user_nft_balance_denominated(
-        &self,
+        &mut self,
         address: &Address,
-        token_id: &[u8],
+        token_id: TestTokenIdentifier,
         token_nonce: u64,
-        token_balance: num_bigint::BigUint,
-        expected_attributes: Option<&UnstakeTokenAttributes>,
+        token_balance: BigUint<StaticApi>,
+        expected_attributes: Option<UnstakeTokenAttributes>,
     ) {
-        self.b_mock.check_nft_balance::<UnstakeTokenAttributes>(
-            address,
-            token_id,
-            token_nonce,
-            &token_balance,
-            expected_attributes,
-        );
+        if expected_attributes.is_some() {
+            self.b_mock
+                .check_account(address)
+                .esdt_nft_balance_and_attributes(
+                    token_id,
+                    token_nonce,
+                    token_balance,
+                    expected_attributes.unwrap(),
+                );
+        } else {
+            self.b_mock
+                .check_account(address)
+                .esdt_nft_balance_and_attributes(
+                    token_id,
+                    token_nonce,
+                    token_balance,
+                    UnstakeTokenAttributes {
+                        unbond_epoch: 0,
+                        unstake_epoch: 0,
+                    },
+                );
+        }
     }
 }

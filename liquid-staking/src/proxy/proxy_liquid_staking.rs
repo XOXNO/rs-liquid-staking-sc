@@ -112,11 +112,15 @@ where
     /// Note: No immediate delegation occurs; instead, funds are held and distributed 
     /// at set intervals across providers for efficient decentralization. 
     /// Transaction value is used as the staked amount. 
-    pub fn delegate(
+    pub fn delegate<
+        Arg0: ProxyArg<OptionalValue<ManagedAddress<Env::Api>>>,
+    >(
         self,
+        to: Arg0,
     ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
         self.wrapped_tx
             .raw_call("delegate")
+            .argument(&to)
             .original_result()
     }
 
@@ -348,6 +352,32 @@ where
             .original_result()
     }
 
+    pub fn add_liquidity_provider<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        liquidity_provider: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("addLiquidityProvider")
+            .argument(&liquidity_provider)
+            .original_result()
+    }
+
+    pub fn remove_liquidity_provider<
+        Arg0: ProxyArg<ManagedAddress<Env::Api>>,
+    >(
+        self,
+        liquidity_provider: Arg0,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("removeLiquidityProviders")
+            .argument(&liquidity_provider)
+            .original_result()
+    }
+
     pub fn set_scoring_config<
         Arg0: ProxyArg<ScoringConfig>,
     >(
@@ -478,6 +508,15 @@ where
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("getManagers")
+            .original_result()
+    }
+
+    pub fn liquidity_providers(
+        self,
+    ) -> TxTypedCall<Env, From, To, NotPayable, Gas, MultiValueEncoded<Env::Api, ManagedAddress<Env::Api>>> {
+        self.wrapped_tx
+            .payment(NotPayable)
+            .raw_call("getLiquidityProviders")
             .original_result()
     }
 

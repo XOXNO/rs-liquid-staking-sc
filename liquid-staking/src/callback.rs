@@ -1,5 +1,5 @@
 multiversx_sc::imports!();
-use crate::{utils, StorageCache};
+use crate::StorageCache;
 
 #[multiversx_sc::module]
 pub trait CallbackModule:
@@ -7,7 +7,7 @@ pub trait CallbackModule:
     + crate::events::EventsModule
     + crate::storage::StorageModule
     + crate::score::ScoreModule
-    + utils::generic::UtilsModule
+    + crate::utils::generic::UtilsModule
     + crate::selection::SelectionModule
     + crate::liquidity_pool::LiquidityPoolModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
@@ -115,6 +115,26 @@ pub trait CallbackModule:
         caller: &ManagedAddress,
         #[call_result] result: ManagedAsyncCallResult<()>,
     ) {
+        match result {
+            ManagedAsyncCallResult::Ok(()) => {
+                self.add_delegation_address_in_list(contract_address.clone());
+                self.add_un_delegation_address_in_list(contract_address);
+            }
+            ManagedAsyncCallResult::Err(_) => {
+                self.delegation_contract_data(&contract_address).clear();
+                self.tx().to(caller).egld(staked_tokens).transfer();
+            }
+        }
+    }
+
+    #[promises_callback]
+    fn instant_delegation_contract_callback(
+        &self,
+        contract_address: ManagedAddress,
+        staked_tokens: &BigUint,
+        caller: &ManagedAddress,
+        #[call_result] result: ManagedAsyncCallResult<()>,
+    ) {
         let mut storage_cache = StorageCache::new(self);
         match result {
             ManagedAsyncCallResult::Ok(()) => {
@@ -123,9 +143,6 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract += staked_tokens;
                     });
 
-                self.add_delegation_address_in_list(contract_address.clone());
-                self.add_un_delegation_address_in_list(contract_address);
-
                 let ls_amount = self.pool_add_liquidity(&staked_tokens, &mut storage_cache);
                 let user_payment = self.mint_ls_token(ls_amount);
 
@@ -133,7 +150,6 @@ pub trait CallbackModule:
                 self.tx().to(caller).esdt(user_payment).transfer();
             }
             ManagedAsyncCallResult::Err(_) => {
-                self.delegation_contract_data(&contract_address).clear();
                 self.tx().to(caller).egld(staked_tokens).transfer();
             }
         }
