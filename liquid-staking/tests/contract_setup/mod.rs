@@ -38,7 +38,6 @@ pub const ACCUMULATION_DEPLOY_CODE: MxscPath =
 pub static ESDT_ROLES: &[EsdtLocalRole] = &[
     EsdtLocalRole::Mint,
     EsdtLocalRole::Burn,
-    EsdtLocalRole::Transfer,
 ];
 
 pub static SFT_ROLES: &[EsdtLocalRole] = &[
