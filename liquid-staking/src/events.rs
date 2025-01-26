@@ -25,6 +25,28 @@ pub trait EventsModule:
     + crate::storage::StorageModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
+    fn emit_add_rewards_event(&self, storage_cache: &StorageCache<Self>, egld_amount: &BigUint) {
+        let epoch = self.blockchain().get_block_epoch();
+        let caller = self.blockchain().get_caller();
+        self.add_rewards_event(
+            &egld_amount,
+            &ChangeLiquidityEvent {
+                caller: caller.clone(),
+                ls_token_id: storage_cache.ls_token_id.clone(),
+                ls_token_supply: storage_cache.ls_token_supply.clone(),
+                virtual_egld_reserve: storage_cache.virtual_egld_reserve.clone(),
+                fees_reserve: storage_cache.fees_reserve.clone(),
+                total_withdrawn_egld: storage_cache.total_withdrawn_egld.clone(),
+                pending_egld: storage_cache.pending_egld.clone(),
+                pending_egld_for_unstake: storage_cache.pending_egld_for_unstake.clone(),
+                pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
+                block: self.blockchain().get_block_nonce(),
+                epoch,
+                timestamp: self.blockchain().get_block_timestamp(),
+            },
+        )
+    }
+
     fn emit_add_liquidity_event(
         &self,
         storage_cache: &StorageCache<Self>,
@@ -152,6 +174,13 @@ pub trait EventsModule:
             timestamp: self.blockchain().get_block_timestamp(),
         })
     }
+
+    #[event("add_rewards")]
+    fn add_rewards_event(
+        &self,
+        #[indexed] amount: &BigUint,
+        #[indexed] change_liquidity_event: &ChangeLiquidityEvent<Self::Api>,
+    );
 
     #[event("add_liquidity")]
     fn add_liquidity_event(

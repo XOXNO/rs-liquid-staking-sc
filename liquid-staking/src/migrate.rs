@@ -1,7 +1,6 @@
 multiversx_sc::imports!();
 use crate::{StorageCache, ERROR_MIGRATION_NOT_ALLOWED, ERROR_MIGRATION_SC_NOT_SET};
 
-
 #[multiversx_sc::module]
 pub trait MigrateModule:
     crate::config::ConfigModule
@@ -78,7 +77,7 @@ pub trait MigrateModule:
         storage_cache.virtual_egld_reserve += amount.clone_value();
         storage_cache.pending_egld += amount.clone_value();
 
-        self.emit_general_liquidity_event(&storage_cache);
+        self.emit_add_rewards_event(&storage_cache, &amount);
     }
 
     #[only_owner]
