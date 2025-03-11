@@ -21,7 +21,7 @@ pub trait DelegateUtilsModule:
         egld_from_pending_used: &BigUint,
         egld_to_add_liquidity: &BigUint,
         caller: &ManagedAddress,
-    ) {
+    ) -> EsdtTokenPayment {
         let mut final_amount_to_mint = BigUint::zero();
 
         // Process redemption of pending xEGLD by the user via his EGLD
@@ -41,21 +41,25 @@ pub trait DelegateUtilsModule:
                 &mut final_amount_to_mint,
             );
         }
+        require!(
+            final_amount_to_mint > BigUint::zero(),
+            ERROR_BAD_PAYMENT_AMOUNT
+        );
 
-        if final_amount_to_mint > BigUint::zero() {
-            // Add the liquidity to the pool and mint the corresponding xEGLD
-            let ls_amount = self.pool_add_liquidity(&final_amount_to_mint, storage_cache);
-            let user_payment = self.mint_ls_token(ls_amount);
+        // Add the liquidity to the pool and mint the corresponding xEGLD
+        let ls_amount = self.pool_add_liquidity(&final_amount_to_mint, storage_cache);
+        let user_payment = self.mint_ls_token(ls_amount);
 
-            // Send the final amount to the user, including the xEGLD from pending redemption if any and the fresh minted xEGLD if any
-            self.tx().to(caller).esdt(user_payment).transfer();
-            // Emit the add liquidity event
-            self.emit_add_liquidity_event(
-                &storage_cache,
-                &(egld_to_add_liquidity + egld_from_pending_used),
-                Some(caller.clone()),
-            );
-        }
+        // Send the final amount to the user, including the xEGLD from pending redemption if any and the fresh minted xEGLD if any
+        self.tx().to(caller).esdt(user_payment.clone()).transfer();
+        // Emit the add liquidity event
+        self.emit_add_liquidity_event(
+            &storage_cache,
+            &(egld_to_add_liquidity + egld_from_pending_used),
+            Some(caller.clone()),
+        );
+
+        user_payment
     }
 
     fn decrease_pending_egld(

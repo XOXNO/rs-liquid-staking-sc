@@ -95,7 +95,7 @@ pub trait LiquidStaking<ContractReader>:
     /// Transaction value is used as the staked amount.
     #[payable("EGLD")]
     #[endpoint(delegate)]
-    fn delegate(&self, to: OptionalValue<ManagedAddress>) {
+    fn delegate(&self, to: OptionalValue<ManagedAddress>) -> OptionalValue<EsdtTokenPayment> {
         let mut storage_cache = StorageCache::new(self);
 
         let payment = self.call_value().egld().clone_value();
@@ -139,11 +139,15 @@ pub trait LiquidStaking<ContractReader>:
                 )
                 .gas_for_callback(MIN_GAS_FOR_WHITELIST_CALLBACK)
                 .register_promise();
+
+            return OptionalValue::None;
         } else {
             let (pending, extra) =
                 self.get_action_amount(&storage_cache.pending_egld_for_unstake, &payment);
 
-            self.process_delegation(&mut storage_cache, &pending, &extra, &caller)
+            let result = self.process_delegation(&mut storage_cache, &pending, &extra, &caller);
+
+            return OptionalValue::Some(result);
         }
     }
 

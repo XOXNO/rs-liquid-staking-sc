@@ -414,10 +414,8 @@ pub trait SelectionModule:
         min_egld: &BigUint<Self::Api>,
         providers_len: usize,
     ) -> usize {
-        let amount_decimal =
-            ManagedDecimal::<Self::Api, ConstDecimals<DECIMALS>>::from(amount_to_delegate.clone());
-        let min_egld_decimal =
-            ManagedDecimal::<Self::Api, ConstDecimals<DECIMALS>>::from(min_egld.clone());
+        let amount_decimal = ManagedDecimal::from_raw_units(amount_to_delegate.clone(), DECIMALS);
+        let min_egld_decimal = ManagedDecimal::from_raw_units(min_egld.clone(), DECIMALS);
 
         let max_providers_decimal = amount_decimal / min_egld_decimal;
         let max_providers_biguint = max_providers_decimal.trunc();

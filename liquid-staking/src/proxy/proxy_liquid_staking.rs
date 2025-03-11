@@ -117,7 +117,7 @@ where
     >(
         self,
         to: Arg0,
-    ) -> TxTypedCall<Env, From, To, (), Gas, ()> {
+    ) -> TxTypedCall<Env, From, To, (), Gas, Option<EsdtTokenPayment<Env::Api>>> {
         self.wrapped_tx
             .raw_call("delegate")
             .argument(&to)
