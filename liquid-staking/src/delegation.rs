@@ -61,7 +61,7 @@ pub trait DelegationModule:
 
         let payment = self.call_value().egld().clone_value();
         require!(
-            payment >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            payment >= MIN_EGLD_TO_DELEGATE,
             ERROR_MIN_EGLD_TO_DELEGATE
         );
 

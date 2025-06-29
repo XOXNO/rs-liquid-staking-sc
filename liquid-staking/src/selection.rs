@@ -233,11 +233,7 @@ pub trait SelectionModule:
                     info.address.clone(),
                     amount_to_delegate.clone(),
                     if is_delegate {
-                        if let Some(space_left) = info.space_left.clone() {
-                            Some(space_left - amount_to_delegate) // Decrease space left
-                        } else {
-                            None // Unlimited provider
-                        }
+                        info.space_left.clone().map(|space_left| space_left - amount_to_delegate)
                     } else {
                         Some(info.total_staked_from_ls_contract.clone() - amount_to_delegate)
                     },
@@ -331,8 +327,8 @@ pub trait SelectionModule:
                 // Either take the remaining amount or the space left (which can be 0)
                 let can_use = space_left.clone().min(remaining_amount.clone());
                 if can_use > BigUint::zero()
-                    && (&space_left - &can_use >= BigUint::from(MIN_EGLD_TO_DELEGATE)
-                        || &space_left == &can_use)
+                    && (&space_left - &can_use >= MIN_EGLD_TO_DELEGATE
+                        || space_left == can_use)
                 {
                     self.update_provider_amount(providers, i, &provider, &can_use);
                     *remaining_amount -= can_use;
@@ -340,7 +336,7 @@ pub trait SelectionModule:
             } else {
                 // For not capped providers we can fill the remaining amount with no problem
                 if provider.space_left.is_none() {
-                    self.update_provider_amount(providers, i, &provider, &remaining_amount);
+                    self.update_provider_amount(providers, i, &provider, remaining_amount);
                     *remaining_amount = BigUint::zero();
                 } else {
                     // For capped providers we need to check if the remaining amount fits in the space left

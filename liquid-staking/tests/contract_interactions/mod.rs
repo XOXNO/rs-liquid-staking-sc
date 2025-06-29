@@ -18,7 +18,7 @@ impl LiquidStakingContractSetup {
         self.b_mock
             .account(user)
             .nonce(0)
-            .balance(&exp18(egld_token_amount));
+            .balance(exp18(egld_token_amount));
 
         user.to_address()
     }

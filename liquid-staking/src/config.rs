@@ -81,7 +81,7 @@ pub trait ConfigModule: crate::storage::StorageModule {
     #[endpoint(setMaxSelectedProviders)]
     fn set_max_selected_providers(&self, number: BigUint) {
         require!(
-            number >= BigUint::from(1u64),
+            number >= 1u64,
             ERROR_MAX_CHANGED_DELEGATION_ADDRESSES
         );
 

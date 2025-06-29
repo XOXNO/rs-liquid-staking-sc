@@ -24,9 +24,9 @@ pub trait UnDelegateUtilsModule:
     ) {
         let caller = self.blockchain().get_caller();
 
-        self.process_instant_redemption(storage_cache, &caller, &egld_from_pending_used);
+        self.process_instant_redemption(storage_cache, &caller, egld_from_pending_used);
 
-        self.undelegate_amount(storage_cache, &egld_to_remove_liquidity, &caller);
+        self.undelegate_amount(storage_cache, egld_to_remove_liquidity, &caller);
 
         self.emit_remove_liquidity_event(
             storage_cache,
@@ -44,7 +44,7 @@ pub trait UnDelegateUtilsModule:
             storage_cache.pending_egld -= instant_amount;
 
             require!(
-                &storage_cache.pending_egld >= &BigUint::from(MIN_EGLD_TO_DELEGATE)
+                storage_cache.pending_egld >= MIN_EGLD_TO_DELEGATE
                     || storage_cache.pending_egld == BigUint::zero(),
                 ERROR_INSUFFICIENT_PENDING_EGLD
             );
@@ -83,7 +83,7 @@ pub trait UnDelegateUtilsModule:
             storage_cache.pending_egld_for_unstake += egld_to_unstake;
 
             require!(
-                storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                storage_cache.pending_egld_for_unstake >= MIN_EGLD_TO_DELEGATE
                     || storage_cache.pending_egld_for_unstake == BigUint::zero(),
                 ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
             );

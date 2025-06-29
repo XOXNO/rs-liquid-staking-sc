@@ -16,7 +16,7 @@ fn init_test() {
 
 #[test]
 fn liquid_staking_claim_rewards_and_withdraw_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -72,7 +72,7 @@ fn liquid_staking_claim_rewards_and_withdraw_test() {
 
 #[test]
 fn liquid_staking_multiple_operations() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
 
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -178,7 +178,7 @@ fn liquid_staking_multiple_operations() {
 
 #[test]
 fn liquid_staking_multiple_withdraw_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -427,7 +427,7 @@ fn liquid_staking_multiple_withdraw_test() {
 
 #[test]
 fn add_liquidity_no_valid_delegation_contract_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let first_user = sc_setup.setup_new_user(TestAddress::new("first_user"), 100u64);

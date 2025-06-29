@@ -22,7 +22,7 @@ pub static BAD_TOKEN_ID: TestTokenIdentifier = TestTokenIdentifier::new("BAD-123
 
 #[test]
 fn liquid_staking_unbond_success_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -82,7 +82,7 @@ fn liquid_staking_unbond_success_test() {
 
 #[test]
 fn liquid_staking_unbond_error_epoch_too_soon_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -122,7 +122,7 @@ fn liquid_staking_unbond_error_epoch_too_soon_test() {
 
 #[test]
 fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -159,7 +159,7 @@ fn liquid_staking_unbond_error_epoch_no_withdraw_pending_test() {
 
 #[test]
 fn liquid_staking_unbond_partial_withdraw_pending_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -221,7 +221,7 @@ fn liquid_staking_unbond_partial_withdraw_pending_test() {
 
 #[test]
 fn liquid_staking_unbond_error_not_active_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -257,7 +257,7 @@ fn liquid_staking_unbond_error_not_active_test() {
 
 #[test]
 fn liquid_staking_unbond_error_not_amount_sent_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -297,7 +297,7 @@ fn liquid_staking_unbond_error_not_amount_sent_test() {
 
 #[test]
 fn liquid_staking_unbond_error_bad_token_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let delegation_contract =
@@ -329,6 +329,6 @@ fn liquid_staking_unbond_error_bad_token_test() {
 
     sc_setup
         .b_mock
-        .set_esdt_balance(&user, BAD_TOKEN_ID.as_bytes(), &exp18(100));
+        .set_esdt_balance(&user, BAD_TOKEN_ID.as_bytes(), exp18(100));
     sc_setup.withdraw_error(&user, BAD_TOKEN_ID, 0, exp18(100), ERROR_BAD_PAYMENT_TOKEN);
 }

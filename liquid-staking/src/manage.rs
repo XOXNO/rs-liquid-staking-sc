@@ -39,26 +39,26 @@ pub trait ManageModule:
         self.is_manager(&self.blockchain().get_caller(), true);
 
         require!(
-            storage_cache.pending_egld >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            storage_cache.pending_egld >= MIN_EGLD_TO_DELEGATE,
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
         let amount_to_delegate = match amount {
             OptionalValue::Some(amount) => {
                 require!(
-                    &amount <= &storage_cache.pending_egld,
+                    amount <= storage_cache.pending_egld,
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 
                 require!(
-                    amount >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+                    amount >= MIN_EGLD_TO_DELEGATE,
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 
                 let left_over = &storage_cache.pending_egld - &amount;
 
                 require!(
-                    left_over >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                    left_over >= MIN_EGLD_TO_DELEGATE
                         || left_over == BigUint::zero(),
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
@@ -115,26 +115,26 @@ pub trait ManageModule:
         self.is_manager(&self.blockchain().get_caller(), true);
 
         require!(
-            &storage_cache.pending_egld_for_unstake >= &BigUint::from(MIN_EGLD_TO_DELEGATE),
+            storage_cache.pending_egld_for_unstake >= MIN_EGLD_TO_DELEGATE,
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 
         let amount_to_unstake = match amount {
             OptionalValue::Some(amount) => {
                 require!(
-                    &amount <= &storage_cache.pending_egld_for_unstake,
+                    amount <= storage_cache.pending_egld_for_unstake,
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 
                 require!(
-                    amount >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+                    amount >= MIN_EGLD_TO_DELEGATE,
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 
                 let left_over = &storage_cache.pending_egld_for_unstake - &amount;
 
                 require!(
-                    left_over >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+                    left_over >= MIN_EGLD_TO_DELEGATE
                         || left_over == BigUint::zero(),
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );

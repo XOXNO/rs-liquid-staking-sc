@@ -23,7 +23,7 @@ pub trait CallbackModule:
         match result {
             ManagedAsyncCallResult::Ok(()) => {
                 storage_cache.pending_egld_for_unbond += egld_to_unstake;
-                self.delegation_contract_data(&delegation_contract)
+                self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract -= egld_to_unstake;
                         contract_data.total_unstaked_from_ls_contract += egld_to_unstake;
@@ -32,7 +32,7 @@ pub trait CallbackModule:
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld_for_unstake += egld_to_unstake;
-                self.delegation_contract_data(&delegation_contract)
+                self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.pending_unstaking_callback_amount -= egld_to_unstake;
                     });
@@ -51,7 +51,7 @@ pub trait CallbackModule:
         let mut storage_cache = StorageCache::new(self);
         match result {
             ManagedAsyncCallResult::Ok(()) => {
-                self.delegation_contract_data(&delegation_contract)
+                self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.total_staked_from_ls_contract += staked_tokens;
                         contract_data.pending_staking_callback_amount -= staked_tokens;
@@ -59,7 +59,7 @@ pub trait CallbackModule:
             }
             ManagedAsyncCallResult::Err(_) => {
                 storage_cache.pending_egld += staked_tokens;
-                self.delegation_contract_data(&delegation_contract)
+                self.delegation_contract_data(delegation_contract)
                     .update(|contract_data| {
                         contract_data.eligible = false;
                         contract_data.pending_staking_callback_amount -= staked_tokens;
@@ -74,7 +74,7 @@ pub trait CallbackModule:
         let withdraw_amount = self.call_value().egld().clone_value();
         if withdraw_amount > BigUint::zero() {
             let mut storage_cache = StorageCache::new(self);
-            let delegation_contract_mapper = self.delegation_contract_data(&delegation_contract);
+            let delegation_contract_mapper = self.delegation_contract_data(delegation_contract);
 
             storage_cache.total_withdrawn_egld += &withdraw_amount;
             storage_cache.pending_egld_for_unbond -= &withdraw_amount;
@@ -88,22 +88,19 @@ pub trait CallbackModule:
 
     #[promises_callback]
     fn claim_rewards_callback(&self, #[call_result] result: ManagedAsyncCallResult<BigUint>) {
-        match result {
-            ManagedAsyncCallResult::Ok(total_rewards) => {
-                if total_rewards > BigUint::zero() {
-                    let mut storage_cache = StorageCache::new(self);
-                    let fees = self.calculate_share(&total_rewards, &self.fees().get());
+        if let ManagedAsyncCallResult::Ok(total_rewards) = result {
+            if total_rewards > BigUint::zero() {
+                let mut storage_cache = StorageCache::new(self);
+                let fees = self.calculate_share(&total_rewards, &self.fees().get());
 
-                    let post_fees_amount = &total_rewards - &fees;
+                let post_fees_amount = &total_rewards - &fees;
 
-                    storage_cache.fees_reserve += &fees;
-                    storage_cache.pending_egld += &post_fees_amount;
-                    storage_cache.virtual_egld_reserve += &post_fees_amount;
+                storage_cache.fees_reserve += &fees;
+                storage_cache.pending_egld += &post_fees_amount;
+                storage_cache.virtual_egld_reserve += &post_fees_amount;
 
-                    self.emit_claim_rewards_event(&storage_cache, &total_rewards, &fees);
-                }
+                self.emit_claim_rewards_event(&storage_cache, &total_rewards, &fees);
             }
-            _ => {}
         }
     }
 
@@ -143,7 +140,7 @@ pub trait CallbackModule:
                         contract_data.total_staked_from_ls_contract += staked_tokens;
                     });
 
-                let ls_amount = self.pool_add_liquidity(&staked_tokens, &mut storage_cache);
+                let ls_amount = self.pool_add_liquidity(staked_tokens, &mut storage_cache);
                 let user_payment = self.mint_ls_token(ls_amount);
 
                 self.emit_add_liquidity_event(&storage_cache, staked_tokens, Some(caller.clone()));

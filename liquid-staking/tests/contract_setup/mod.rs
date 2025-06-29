@@ -119,7 +119,7 @@ fn setup_liquid_staking_sc(world: &mut ScenarioWorld, fees: u64) -> ManagedAddre
     world.set_esdt_local_roles(&sc, LS_TOKEN_ID.as_bytes(), ESDT_ROLES);
     world.set_esdt_local_roles(&sc, UNSTAKE_TOKEN_ID.as_bytes(), SFT_ROLES);
 
-    return sc;
+    sc
 }
 
 impl LiquidStakingContractSetup {

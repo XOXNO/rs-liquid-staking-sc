@@ -122,7 +122,7 @@ pub trait LiquidStaking<ContractReader>:
                 ERROR_NOT_LIQUIDITY_PROVIDER
             );
 
-            require!(&payment >= &min_egld_amount, ERROR_MIN_EGLD_TO_DELEGATE);
+            require!(payment >= min_egld_amount, ERROR_MIN_EGLD_TO_DELEGATE);
 
             self.tx()
                 .to(&provider)
@@ -210,36 +210,34 @@ pub trait LiquidStaking<ContractReader>:
 
                 storage_cache.total_withdrawn_egld -= &payment.amount;
                 to_send += payment.amount;
-            } else {
-                if storage_cache.total_withdrawn_egld > BigUint::zero() {
-                    // In this case the required amount of the MetaESDT is higher than the available amount
-                    // This case can happen only when the amount from the providers didn't arrive yet in the protocol
-                    // In this case we partially give to the user the available amount and return the remaining MetaESDT to the user
-                    self.burn_unstake_tokens(
+            } else if storage_cache.total_withdrawn_egld > BigUint::zero() {
+                // In this case the required amount of the MetaESDT is higher than the available amount
+                // This case can happen only when the amount from the providers didn't arrive yet in the protocol
+                // In this case we partially give to the user the available amount and return the remaining MetaESDT to the user
+                self.burn_unstake_tokens(
+                    payment.token_nonce,
+                    &storage_cache.total_withdrawn_egld,
+                );
+
+                let remaining_amount = payment.amount - &storage_cache.total_withdrawn_egld;
+
+                // Send the remaining amount to the user
+                self.tx()
+                    .to(&caller)
+                    .single_esdt(
+                        &payment.token_identifier,
                         payment.token_nonce,
-                        &storage_cache.total_withdrawn_egld,
-                    );
+                        &remaining_amount,
+                    )
+                    .transfer();
 
-                    let remaining_amount = payment.amount - &storage_cache.total_withdrawn_egld;
+                // Send the amount to the user
+                to_send += storage_cache.total_withdrawn_egld.clone();
 
-                    // Send the remaining amount to the user
-                    self.tx()
-                        .to(&caller)
-                        .single_esdt(
-                            &payment.token_identifier,
-                            payment.token_nonce,
-                            &remaining_amount,
-                        )
-                        .transfer();
-
-                    // Send the amount to the user
-                    to_send += storage_cache.total_withdrawn_egld.clone();
-
-                    // Reset the total withdrawn amount to 0
-                    storage_cache.total_withdrawn_egld = BigUint::zero();
-                } else {
-                    sc_panic!(ERROR_INSUFFICIENT_UNBONDED_AMOUNT);
-                }
+                // Reset the total withdrawn amount to 0
+                storage_cache.total_withdrawn_egld = BigUint::zero();
+            } else {
+                sc_panic!(ERROR_INSUFFICIENT_UNBONDED_AMOUNT);
             }
         }
 

@@ -29,7 +29,7 @@ pub trait EventsModule:
         let epoch = self.blockchain().get_block_epoch();
         let caller = self.blockchain().get_caller();
         self.add_rewards_event(
-            &egld_amount,
+            egld_amount,
             &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
@@ -59,7 +59,7 @@ pub trait EventsModule:
             None => self.blockchain().get_caller(),
         };
         self.add_liquidity_event(
-            &egld_amount,
+            egld_amount,
             &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
@@ -81,7 +81,7 @@ pub trait EventsModule:
         let epoch = self.blockchain().get_block_epoch();
         let caller = self.blockchain().get_caller();
         self.remove_liquidity_event(
-            &ls_amount,
+            ls_amount,
             &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
@@ -110,7 +110,7 @@ pub trait EventsModule:
 
         self.protocol_revenue_event(fees, epoch);
         self.claim_rewards_event(
-            &egld_amount,
+            egld_amount,
             &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
@@ -137,7 +137,7 @@ pub trait EventsModule:
         let epoch = self.blockchain().get_block_epoch();
         let caller = self.blockchain().get_caller();
         self.withdraw_pending_event(
-            &egld_amount,
+            egld_amount,
             &ChangeLiquidityEvent {
                 caller: caller.clone(),
                 ls_token_id: storage_cache.ls_token_id.clone(),
@@ -152,7 +152,7 @@ pub trait EventsModule:
                 epoch,
                 timestamp: self.blockchain().get_block_timestamp(),
             },
-            &delegation_contract,
+            delegation_contract,
         )
     }
 

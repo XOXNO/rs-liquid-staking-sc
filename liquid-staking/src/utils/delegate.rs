@@ -54,7 +54,7 @@ pub trait DelegateUtilsModule:
         self.tx().to(caller).esdt(user_payment.clone()).transfer();
         // Emit the add liquidity event
         self.emit_add_liquidity_event(
-            &storage_cache,
+            storage_cache,
             &(egld_to_add_liquidity + egld_from_pending_used),
             Some(caller.clone()),
         );
@@ -75,7 +75,7 @@ pub trait DelegateUtilsModule:
 
         // Ensure the remaining pending xEGLD is higher or equal to min_xegld_amount or is zero
         require!(
-            storage_cache.pending_egld_for_unstake >= BigUint::from(MIN_EGLD_TO_DELEGATE)
+            storage_cache.pending_egld_for_unstake >= MIN_EGLD_TO_DELEGATE
                 || storage_cache.pending_egld_for_unstake == BigUint::zero(),
             ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD
         );
@@ -94,7 +94,7 @@ pub trait DelegateUtilsModule:
 
         // Ensure the remaining pending EGLD is not less than 1 EGLD
         require!(
-            storage_cache.pending_egld >= BigUint::from(MIN_EGLD_TO_DELEGATE),
+            storage_cache.pending_egld >= MIN_EGLD_TO_DELEGATE,
             ERROR_INSUFFICIENT_PENDING_EGLD
         );
 

@@ -109,10 +109,10 @@ pub trait LiquidityPoolModule: config::ConfigModule + storage::StorageModule {
 
             EsdtTokenPayment::new(token_id, new_nonce, amount.clone())
         } else {
-            let payment = self
+            
+            self
                 .unstake_token()
-                .nft_add_quantity(nonce.get(), amount.clone());
-            payment
+                .nft_add_quantity(nonce.get(), amount.clone())
         }
     }
 

@@ -19,7 +19,7 @@ use multiversx_sc_scenario::DebugApi;
 #[test]
 fn undelegate_can_fully_instant_redeem() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -52,7 +52,7 @@ fn undelegate_can_fully_instant_redeem() {
 #[test]
 fn undelegate_partially_instant_test() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -104,7 +104,7 @@ fn undelegate_partially_instant_test() {
 #[test]
 fn clean_old_unbond_epochs_test() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -169,7 +169,7 @@ fn clean_old_unbond_epochs_test() {
 #[test]
 fn calculate_partial_undelegate_fallback_test() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -233,7 +233,7 @@ fn calculate_partial_undelegate_fallback_test() {
 #[test]
 fn undelegate_can_fully_pending_redeem() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -285,7 +285,7 @@ fn undelegate_can_fully_pending_redeem() {
 #[test]
 fn undelegate_small_amount_error_test() {
     // Create a dummy debug API instance
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     // Set up the liquid staking contract
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
@@ -320,7 +320,7 @@ fn undelegate_small_amount_error_test() {
 
 #[test]
 fn liquid_staking_un_delegate_custom_amount_under_min_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -341,7 +341,7 @@ fn liquid_staking_un_delegate_custom_amount_under_min_pending_error_test() {
 
 #[test]
 fn liquid_staking_un_delegate_custom_amount_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -362,7 +362,7 @@ fn liquid_staking_un_delegate_custom_amount_pending_error_test() {
 
 #[test]
 fn liquid_staking_un_delegate_custom_amount_left_over_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -382,7 +382,7 @@ fn liquid_staking_un_delegate_custom_amount_left_over_pending_error_test() {
 
 #[test]
 fn liquid_staking_un_delegate_custom_amount_full_pending_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -399,7 +399,7 @@ fn liquid_staking_un_delegate_custom_amount_full_pending_test() {
 
 #[test]
 fn undelegate_remaining_amount_distribution_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy providers with specific caps to trigger our edge case
@@ -447,7 +447,7 @@ fn undelegate_remaining_amount_distribution_test() {
 
 #[test]
 fn undelegate_left_over_amount_condition_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy three providers to ensure redistribution logic is properly tested
@@ -514,7 +514,7 @@ fn undelegate_left_over_amount_condition_test() {
 
 #[test]
 fn undelegate_left_over_min_egld_condition_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy with same APY differences
@@ -571,7 +571,7 @@ fn undelegate_left_over_min_egld_condition_test() {
 
 #[test]
 fn undelegate_remaining_amount_over_provider_limit_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying APYs and caps
@@ -613,7 +613,7 @@ fn undelegate_remaining_amount_over_provider_limit_test() {
 
 #[test]
 fn delegate_remaining_amount_over_provider_limit_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying caps
@@ -638,7 +638,7 @@ fn delegate_remaining_amount_over_provider_limit_test() {
 
 #[test]
 fn full_un_delegate_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 60 providers with varying caps
@@ -679,7 +679,7 @@ fn full_un_delegate_test() {
 
 #[test]
 fn test_scoring_config_distribution() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying caps
@@ -730,7 +730,7 @@ fn test_scoring_config_distribution() {
 
 #[test]
 fn full_small_first_amount_un_delegate_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying caps
@@ -769,7 +769,7 @@ fn full_small_first_amount_un_delegate_test() {
 
 #[test]
 fn full_over_2_first_amount_un_delegate_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying caps

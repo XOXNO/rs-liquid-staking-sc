@@ -98,12 +98,12 @@ pub trait ScoreModule {
         config: &ScoringConfig,
     ) -> BigUint {
         // Apply weights
-        let weighted_score = node_score
+        
+
+        node_score
             .mul(config.nodes_weight)
             .add(&apy_score.mul(config.apy_weight))
-            .add(&stake_score.mul(config.stake_weight));
-
-        weighted_score
+            .add(&stake_score.mul(config.stake_weight))
     }
 
     fn update_selected_addresses_scores(

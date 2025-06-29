@@ -18,7 +18,7 @@ use multiversx_sc_scenario::{managed_address, DebugApi};
 
 #[test]
 fn liquid_staking_add_liquidity_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -45,7 +45,7 @@ fn liquid_staking_add_liquidity_test() {
 #[test]
 fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
     // Create a dummy instance of DebugApi for testing purposes
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
 
     // Set up a new instance of the LiquidStakingContractSetup with the liquid_staking contract object
     let mut sc_setup = LiquidStakingContractSetup::new(400);
@@ -146,7 +146,7 @@ fn liquid_staking_add_liquidity_pending_redemption_partial_test() {
 #[test]
 fn liquid_staking_add_liquidity_pending_redemption_full_test() {
     // Create a dummy instance of DebugApi for testing purposes
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
 
     // Set up a new instance of the LiquidStakingContractSetup with the liquid_staking contract object
     let mut sc_setup = LiquidStakingContractSetup::new(400);
@@ -241,7 +241,7 @@ fn liquid_staking_add_liquidity_pending_redemption_full_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_exp17_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -273,7 +273,7 @@ fn liquid_staking_add_liquidity_exp17_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_exp17_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -300,7 +300,7 @@ fn liquid_staking_add_liquidity_exp17_error_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_inactive_contract_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -318,7 +318,7 @@ fn liquid_staking_add_liquidity_inactive_contract_error_test() {
 
 #[test]
 fn liquid_staking_delegate_custom_amount_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -336,7 +336,7 @@ fn liquid_staking_delegate_custom_amount_pending_error_test() {
 
 #[test]
 fn liquid_staking_delegate_custom_amount_under_min_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -354,7 +354,7 @@ fn liquid_staking_delegate_custom_amount_under_min_pending_error_test() {
 
 #[test]
 fn liquid_staking_delegate_custom_amount_left_over_pending_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -372,7 +372,7 @@ fn liquid_staking_delegate_custom_amount_left_over_pending_error_test() {
 
 #[test]
 fn liquid_staking_delegate_custom_amount_full_pending_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -386,7 +386,7 @@ fn liquid_staking_delegate_custom_amount_full_pending_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_not_enough_pending_egld_error_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -404,7 +404,7 @@ fn liquid_staking_add_liquidity_not_enough_pending_egld_error_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -441,7 +441,7 @@ fn liquid_staking_add_liquidity_partial_pending_redemption_test() {
 
 #[test]
 fn liquid_staking_add_liquidity_fallback_test() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
@@ -467,7 +467,7 @@ fn liquid_staking_add_liquidity_fallback_test() {
 
 #[test]
 fn liquidity_staking_provider_instant() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let provider_1 =
@@ -488,7 +488,7 @@ fn liquidity_staking_provider_instant() {
 
 #[test]
 fn liquidity_staking_provider_instant_no_wl() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let provider_1 =
@@ -506,7 +506,7 @@ fn liquidity_staking_provider_instant_no_wl() {
 
 #[test]
 fn liquidity_staking_provider_instant_no_minim() {
-    let _ = DebugApi::dummy();
+    DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     let provider_1 =
