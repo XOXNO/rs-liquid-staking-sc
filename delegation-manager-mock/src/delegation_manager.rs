@@ -20,7 +20,7 @@ pub trait DelegationManagerMock {
                 .returns(ReturnsBackTransfers)
                 .sync_call();
 
-            total_rewards += back_transfers.total_egld_amount;
+            total_rewards += back_transfers.egld_sum();
         }
         self.tx().to(&caller).egld(&total_rewards).transfer();
         total_rewards

@@ -11,4 +11,4 @@ authors = ["Mihai Eremia <mihai@xoxno.com>"]
 path = ".."
 
 [dependencies.multiversx-sc-meta-lib]
-version = "0.57.0"
+version = "0.59.0"

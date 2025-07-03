@@ -4,7 +4,7 @@ use multiversx_sc::types::{
 };
 
 use multiversx_sc_scenario::{
-    api::StaticApi, imports::MxscPath, managed_biguint, rust_biguint, ScenarioTxRun,
+    api::StaticApi, imports::{ExecutorConfig, MxscPath}, managed_biguint, rust_biguint, ScenarioTxRun,
     ScenarioTxWhitebox, ScenarioWorld,
 };
 
@@ -136,8 +136,13 @@ impl LiquidStakingContractSetup {
     }
 }
 
-pub fn world() -> ScenarioWorld {
-    let mut blockchain = ScenarioWorld::new();
+pub fn world() -> ScenarioWorld {    
+    let mut blockchain =
+    ScenarioWorld::new().executor_config(ExecutorConfig::compiled_tests_if_else(
+        ExecutorConfig::Experimental.then(ExecutorConfig::Experimental),
+        ExecutorConfig::Debugger,
+    ));
+
     blockchain.register_contract(LIQUID_STAKING_DEPLOY_CODE, liquid_staking::ContractBuilder);
     blockchain.register_contract(ACCUMULATION_DEPLOY_CODE, accumulator::ContractBuilder);
     blockchain.register_contract(DELEGATION_DEPLOY_CODE, delegation_mock::ContractBuilder);

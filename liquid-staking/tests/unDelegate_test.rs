@@ -728,16 +728,18 @@ fn test_scoring_config_distribution() {
     sc_setup.debug_providers();
 }
 
+
 #[test]
 fn full_small_first_amount_un_delegate_test() {
     DebugApi::dummy();
+
     let mut sc_setup = LiquidStakingContractSetup::new(400);
 
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let random_nodes = rand::rng().random_range(1..=100);
+        let random_apy = rand::rng().random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,
