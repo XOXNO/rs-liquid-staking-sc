@@ -7,7 +7,7 @@ pub const MIN_GAS_FOR_WHITELIST_CALLBACK: u64 = 20_000_000;
 pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 
 pub const MAX_PERCENTAGE: u64 = 100_000;
-pub const ROUNDS_PER_EPOCH: u64 = 14_400;
+pub const ROUNDS_PER_EPOCH: u64 = 2400; // Mainnet = 14_400; Devnet = 2400
 pub const ROUNDS_LEFT_TO_END_EPOCH: u64 = 1000;
 
 pub const DECIMALS: usize = 18;
