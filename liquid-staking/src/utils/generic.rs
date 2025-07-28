@@ -1,6 +1,7 @@
 multiversx_sc::imports!();
 use crate::{
-    constants::BPS,
+    constants::{BPS, ROUNDS_LEFT_TO_END_EPOCH, ROUNDS_PER_EPOCH},
+    errors::ERROR_ROUNDS_NOT_PASSED,
     structs::{DelegatorSelection, State},
     StorageCache, ERROR_NOT_ACTIVE, MIN_EGLD_TO_DELEGATE,
 };
@@ -153,5 +154,19 @@ pub trait UtilsModule:
             (BigUint::zero(), payment_amount.clone())
         }
     }
-    // Swap amount between pending and payment for both delegation and undelegation
+
+    // Function to check if enough rounds have passed since the start of the epoch
+    // This is used to check if the contract is in the last few rounds of the epoch to allow pending actions for delegation and undelegation
+    fn require_rounds_passed(&self) {
+        let current_round = self.blockchain().get_block_round();
+        let start_round = self.blockchain().epoch_start_block_round();
+
+        let end_round = start_round + ROUNDS_PER_EPOCH;
+        let rounds_passed = end_round - current_round;
+
+        require!(
+            rounds_passed <= ROUNDS_LEFT_TO_END_EPOCH,
+            ERROR_ROUNDS_NOT_PASSED
+        );
+    }
 }

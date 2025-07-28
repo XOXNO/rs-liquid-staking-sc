@@ -128,6 +128,7 @@ impl LiquidStakingContractSetup {
 
         setup_delegation_manager(&mut world);
         let template_address_liquidity_pool = setup_liquid_staking_sc(&mut world, fees);
+        world.current_block().block_round(14000u64);
 
         LiquidStakingContractSetup {
             b_mock: world,

@@ -3,7 +3,8 @@ mod contract_setup;
 mod utils;
 use contract_setup::*;
 use multiversx_sc::{imports::OptionalValue, types::TestAddress};
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use utils::*;
 
 use liquid_staking::{
@@ -640,12 +641,13 @@ fn delegate_remaining_amount_over_provider_limit_test() {
 fn full_un_delegate_test() {
     DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
-
+    const SEED: u64 = 69696; // Fixed seed for reproducible tests
+    let mut rng = ChaCha8Rng::seed_from_u64(SEED);
     // Deploy 60 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let random_nodes = rng.random_range(1..=100);
+        let random_apy = rng.random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,
@@ -681,12 +683,14 @@ fn full_un_delegate_test() {
 fn test_scoring_config_distribution() {
     DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
+    const SEED: u64 = 69696; // Fixed seed for reproducible tests
+    let mut rng = ChaCha8Rng::seed_from_u64(SEED);
 
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let random_nodes = rng.random_range(1..=100);
+        let random_apy = rng.random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,
@@ -707,8 +711,8 @@ fn test_scoring_config_distribution() {
     sc_setup.add_liquidity(&first_user, exp18(20000u64), OptionalValue::None);
     sc_setup.delegate_pending(&OWNER_ADDRESS.to_address(), OptionalValue::None);
     for _ in 0..10 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let random_nodes = rng.random_range(1..=100);
+        let random_apy = rng.random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,
@@ -728,9 +732,10 @@ fn test_scoring_config_distribution() {
     sc_setup.debug_providers();
 }
 
-
 #[test]
 fn full_small_first_amount_un_delegate_test() {
+    const SEED: u64 = 12; // Fixed seed for reproducible tests
+    let mut rng = ChaCha8Rng::seed_from_u64(SEED);
     DebugApi::dummy();
 
     let mut sc_setup = LiquidStakingContractSetup::new(400);
@@ -738,8 +743,8 @@ fn full_small_first_amount_un_delegate_test() {
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        let random_nodes = rand::rng().random_range(1..=100);
-        let random_apy = rand::rng().random_range(500..=1000);
+        let random_nodes = rng.random_range(1..=100);
+        let random_apy = rng.random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,
@@ -773,12 +778,13 @@ fn full_small_first_amount_un_delegate_test() {
 fn full_over_2_first_amount_un_delegate_test() {
     DebugApi::dummy();
     let mut sc_setup = LiquidStakingContractSetup::new(400);
-
+    const SEED: u64 = 69696; // Fixed seed for reproducible tests
+    let mut rng = ChaCha8Rng::seed_from_u64(SEED);
     // Deploy 25 providers with varying caps
     let mut delegation_contracts = Vec::new();
     for _ in 0..60 {
-        let random_nodes = rand::thread_rng().gen_range(1..=100);
-        let random_apy = rand::thread_rng().gen_range(500..=1000);
+        let random_nodes = rng.random_range(1..=100);
+        let random_apy = rng.random_range(500..=1000);
         let contract = sc_setup.deploy_staking_contract(
             &OWNER_ADDRESS.to_address(),
             0,

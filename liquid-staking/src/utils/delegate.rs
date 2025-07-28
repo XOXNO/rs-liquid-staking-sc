@@ -1,7 +1,7 @@
 multiversx_sc::imports!();
 use crate::{
-    StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_PENDING_EGLD,
-    ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD, MIN_EGLD_TO_DELEGATE,
+    StorageCache, ERROR_BAD_PAYMENT_AMOUNT, ERROR_INSUFFICIENT_UNSTAKE_PENDING_EGLD,
+    MIN_EGLD_TO_DELEGATE,
 };
 
 #[multiversx_sc::module]
@@ -91,12 +91,6 @@ pub trait DelegateUtilsModule:
         final_amount_to_mint: &mut BigUint,
     ) {
         storage_cache.pending_egld += egld_to_add_liquidity;
-
-        // Ensure the remaining pending EGLD is not less than 1 EGLD
-        require!(
-            storage_cache.pending_egld >= MIN_EGLD_TO_DELEGATE,
-            ERROR_INSUFFICIENT_PENDING_EGLD
-        );
 
         // Add the minted xEGLD to the final amount to send
         *final_amount_to_mint += egld_to_add_liquidity;

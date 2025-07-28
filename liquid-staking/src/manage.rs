@@ -35,8 +35,7 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
-        // TODO: To be removed once Bernard gets released
-        self.is_manager(&self.blockchain().get_caller(), true);
+        self.require_rounds_passed();
 
         require!(
             storage_cache.pending_egld >= MIN_EGLD_TO_DELEGATE,
@@ -58,8 +57,7 @@ pub trait ManageModule:
                 let left_over = &storage_cache.pending_egld - &amount;
 
                 require!(
-                    left_over >= MIN_EGLD_TO_DELEGATE
-                        || left_over == BigUint::zero(),
+                    left_over >= MIN_EGLD_TO_DELEGATE || left_over == BigUint::zero(),
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 
@@ -111,8 +109,7 @@ pub trait ManageModule:
 
         self.is_state_active(storage_cache.contract_state);
 
-        // TODO: To be removed once Bernard gets released
-        self.is_manager(&self.blockchain().get_caller(), true);
+        self.require_rounds_passed();
 
         require!(
             storage_cache.pending_egld_for_unstake >= MIN_EGLD_TO_DELEGATE,
@@ -134,8 +131,7 @@ pub trait ManageModule:
                 let left_over = &storage_cache.pending_egld_for_unstake - &amount;
 
                 require!(
-                    left_over >= MIN_EGLD_TO_DELEGATE
-                        || left_over == BigUint::zero(),
+                    left_over >= MIN_EGLD_TO_DELEGATE || left_over == BigUint::zero(),
                     ERROR_INSUFFICIENT_PENDING_EGLD
                 );
 

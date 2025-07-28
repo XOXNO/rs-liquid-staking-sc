@@ -7,6 +7,7 @@ pub static ERROR_OLD_CLAIM_START: &[u8] =
 pub static ERROR_RECOMPUTE_RESERVES: &[u8] = b"Claim operation must be in the finished status";
 pub static ERROR_CLAIM_EPOCH: &[u8] = b"The rewards were already claimed for this epoch";
 pub static ERROR_UNSTAKE_PERIOD_NOT_PASSED: &[u8] = b"The unstake period has not passed";
+pub static ERROR_ROUNDS_NOT_PASSED: &[u8] = b"Not enough rounds passed since the start of the epoch";
 
 pub static ERROR_BAD_PAYMENT_TOKEN: &[u8] = b"Bad payment token";
 pub static ERROR_BAD_PAYMENT_AMOUNT: &[u8] = b"Insufficient delegated amount";

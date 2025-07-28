@@ -14,6 +14,7 @@ default-features = false
 
 [dependencies.multiversx-sc]
 version = "0.59.0"
+features = ["barnard"]
 
 [dependencies.multiversx-sc-modules]
 version = "0.59.0"
@@ -33,3 +34,4 @@ features = ["wasmer-experimental"]
 
 [dev-dependencies]
 rand = "0.9.1"
+rand_chacha            = "0.9.0"

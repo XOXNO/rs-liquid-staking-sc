@@ -271,32 +271,6 @@ fn liquid_staking_add_liquidity_exp17_test() {
     sc_setup.check_user_balance(&second_user, LS_TOKEN_ID, exp17(5u64));
 }
 
-#[test]
-fn liquid_staking_add_liquidity_exp17_error_test() {
-    DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(400);
-
-    sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
-
-    let first_user = sc_setup.setup_new_user(TestAddress::new("first_user"), 10u64);
-    let second_user = sc_setup.setup_new_user(TestAddress::new("second_user"), 1u64);
-
-    // Action: First user adds 3 EGLD as liquidity to the contract
-    sc_setup.add_liquidity(&first_user, exp18(3u64), OptionalValue::None);
-    sc_setup.delegate_pending(&OWNER_ADDRESS.to_address(), OptionalValue::None);
-
-    // Action: First user removes 15 * 10^17 (1.5 EGLD) as liquidity from the contract using exp17
-    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, exp17(15u64));
-
-    // Action: Second user adds 6 * 10^17 (0.6 EGLD) as liquidity to the contract using exp17
-    // This simulates adding liquidity with decimal values
-    sc_setup.add_liquidity_error(
-        &second_user,
-        exp17(6u64),
-        ERROR_INSUFFICIENT_PENDING_EGLD,
-        OptionalValue::None,
-    );
-}
 
 #[test]
 fn liquid_staking_add_liquidity_inactive_contract_error_test() {
@@ -382,24 +356,6 @@ fn liquid_staking_delegate_custom_amount_full_pending_test() {
     // Action: First user adds 3 EGLD as liquidity to the   contract
     sc_setup.add_liquidity(&first_user, exp18(3u64), OptionalValue::None);
     sc_setup.delegate_pending(&OWNER_ADDRESS.to_address(), OptionalValue::Some(exp18(3)));
-}
-
-#[test]
-fn liquid_staking_add_liquidity_not_enough_pending_egld_error_test() {
-    DebugApi::dummy();
-    let mut sc_setup = LiquidStakingContractSetup::new(400);
-
-    sc_setup.deploy_staking_contract(&OWNER_ADDRESS.to_address(), 1000, 1000, 1500, 0, 0);
-
-    let first_user = sc_setup.setup_new_user(TestAddress::new("first_user"), 10u64);
-
-    // Try to add only 0.1 EGLD when there is not enough pending EGLD
-    sc_setup.add_liquidity_error(
-        &first_user,
-        exp17(1u64),
-        ERROR_INSUFFICIENT_PENDING_EGLD,
-        OptionalValue::None,
-    );
 }
 
 #[test]

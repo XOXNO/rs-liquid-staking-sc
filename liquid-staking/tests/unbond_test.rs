@@ -6,7 +6,7 @@ use contract_setup::*;
 use liquid_staking::{
     errors::{
         ERROR_BAD_PAYMENT_AMOUNT, ERROR_BAD_PAYMENT_TOKEN, ERROR_INSUFFICIENT_UNBONDED_AMOUNT,
-        ERROR_NOT_ACTIVE, ERROR_UNSTAKE_PERIOD_NOT_PASSED,
+        ERROR_NOT_ACTIVE, ERROR_ROUNDS_NOT_PASSED, ERROR_UNSTAKE_PERIOD_NOT_PASSED,
     },
     structs::UnstakeTokenAttributes,
 };
@@ -216,6 +216,25 @@ fn liquid_staking_unbond_partial_withdraw_pending_test() {
         1,
         exp18(40),
         ERROR_INSUFFICIENT_UNBONDED_AMOUNT,
+    );
+}
+
+#[test]
+fn delegate_pending_error_rounds_not_passed_test() {
+    DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(400);
+
+    let user = sc_setup.setup_new_user(TestAddress::new("user"), 100u64);
+
+    // Add liquidity
+    sc_setup.add_liquidity(&user, exp18(100u64), OptionalValue::None);
+
+    sc_setup.b_mock.current_block().block_round(100u64);
+    // Delegate pending tokens
+    sc_setup.delegate_pending_error(
+        &OWNER_ADDRESS.to_address(),
+        OptionalValue::None,
+        ERROR_ROUNDS_NOT_PASSED,
     );
 }
 
