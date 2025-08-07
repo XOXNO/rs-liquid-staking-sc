@@ -23,6 +23,7 @@ pub trait SelectionModule:
         amount: &BigUint,
         is_delegate: bool,
         storage_cache: &mut StorageCache<Self>,
+        providers: OptionalValue<ManagedVec<ManagedAddress>>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         let map_list = if is_delegate {
             self.delegation_addresses_list()
@@ -34,7 +35,13 @@ pub trait SelectionModule:
         let min_egld = BigUint::from(MIN_EGLD_TO_DELEGATE);
 
         if !is_delegate {
-            return self.handle_undelegation(&map_list, amount, &min_egld, storage_cache);
+            return self.handle_undelegation(
+                &map_list,
+                amount,
+                &min_egld,
+                storage_cache,
+                providers,
+            );
         }
 
         self.handle_delegation(&map_list, amount, &min_egld, storage_cache)
@@ -100,9 +107,10 @@ pub trait SelectionModule:
         amount: &BigUint,
         min_egld: &BigUint,
         storage_cache: &mut StorageCache<Self>,
+        providers: OptionalValue<ManagedVec<ManagedAddress>>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
         let (mut selected_providers, total_stake) =
-            self.select_undelegation_providers(map_list, amount, min_egld);
+            self.select_undelegation_providers(map_list, amount, min_egld, providers);
 
         require!(!selected_providers.is_empty(), ERROR_BAD_DELEGATION_ADDRESS);
 
@@ -123,6 +131,7 @@ pub trait SelectionModule:
         map_list: &SetMapper<Self::Api, ManagedAddress>,
         amount: &BigUint,
         min_egld: &BigUint,
+        providers: OptionalValue<ManagedVec<ManagedAddress>>,
     ) -> (
         ManagedVec<DelegationContractSelectionInfo<Self::Api>>,
         BigUint,
@@ -131,23 +140,32 @@ pub trait SelectionModule:
         let mut total_stake = BigUint::zero();
         let mut remaining = amount.clone();
         let hard_max_providers = self.max_selected_providers().get();
-        let max_providers = self.calculate_max_providers(amount, min_egld, map_list.len());
+        let priority_providers_option = providers.into_option();
+        let has_priority_providers = priority_providers_option.is_some();
+        let priority_providers = priority_providers_option.unwrap_or(ManagedVec::new());
+        let providers_len = if has_priority_providers {
+            priority_providers.len()
+        } else {
+            map_list.len()
+        };
+        let max_providers = self.calculate_max_providers(amount, min_egld, providers_len);
 
         let amount_per_all_providers = amount / &hard_max_providers;
 
         let average_amount_per_provider =
             (amount / &BigUint::from(max_providers as u64) + amount_per_all_providers) / 2u64;
 
-        for address in map_list.iter() {
+        // Helper closure to process each address
+        let mut process_address = |address: &ManagedAddress| -> bool {
             let providers_len = selected_providers.len();
             // Check hard max providers
             if providers_len >= hard_max_providers.to_u64().unwrap() as usize {
-                break;
+                return true; // Signal to stop iteration
             }
 
             // Check max providers and remaining amount
             if providers_len >= max_providers && remaining == BigUint::zero() {
-                break;
+                return true; // Signal to stop iteration
             }
 
             let contract_data = self.delegation_contract_data(&address).get();
@@ -169,6 +187,23 @@ pub trait SelectionModule:
                     remaining -= amount_to_take;
                 } else {
                     remaining = BigUint::zero();
+                }
+            }
+
+            false // Continue iteration
+        };
+
+        // Iterate based on which collection to use
+        if !has_priority_providers {
+            for address in map_list.iter() {
+                if process_address(&address) {
+                    break;
+                }
+            }
+        } else {
+            for address in priority_providers.iter() {
+                if process_address(&address) {
+                    break;
                 }
             }
         }
@@ -233,7 +268,9 @@ pub trait SelectionModule:
                     info.address.clone(),
                     amount_to_delegate.clone(),
                     if is_delegate {
-                        info.space_left.clone().map(|space_left| space_left - amount_to_delegate)
+                        info.space_left
+                            .clone()
+                            .map(|space_left| space_left - amount_to_delegate)
                     } else {
                         Some(info.total_staked_from_ls_contract.clone() - amount_to_delegate)
                     },
@@ -327,8 +364,7 @@ pub trait SelectionModule:
                 // Either take the remaining amount or the space left (which can be 0)
                 let can_use = space_left.clone().min(remaining_amount.clone());
                 if can_use > BigUint::zero()
-                    && (&space_left - &can_use >= MIN_EGLD_TO_DELEGATE
-                        || space_left == can_use)
+                    && (&space_left - &can_use >= MIN_EGLD_TO_DELEGATE || space_left == can_use)
                 {
                     self.update_provider_amount(providers, i, &provider, &can_use);
                     *remaining_amount -= can_use;

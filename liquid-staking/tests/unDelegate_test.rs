@@ -2,7 +2,7 @@ mod contract_interactions;
 mod contract_setup;
 mod utils;
 use contract_setup::*;
-use multiversx_sc::{imports::OptionalValue, types::TestAddress};
+use multiversx_sc::{imports::OptionalValue, types::{BigUint, ManagedAddress, TestAddress}};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use utils::*;
@@ -396,6 +396,66 @@ fn liquid_staking_un_delegate_custom_amount_full_pending_test() {
 
     sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, exp18(3u64));
     sc_setup.un_delegate_pending(&OWNER_ADDRESS.to_address(), OptionalValue::Some(exp18(3)));
+}
+
+#[test]
+fn undelegate_remaining_amount_distribution_test_pick_first_provider() {
+    DebugApi::dummy();
+    let mut sc_setup = LiquidStakingContractSetup::new(400);
+
+    // Deploy providers with specific caps to trigger our edge case
+    let sc1 = sc_setup.deploy_staking_contract(
+        &OWNER_ADDRESS.to_address(),
+        1000,
+        1000,
+        1200, // Higher cap
+        4,
+        8_000u64,
+    );
+
+    let sc2= sc_setup.deploy_staking_contract(
+        &OWNER_ADDRESS.to_address(),
+        1000,
+        1000,
+        1050, // Lower cap
+        5,
+        9_000u64,
+    );
+
+    // Setup user and initial delegation
+    let first_user = sc_setup.setup_new_user(TestAddress::new("first_user"), 100u64);
+    sc_setup.add_liquidity(&first_user, exp18(100u64), OptionalValue::None);
+
+    sc_setup.b_mock.current_block().block_round(14000u64);
+    sc_setup.delegate_pending(&OWNER_ADDRESS.to_address(), OptionalValue::None);
+    let staked_amount_before = sc_setup.get_total_staked_from_ls_contract(&sc1);
+
+    let staked_amount_before_second = sc_setup.get_total_staked_from_ls_contract(&sc2);
+    let total_staked_before = staked_amount_before.clone() + staked_amount_before_second.clone();
+    // Remove liquidity in a way that would leave less than MIN_EGLD in contract2
+    sc_setup.remove_liquidity(&first_user, LS_TOKEN_ID, total_staked_before.clone());
+
+    // This should trigger the remaining amount redistribution
+    sc_setup.b_mock.current_block().block_epoch(50u64);
+    sc_setup.un_delegate_pending_provider(&OWNER_ADDRESS.to_address(), OptionalValue::Some(total_staked_before.clone()), ManagedAddress::from_address(&sc2));
+
+    let staked_amount_after = sc_setup.get_total_staked_from_ls_contract(&sc1);
+
+    let staked_amount_after_second = sc_setup.get_total_staked_from_ls_contract(&sc2);
+    println!("staked_amount_after: {:?}", staked_amount_after);
+    println!("staked_amount_after_second: {:?}", staked_amount_after_second);
+
+    assert_eq!(staked_amount_after_second, BigUint::zero());
+    assert_eq!(staked_amount_after, staked_amount_before);
+
+    // Verify NFT was issued correctly
+    sc_setup.check_user_nft_balance_denominated(
+        &first_user,
+        UNSTAKE_TOKEN_ID,
+        1,
+        total_staked_before,
+        Some(UnstakeTokenAttributes::new(0, 10)),
+    );
 }
 
 #[test]

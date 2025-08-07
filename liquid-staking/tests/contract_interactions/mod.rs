@@ -4,7 +4,7 @@ use delegation_manager_mock::proxy_delegation::{self, DelegationMockProxy};
 use liquid_staking::proxy::proxy_liquid_staking;
 use liquid_staking::structs::UnstakeTokenAttributes;
 use multiversx_sc::types::{
-    BigUint, ReturnsNewManagedAddress, ReturnsResult, TestAddress, TestTokenIdentifier,
+    BigUint, ManagedVec, ReturnsNewManagedAddress, ReturnsResult, TestAddress, TestTokenIdentifier,
 };
 use multiversx_sc::{
     imports::OptionalValue,
@@ -266,7 +266,28 @@ impl LiquidStakingContractSetup {
             .from(caller)
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
-            .un_delegate_pending(amount)
+            .un_delegate_pending(
+                amount,
+                OptionalValue::<ManagedVec<StaticApi, ManagedAddress<StaticApi>>>::None,
+            )
+            .run();
+    }
+
+    pub fn un_delegate_pending_provider(
+        &mut self,
+        caller: &Address,
+        amount: OptionalValue<BigUint<StaticApi>>,
+        provider: ManagedAddress<StaticApi>,
+    ) {
+        self.b_mock
+            .tx()
+            .from(caller)
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .un_delegate_pending(
+                amount,
+                OptionalValue::Some(ManagedVec::from_iter(vec![provider])),
+            )
             .run();
     }
 
@@ -281,7 +302,10 @@ impl LiquidStakingContractSetup {
             .from(caller)
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
-            .un_delegate_pending(amount)
+            .un_delegate_pending(
+                amount,
+                OptionalValue::<ManagedVec<StaticApi, ManagedAddress<StaticApi>>>::None,
+            )
             .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
             .run();
     }
@@ -645,6 +669,20 @@ impl LiquidStakingContractSetup {
                 .total_staked_from_ls_contract,
             exp(total_staked)
         );
+    }
+
+    pub fn get_total_staked_from_ls_contract(
+        &mut self,
+        delegation_contract: &Address,
+    ) -> BigUint<StaticApi> {
+        self.b_mock
+            .query()
+            .to(&self.sc_wrapper)
+            .typed(proxy_liquid_staking::LiquidStakingProxy)
+            .delegation_contract_data(delegation_contract)
+            .returns(ReturnsResult)
+            .run()
+            .total_staked_from_ls_contract
     }
 
     pub fn check_delegation_contract_unstaked_value_denominated(

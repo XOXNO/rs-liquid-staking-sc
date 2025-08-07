@@ -117,7 +117,7 @@ where
     >(
         self,
         to: Arg0,
-    ) -> TxTypedCall<Env, From, To, (), Gas, Option<EsdtTokenPayment<Env::Api>>> {
+    ) -> TxTypedCall<Env, From, To, (), Gas, OptionalValue<EsdtTokenPayment<Env::Api>>> {
         self.wrapped_tx
             .raw_call("delegate")
             .argument(&to)
@@ -419,14 +419,17 @@ where
     ///             un-delegates from pending EGLD accumulated in the contract. 
     pub fn un_delegate_pending<
         Arg0: ProxyArg<OptionalValue<BigUint<Env::Api>>>,
+        Arg1: ProxyArg<OptionalValue<ManagedVec<Env::Api, ManagedAddress<Env::Api>>>>,
     >(
         self,
         amount: Arg0,
+        providers: Arg1,
     ) -> TxTypedCall<Env, From, To, NotPayable, Gas, ()> {
         self.wrapped_tx
             .payment(NotPayable)
             .raw_call("unDelegatePending")
             .argument(&amount)
+            .argument(&providers)
             .original_result()
     }
 

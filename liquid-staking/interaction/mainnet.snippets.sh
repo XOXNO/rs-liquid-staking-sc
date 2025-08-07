@@ -1,6 +1,6 @@
 ADDRESS=erd1qqqqqqqqqqqqqpgq6uzdzy54wnesfnlaycxwymrn9texlnmyah0ssrfvk6
 PROXY=https://gateway.xoxno.com
-PROJECT="../output-docker/liquid-staking/liquid-staking.wasm"
+PROJECT="./output-docker/liquid-staking/liquid-staking.wasm"
 
 ACCUMULATOR_SC_ADDRESS=erd1qqqqqqqqqqqqqpgq8538ku69p97lq4eug75y8d6g6yfwhd7c45qs4zvejt
 FEES=700
@@ -74,7 +74,7 @@ getLsValueForPosition() {
 
 verifyContract() {
     mxpy --verbose contract verify "${ADDRESS}"  \
-    --packaged-src=../output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
+    --packaged-src=./output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
     --docker-image="multiversx/sdk-rust-contract-builder:v11.0.0" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
 }
 

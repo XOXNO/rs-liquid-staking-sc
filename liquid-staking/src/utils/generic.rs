@@ -18,15 +18,16 @@ pub trait UtilsModule:
         amount_to_delegate: &BigUint,
         storage_cache: &mut StorageCache<Self>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
-        self.get_delegation_contract(amount_to_delegate, true, storage_cache)
+        self.get_delegation_contract(amount_to_delegate, true, storage_cache, OptionalValue::None)
     }
 
     fn get_contracts_for_undelegate(
         &self,
         amount_to_undelegate: &BigUint,
         storage_cache: &mut StorageCache<Self>,
+        providers: OptionalValue<ManagedVec<ManagedAddress>>,
     ) -> ManagedVec<DelegatorSelection<Self::Api>> {
-        self.get_delegation_contract(amount_to_undelegate, false, storage_cache)
+        self.get_delegation_contract(amount_to_undelegate, false, storage_cache, providers)
     }
 
     fn calculate_share(&self, total_amount: &BigUint, cut_percentage: &BigUint) -> BigUint {

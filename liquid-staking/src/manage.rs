@@ -103,13 +103,23 @@ pub trait ManageModule:
     /// Arguments:
     /// - `amount`: Optional. Specific amount to un-delegate; if omitted, the function
     ///             un-delegates from pending EGLD accumulated in the contract.
+    #[allow_multiple_var_args]
     #[endpoint(unDelegatePending)]
-    fn un_delegate_pending(&self, amount: OptionalValue<BigUint>) {
+    fn un_delegate_pending(
+        &self,
+        amount: OptionalValue<BigUint>,
+        providers: OptionalValue<ManagedVec<ManagedAddress>>,
+    ) {
         let mut storage_cache = StorageCache::new(self);
 
         self.is_state_active(storage_cache.contract_state);
 
-        self.require_rounds_passed();
+        if providers.is_some() {
+            let caller = self.blockchain().get_caller();
+            self.is_manager(&caller, true);
+        } else {
+            self.require_rounds_passed();
+        }
 
         require!(
             storage_cache.pending_egld_for_unstake >= MIN_EGLD_TO_DELEGATE,
@@ -140,7 +150,8 @@ pub trait ManageModule:
             OptionalValue::None => storage_cache.pending_egld_for_unstake.clone(),
         };
 
-        let contracts = self.get_contracts_for_undelegate(&amount_to_unstake, &mut storage_cache);
+        let contracts =
+            self.get_contracts_for_undelegate(&amount_to_unstake, &mut storage_cache, providers);
 
         // Important before un delegating the amount from the new contracts, set the amount to 0
         storage_cache.pending_egld_for_unstake -= amount_to_unstake;
