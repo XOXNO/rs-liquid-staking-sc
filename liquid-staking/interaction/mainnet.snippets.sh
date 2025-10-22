@@ -8,6 +8,14 @@ MAX_SELECTED_PROVIDERS=20
 MAX_DELEGATION_ADDRESSES=100
 UNBOND_PERIOD=10
 MIGRATION_SC_ADDRESS="erd1qqqqqqqqqqqqqpgqc0jp2q280xaccqszxwsh5cyl2hv35g79ah0sk4zu5n"
+VOTE_SC_ADDRESS=erd1qqqqqqqqqqqqqpgqdnpmeseu3j5t7grds9dfj8ttt70pev66ah0sydkq9x
+
+setVoteContract() {
+    mxpy contract call ${ADDRESS} --recall-nonce --function="set_vote_contract" \
+    --arguments ${VOTE_SC_ADDRESS} \
+    --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    --gas-limit=50000000 --send --proxy=${PROXY} --chain=1 || return
+}
 
 deploy() {
     mxpy --verbose contract deploy --bytecode=${PROJECT}  --metadata-payable-by-sc --arguments ${ACCUMULATOR_SC_ADDRESS} ${FEES} ${MAX_SELECTED_PROVIDERS} ${MAX_DELEGATION_ADDRESSES} ${UNBOND_PERIOD} --recall-nonce \

@@ -20,6 +20,7 @@ pub mod storage;
 pub mod structs;
 pub mod utils;
 pub mod views;
+pub mod vote;
 
 use callback::{CallbackModule, CallbackProxy};
 use constants::*;
@@ -44,6 +45,7 @@ pub trait LiquidStaking<ContractReader>:
     + liquidity_pool::LiquidityPoolModule
     + utils::delegate::DelegateUtilsModule
     + utils::un_delegation::UnDelegateUtilsModule
+    + vote::VoteModule
     + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[upgrade]

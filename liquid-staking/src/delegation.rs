@@ -36,13 +36,14 @@ pub trait DelegationModule:
         apy: u64,
     ) {
         let mapper = self.max_delegation_addresses();
+        // Enforce strict cap: when len == cap, further whitelisting must be rejected.
         require!(
-            self.delegation_addresses_list().len() <= mapper.get(),
+            self.delegation_addresses_list().len() < mapper.get(),
             ERROR_MAX_DELEGATION_ADDRESSES
         );
 
         require!(
-            self.un_delegation_addresses_list().len() <= mapper.get(),
+            self.un_delegation_addresses_list().len() < mapper.get(),
             ERROR_MAX_UN_DELEGATION_ADDRESSES
         );
 

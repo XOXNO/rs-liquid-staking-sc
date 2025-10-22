@@ -1,12 +1,11 @@
 [package]
-name = "delegation-mock-meta"
+name = "vote-sc-abi"
 version = "0.0.0"
+authors = ["Mihai Eremia <mihai@xoxno.com>"]
 edition = "2021"
 publish = false
 
-[dev-dependencies]
-
-[dependencies.delegation-mock]
+[dependencies.vote-sc]
 path = ".."
 
 [dependencies.multiversx-sc-meta-lib]

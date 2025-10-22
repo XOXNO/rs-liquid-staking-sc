@@ -21,22 +21,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2261d10cca569e4643e526d8dc2e62e433cc8aba21ab764233731f8d369bf394"
 
 [[package]]
-name = "delegation-mock"
-version = "0.0.0"
-dependencies = [
- "itertools",
- "multiversx-sc",
-]
-
-[[package]]
-name = "delegation-mock-wasm"
-version = "0.0.0"
-dependencies = [
- "delegation-mock",
- "multiversx-sc-wasm-adapter",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -71,9 +55,9 @@ checksum = "bcaaec4551594c969335c98c903c1397853d4198408ea609190f420500f6be71"
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -139,6 +123,15 @@ dependencies = [
  "quote",
  "radix_trie",
  "syn",
+]
+
+[[package]]
+name = "multiversx-sc-modules"
+version = "0.61.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13f9ab3787e3390907bf1754171749e6e10c4b55c9d651c44439d0c81d30ce9c"
+dependencies = [
+ "multiversx-sc",
 ]
 
 [[package]]
@@ -230,3 +223,20 @@ name = "unwrap-infallible"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "151ac09978d3c2862c4e39b557f4eceee2cc72150bc4cb4f16abf061b6e381fb"
+
+[[package]]
+name = "vote-sc"
+version = "0.0.0"
+dependencies = [
+ "itertools",
+ "multiversx-sc",
+ "multiversx-sc-modules",
+]
+
+[[package]]
+name = "vote-sc-wasm"
+version = "0.0.0"
+dependencies = [
+ "multiversx-sc-wasm-adapter",
+ "vote-sc",
+]

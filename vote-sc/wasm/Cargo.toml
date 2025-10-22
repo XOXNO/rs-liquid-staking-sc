@@ -5,7 +5,7 @@
 # ##########################################
 
 [package]
-name = "liquid-staking-wasm"
+name = "vote-sc-wasm"
 version = "0.0.0"
 edition = "2021"
 publish = false
@@ -24,7 +24,7 @@ overflow-checks = false
 [profile.dev]
 panic = "abort"
 
-[dependencies.liquid-staking]
+[dependencies.vote-sc]
 path = ".."
 
 [dependencies.multiversx-sc-wasm-adapter]

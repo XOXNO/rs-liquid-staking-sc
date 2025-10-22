@@ -7,7 +7,8 @@ pub static ERROR_OLD_CLAIM_START: &[u8] =
 pub static ERROR_RECOMPUTE_RESERVES: &[u8] = b"Claim operation must be in the finished status";
 pub static ERROR_CLAIM_EPOCH: &[u8] = b"The rewards were already claimed for this epoch";
 pub static ERROR_UNSTAKE_PERIOD_NOT_PASSED: &[u8] = b"The unstake period has not passed";
-pub static ERROR_ROUNDS_NOT_PASSED: &[u8] = b"Not enough rounds passed since the start of the epoch";
+pub static ERROR_ROUNDS_NOT_PASSED: &[u8] =
+    b"Not enough rounds passed since the start of the epoch";
 
 pub static ERROR_BAD_PAYMENT_TOKEN: &[u8] = b"Bad payment token";
 pub static ERROR_BAD_PAYMENT_AMOUNT: &[u8] = b"Insufficient delegated amount";
@@ -54,3 +55,8 @@ pub static ERROR_WEIGHTS_MUST_SUM_TO_100: &[u8] = b"Weights must sum to 100";
 pub static ERROR_INSUFFICIENT_FEES_RESERVE: &[u8] = b"Insufficient fees reserve";
 
 pub static ERROR_PROVIDER_NOT_ELIGIBLE: &[u8] = b"The provider is not eligible";
+
+pub static ERROR_INVALID_CALLER: &[u8] = b"Invalid caller";
+pub static ERROR_VOTE_SC_NOT_SET: &[u8] = b"Vote contract is not set";
+pub static ERROR_INSUFFICIENT_GAS_FOR_ASYNC: &[u8] = b"Insufficient gas for async_call";
+pub static ERROR_INVALID_SC_ADDRESS: &[u8] = b"Invalid SC address";

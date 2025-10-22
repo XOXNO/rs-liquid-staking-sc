@@ -6,5 +6,7 @@ members = [
   "delegation-mock",
   "delegation-mock/meta",
   "delegation-manager-mock",
-  "delegation-manager-mock/meta"
+  "delegation-manager-mock/meta",
+  "vote-sc",
+  "vote-sc/meta"
 ]

@@ -13,11 +13,11 @@ version = "0.14.0"
 default-features = false
 
 [dependencies.multiversx-sc]
-version = "0.59.0"
+version = "0.61.0"
 features = ["barnard"]
 
 [dependencies.multiversx-sc-modules]
-version = "0.59.0"
+version = "0.61.0"
 
 [dependencies.accumulator]
 git = "https://github.com/XOXNO/rs-accumulator"
@@ -29,7 +29,7 @@ path = "../delegation-mock"
 path = "../delegation-manager-mock"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.59.0"
+version = "0.61.0"
 features = ["wasmer-experimental"]
 
 [dev-dependencies]
