@@ -2,8 +2,8 @@ ADDRESS=erd1qqqqqqqqqqqqqpgqdnpmeseu3j5t7grds9dfj8ttt70pev66ah0sydkq9x
 PROXY=https://gateway.xoxno.com
 PROJECT="./output-docker/vote-sc/vote-sc.wasm"
 LIQUID_STAKING_SC_ADDRESS="erd1qqqqqqqqqqqqqpgq6uzdzy54wnesfnlaycxwymrn9texlnmyah0ssrfvk6"
-ROOT_HASH=""
-PROPOSAL_ID=102
+ROOT_HASH="0x1f1e38fabf5ca3461123799d0c8ff9ed784de008fa220ab056ac7be20889651c"
+PROPOSAL_ID=1
 
 deploy() {
     mxpy --verbose contract deploy --bytecode=${PROJECT} --recall-nonce \
