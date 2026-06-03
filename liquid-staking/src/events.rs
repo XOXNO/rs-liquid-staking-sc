@@ -42,7 +42,7 @@ pub trait EventsModule:
                 pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
-                timestamp: self.blockchain().get_block_timestamp(),
+                timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             },
         )
     }
@@ -72,7 +72,7 @@ pub trait EventsModule:
                 pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
-                timestamp: self.blockchain().get_block_timestamp(),
+                timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             },
         )
     }
@@ -94,7 +94,7 @@ pub trait EventsModule:
                 pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
-                timestamp: self.blockchain().get_block_timestamp(),
+                timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             },
         )
     }
@@ -123,7 +123,7 @@ pub trait EventsModule:
                 pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
-                timestamp: self.blockchain().get_block_timestamp(),
+                timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             },
         )
     }
@@ -150,7 +150,7 @@ pub trait EventsModule:
                 pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
                 block: self.blockchain().get_block_nonce(),
                 epoch,
-                timestamp: self.blockchain().get_block_timestamp(),
+                timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
             },
             delegation_contract,
         )
@@ -171,7 +171,7 @@ pub trait EventsModule:
             pending_egld_for_unbond: storage_cache.pending_egld_for_unbond.clone(),
             block: self.blockchain().get_block_nonce(),
             epoch,
-            timestamp: self.blockchain().get_block_timestamp(),
+            timestamp: self.blockchain().get_block_timestamp_seconds().as_u64_seconds(),
         })
     }
 

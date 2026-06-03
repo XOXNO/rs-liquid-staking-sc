@@ -12,12 +12,14 @@ path = "src/lib.rs"
 version = "0.14.0"
 default-features = false
 
+[dependencies.hex-literal]
+version = "1.0.0"
+
 [dependencies.multiversx-sc]
-version = "0.61.0"
-features = ["barnard"]
+version = "0.66.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.61.0"
+version = "0.66.1"
 
 [dependencies.accumulator]
 git = "https://github.com/XOXNO/rs-accumulator"
@@ -29,7 +31,7 @@ path = "../delegation-mock"
 path = "../delegation-manager-mock"
 
 [dev-dependencies.multiversx-sc-scenario]
-version = "0.61.0"
+version = "0.66.1"
 features = ["wasmer-experimental"]
 
 [dev-dependencies]

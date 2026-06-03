@@ -168,7 +168,7 @@ pub trait SelectionModule:
                 return true; // Signal to stop iteration
             }
 
-            let contract_data = self.delegation_contract_data(&address).get();
+            let contract_data = self.delegation_contract_data(address).get();
             let staked = &contract_data.get_total_amount_with_pending_callbacks();
 
             let amount_to_take = if staked >= &average_amount_per_provider {
@@ -181,7 +181,7 @@ pub trait SelectionModule:
 
             if amount_to_take > BigUint::zero() {
                 total_stake += staked;
-                selected_providers.push(self.create_selection_info(&address, &contract_data));
+                selected_providers.push(self.create_selection_info(address, &contract_data));
 
                 if remaining > amount_to_take {
                     remaining -= amount_to_take;

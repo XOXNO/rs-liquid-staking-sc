@@ -56,6 +56,10 @@ pub struct LiquidStakingContractSetup {
 }
 
 fn setup_delegation_manager(world: &mut ScenarioWorld) -> ManagedAddress<StaticApi> {
+    let delegation_manager_address =
+        ManagedAddress::<StaticApi>::new_from_bytes(&liquid_staking::constants::DELEGATION_MANAGER);
+    world.new_address(OWNER_ADDRESS, 1, &delegation_manager_address);
+
     let sc = world
         .tx()
         .from(OWNER_ADDRESS)
@@ -109,9 +113,9 @@ fn setup_liquid_staking_sc(world: &mut ScenarioWorld, fees: u64) -> ManagedAddre
         .to(&sc)
         .whitebox(liquid_staking::contract_obj, |sc| {
             sc.unstake_token()
-                .set_token_id(UNSTAKE_TOKEN_ID.to_token_identifier());
+                .set_token_id(UNSTAKE_TOKEN_ID.to_esdt_token_identifier());
             sc.ls_token()
-                .set_token_id(LS_TOKEN_ID.to_token_identifier());
+                .set_token_id(LS_TOKEN_ID.to_esdt_token_identifier());
             sc.set_scoring_config(ScoringConfig::default());
             sc.set_state_active();
         });

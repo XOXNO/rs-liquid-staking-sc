@@ -160,7 +160,7 @@ pub trait UtilsModule:
     // This is used to check if the contract is in the last few rounds of the epoch to allow pending actions for delegation and undelegation
     fn require_rounds_passed(&self) {
         let current_round = self.blockchain().get_block_round();
-        let start_round = self.blockchain().epoch_start_block_round();
+        let start_round = self.blockchain().get_epoch_start_block_round();
 
         let end_round = start_round + ROUNDS_PER_EPOCH;
         let rounds_passed = end_round - current_round;

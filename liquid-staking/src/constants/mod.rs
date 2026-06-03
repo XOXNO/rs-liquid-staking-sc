@@ -1,4 +1,4 @@
-use multiversx_sc::hex_literal::hex;
+use hex_literal::hex;
 
 pub const MIN_GAS_FOR_ASYNC_CALL: u64 = 12_000_000;
 pub const MIN_GAS_FOR_ASYNC_CALL_CLAIM_REWARDS: u64 = 2_500_000;

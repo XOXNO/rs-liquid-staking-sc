@@ -13,13 +13,13 @@ version          = "0.14.0"
 default-features = false
 
 [dependencies.multiversx-sc]
-version = "0.61.0"
+version = "0.66.1"
 
 [dependencies.multiversx-sc-modules]
-version = "0.61.0"
+version = "0.66.1"
 
 [dev-dependencies.multiversx-sc-scenario]
-version  = "0.61.0"
+version  = "0.66.1"
 
 [dev-dependencies]
 rand        = "0.9.1"

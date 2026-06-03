@@ -37,7 +37,7 @@ pub trait MigrateModule:
         // Emit the add liquidity event
         self.emit_add_liquidity_event(&storage_cache, virtual_egld_amount, Some(original_caller));
         // Send the final amount to the user
-        self.tx().to(&caller).esdt(user_payment).transfer();
+        self.tx().to(&caller).payment(user_payment).transfer();
     }
 
     #[payable("EGLD")]

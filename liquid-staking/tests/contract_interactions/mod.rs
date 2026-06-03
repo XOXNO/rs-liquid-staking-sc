@@ -183,7 +183,7 @@ impl LiquidStakingContractSetup {
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
             .un_delegate()
-            .single_esdt(&payment_token.to_token_identifier(), 0, &payment_amount)
+            .single_esdt(&payment_token.to_esdt_token_identifier(), 0, &payment_amount)
             .run();
     }
 
@@ -200,7 +200,7 @@ impl LiquidStakingContractSetup {
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
             .un_delegate()
-            .single_esdt(&payment_token.to_token_identifier(), 0, &payment_amount)
+            .single_esdt(&payment_token.to_esdt_token_identifier(), 0, &payment_amount)
             .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
             .run();
     }
@@ -344,7 +344,7 @@ impl LiquidStakingContractSetup {
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
             .withdraw()
-            .single_esdt(&payment_token.to_token_identifier(), token_nonce, &amount)
+            .single_esdt(&payment_token.to_esdt_token_identifier(), token_nonce, &amount)
             .run();
     }
 
@@ -362,7 +362,7 @@ impl LiquidStakingContractSetup {
             .to(&self.sc_wrapper)
             .typed(proxy_liquid_staking::LiquidStakingProxy)
             .withdraw()
-            .single_esdt(&payment_token.to_token_identifier(), token_nonce, &amount)
+            .single_esdt(&payment_token.to_esdt_token_identifier(), token_nonce, &amount)
             .returns(ExpectMessage(core::str::from_utf8(error).unwrap()))
             .run();
     }
