@@ -27,8 +27,8 @@ deploy() {
 
 upgrade() {
     echo "Upgrade smart contract address: ${ADDRESS}"
-    mxpy  contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode=${PROJECT} --recall-nonce \
-    --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy  contract upgrade ${ADDRESS} --metadata-payable-by-sc --bytecode=${PROJECT} \
+    --ledger \
     --gas-limit=150000000 --send --proxy=${PROXY} --chain=1 || return
 }
 
@@ -57,8 +57,8 @@ setMigrationScAddress() {
 }
 
 setStateActive() {
-    mxpy contract call ${ADDRESS} --recall-nonce --function="setStateActive" \
-    --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy contract call ${ADDRESS} --function="setStateActive" \
+    --ledger \
     --gas-limit=15000000 --send --proxy=${PROXY} --chain=1 || return
 }
 
@@ -83,14 +83,14 @@ getLsValueForPosition() {
 verifyContract() {
     mxpy --verbose contract verify "${ADDRESS}"  \
     --packaged-src=./output-docker/liquid-staking/liquid-staking-0.0.0.source.json --verifier-url="https://play-api.multiversx.com" \
-    --docker-image="multiversx/sdk-rust-contract-builder:v11.0.0" --ledger --ledger-account-index=0 --ledger-address-index=0  || return 
+    --docker-image="multiversx/sdk-rust-contract-builder:v11.0.0" --ledger --ledger-account-index=0 --ledger-address-index=0  || return
 }
 
 buildDocker() {
     mxpy contract reproducible-build --docker-image="multiversx/sdk-rust-contract-builder:v11.0.0"
 }
 
-###PARAMS 
+###PARAMS
 ### Contracts - erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplllllscktaww
 DELEGATION_ADDRESS="erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz0llllsup4dew"
 ADMIN_ADDRESS="erd1x45vnu7shhecfz0v03qqfmy8srndch50cdx7m763p743tzlwah0sgzewlm"
