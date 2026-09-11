@@ -49,8 +49,8 @@ registerUnstakeToken() {
 }
 
 setStateActive() {
-    mxpy contract call ${ADDRESS} --recall-nonce --function="setStateActive" \
-    --ledger --ledger-account-index=0 --ledger-address-index=0 \
+    mxpy contract call ${ADDRESS} --function="setStateActive" \
+    --ledger \
     --gas-limit=15000000 --send --proxy=${PROXY} --chain=D || return
 }
 
